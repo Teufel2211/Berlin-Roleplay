@@ -63,4 +63,18 @@ async function verifyAdminCode(code) {
   return { ok: true };
 }
 
-module.exports = { generateAdminCode, verifyAdminCode, CODE_TTL_MS };
+async function ensureAdminCode() {
+  const { data } = await getClient()
+    .from(TABLES.adminCodes)
+    .select('code')
+    .eq('user_id', config.ownerUserId)
+    .eq('used', false)
+    .gt('expires_at', new Date().toISOString())
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (data) return data.code;
+  return generateAdminCode();
+}
+
+module.exports = { generateAdminCode, ensureAdminCode, verifyAdminCode, CODE_TTL_MS };

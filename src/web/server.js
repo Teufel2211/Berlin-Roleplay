@@ -114,6 +114,24 @@ function createApp() {
   app.get('/dashboard/auth/discord', auth.discordAuthStart);
   app.get('/dashboard/auth/discord/callback', auth.discordAuthCallback);
   app.post('/dashboard/logout', auth.csrfCheck, auth.logout);
+  app.post('/dashboard/login/code', settingsLimiter, auth.csrfCheck, async (req, res) => {
+    const result = await verifyAdminCode(req.body && req.body.code);
+    if (result.ok) {
+      req.session.user = { username: 'Owner', id: config.ownerUserId, isOwner: true };
+      req.session.settingsUnlocked = true;
+      res.redirect('/dashboard/settings');
+    } else {
+      res.redirect('/dashboard/login?error=code');
+    }
+  });
+  app.post('/dashboard/login/code/request', settingsLimiter, auth.csrfCheck, async (req, res) => {
+    try {
+      await generateAdminCode();
+    } catch (err) {
+      logger.warn(`Login-Seite: Code-Resend fehlgeschlagen: ${err.message}`);
+    }
+    res.redirect('/dashboard/login');
+  });
 
   app.use('/dashboard', auth.requireAuth);
 

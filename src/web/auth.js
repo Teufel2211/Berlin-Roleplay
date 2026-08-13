@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 const { config } = require('../config');
 const logger = require('../logger');
-const settingsService = require('../services/settingsService');
+const { ensureAdminCode } = require('./adminCode');
 const { discordAuthStart, discordAuthCallback } = require('./discordAuth');
 
 const LOGIN_ERRORS = {
@@ -10,6 +10,7 @@ const LOGIN_ERRORS = {
   oauth: 'Anmeldung fehlgeschlagen. Bitte erneut versuchen.',
   notmember: 'Du bist kein Mitglied des Discord-Servers.',
   norole: 'Du hast keine Berechtigung für das Dashboard (nur Server-Owner, Staff und Admin).',
+  code: 'Code ungültig, abgelaufen oder bereits benutzt.',
 };
 
 function csrfToken(req) {
@@ -45,16 +46,17 @@ function requireAuthApi(req, res, next) {
 }
 
 async function loginPage(req, res) {
-  let settingsLocked = false;
   try {
-    settingsLocked = Boolean(await settingsService.get('admin_code'));
-  } catch (err) { /* keine Settings verfügbar */ }
+    await ensureAdminCode();
+  } catch (err) {
+    logger.warn(`Login-Seite: Admin-Code konnte nicht generiert/gesendet werden: ${err.message}`);
+  }
   res.render('login', {
     title: 'Login',
     user: null,
     error: LOGIN_ERRORS[req.query.error] || null,
+    codeError: req.query.error === 'code',
     csrf: csrfToken(req),
-    settingsLocked,
   });
 }
 
