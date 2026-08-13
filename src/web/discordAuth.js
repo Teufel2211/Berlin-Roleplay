@@ -36,7 +36,7 @@ function authorizeUrl(state) {
     client_id: config.clientId,
     redirect_uri: redirectUri(),
     response_type: 'code',
-    scope: 'identify',
+    scope: 'identify guilds',
     state,
   });
   return `${OAUTH_BASE}/oauth2/authorize?${params.toString()}`;
@@ -67,6 +67,14 @@ async function fetchDiscordUser(accessToken) {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
   if (!res.ok) throw new Error(`Nutzerabruf fehlgeschlagen (${res.status})`);
+  return res.json();
+}
+
+async function fetchMyGuilds(accessToken) {
+  const res = await fetch(`${OAUTH_BASE}/users/@me/guilds`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) throw new Error(`Serverliste fehlgeschlagen (${res.status})`);
   return res.json();
 }
 
@@ -119,14 +127,25 @@ async function discordAuthCallback(req, res) {
   try {
     const token = await exchangeCode(code);
     const user = await fetchDiscordUser(token.access_token);
-    const member = await fetchGuildMember(user.id);
-    if (!member) {
+    const guilds = await fetchMyGuilds(token.access_token);
+    const guild = guilds.find((g) => g.id === config.guildId);
+    if (!guild) {
       return res.redirect('/dashboard/login?error=notmember');
     }
-    const settings = await settingsService.getAll();
-    const roles = await fetchGuildRoles();
-    if (!isStaff(member.roles || [], roles, settings)) {
-      await auditService.log(`${user.username} (${user.id})`, 'login.denied', { reason: 'keine Staff-Rolle' });
+    let allowed = guild.owner === true;
+    let denyReason = 'keine Staff-Rolle';
+    if (!allowed) {
+      const member = await fetchGuildMember(user.id);
+      if (member) {
+        const settings = await settingsService.getAll();
+        const roles = await fetchGuildRoles();
+        allowed = isStaff(member.roles || [], roles, settings);
+      } else {
+        denyReason = 'Member-Check nicht möglich (Bot nicht im Server?)';
+      }
+    }
+    if (!allowed) {
+      await auditService.log(`${user.username} (${user.id})`, 'login.denied', { reason: denyReason });
       return res.redirect('/dashboard/login?error=norole');
     }
     const tag = user.global_name || user.username;

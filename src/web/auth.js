@@ -8,7 +8,7 @@ const LOGIN_ERRORS = {
   state: 'Ungültige Anmeldung. Bitte erneut versuchen.',
   oauth: 'Anmeldung fehlgeschlagen. Bitte erneut versuchen.',
   notmember: 'Du bist kein Mitglied des Discord-Servers.',
-  norole: 'Du hast keine Berechtigung für das Dashboard (Staff/Admin).',
+  norole: 'Du hast keine Berechtigung für das Dashboard (nur Server-Owner, Staff und Admin).',
 };
 
 function csrfToken(req) {
