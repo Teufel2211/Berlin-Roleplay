@@ -1,0 +1,22 @@
+<%- include('partials/head', { title, user, csrf }) %>
+<% if (locals.dbError) { %><div class="alert error"><%= dbError %></div><% } %>
+<% if (!ticket) { %>
+  <p class="hint">Ticket nicht gefunden.</p>
+<% } else { %>
+<h1>Ticket #<%= ticket.id %></h1>
+<table>
+  <tbody>
+    <tr><td>Status</td><td><%= ticket.status %></td></tr>
+    <tr><td>Owner</td><td><%= ticket.owner_id %></td></tr>
+    <tr><td>Grund</td><td><%= ticket.close_reason || '—' %></td></tr>
+    <tr><td>Geschlossen von</td><td><%= ticket.closed_by || '—' %></td></tr>
+    <tr><td>Erstellt</td><td><%= new Date(ticket.created_at).toLocaleString('de-DE') %></td></tr>
+  </tbody>
+</table>
+<h2>Transkript</h2>
+<% if (!transcript) { %><p class="hint">Kein Transkript gespeichert.</p><% } else { %>
+<pre class="transcript"><%= transcript %></pre>
+<% } %>
+<% } %>
+<p><a href="/dashboard/tickets">← Zurück zu Tickets</a></p>
+<%- include('partials/foot') %>

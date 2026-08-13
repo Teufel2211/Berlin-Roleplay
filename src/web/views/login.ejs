@@ -1,0 +1,16 @@
+<%- include('partials/head', { title, user, csrf }) %>
+<section class="login-box">
+  <h1>Login</h1>
+  <% if (locals.error) { %><div class="alert error"><%= error %></div><% } %>
+  <form method="post" action="/dashboard/login">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <label>Benutzername
+      <input type="text" name="username" required autofocus>
+    </label>
+    <label>Passwort
+      <input type="password" name="password" required>
+    </label>
+    <button type="submit" class="primary">Anmelden</button>
+  </form>
+</section>
+<%- include('partials/foot') %>

@@ -1,0 +1,26 @@
+<%- include('partials/head', { title, user, csrf }) %>
+<h1>Einstellungen</h1>
+<p class="hint">Alle Änderungen werden sofort wirksam und im Audit-Log protokolliert. Kanal-IDs findest du in Discord mit aktiviertem Entwicklermodus (Rechtsklick → Kanal-ID kopieren).</p>
+<form method="post" action="/dashboard/settings">
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+  <% groups.forEach((g) => { %>
+  <h2><%= g.group %></h2>
+  <div class="setting-group">
+    <% g.fields.forEach((f) => { %>
+    <label class="setting-row">
+      <span><%= f.label %></span>
+      <% if (f.boolean) { %>
+        <input type="hidden" name="settings[<%= f.key %>]" value="false">
+        <input type="checkbox" name="settings[<%= f.key %>]" value="true" <%= f.value === 'true' ? 'checked' : '' %>>
+      <% } else if (f.key === 'application_questions') { %>
+        <textarea name="settings[<%= f.key %>]" rows="4"><%= f.value %></textarea>
+      <% } else { %>
+        <input type="text" name="settings[<%= f.key %>]" value="<%= f.value %>">
+      <% } %>
+    </label>
+    <% }) %>
+  </div>
+  <% }) %>
+  <button type="submit" class="primary">Speichern</button>
+</form>
+<%- include('partials/foot') %>

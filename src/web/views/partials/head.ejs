@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %> — Notruf Hamburg Dashboard</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">🏥 Notruf Hamburg</div>
+  <% if (locals.user) { %>
+  <nav>
+    <a href="/dashboard">Übersicht</a>
+    <a href="/dashboard/settings">Einstellungen</a>
+    <a href="/dashboard/verification">Verifizierung</a>
+    <a href="/dashboard/tickets">Tickets</a>
+    <a href="/dashboard/applications">Bewerbungen</a>
+    <a href="/dashboard/audit">Audit-Log</a>
+    <form method="post" action="/dashboard/logout" class="inline">
+      <input type="hidden" name="_csrf" value="<%= locals.csrf %>">
+      <button class="link-btn">Logout</button>
+    </form>
+  </nav>
+  <% } %>
+</header>
+<main>

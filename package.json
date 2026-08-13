@@ -1,0 +1,32 @@
+{
+  "name": "notruf-hamburg-bot",
+  "version": "1.0.0",
+  "description": "Discord-Bot + Website-Dashboard für die Community Notruf Hamburg",
+  "main": "src/index.js",
+  "private": true,
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node src/index.js",
+    "migrate": "node scripts/migrate.js",
+    "setup": "node scripts/setup.js",
+    "deploy": "node scripts/deploy.js",
+    "lint": "node scripts/lint.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.6",
+    "discord.js": "^14.15.3",
+    "dotenv": "^16.4.5",
+    "ejs": "^3.1.10",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.4.0",
+    "express-session": "^1.18.0",
+    "helmet": "^7.1.0",
+    "pg": "^8.12.0",
+    "winston": "^3.14.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

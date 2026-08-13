@@ -1,0 +1,21 @@
+<%- include('partials/head', { title, user, csrf }) %>
+<h1>Tickets</h1>
+<% if (locals.dbError) { %><div class="alert error"><%= dbError %></div><% } %>
+<% if (tickets.length === 0) { %><p class="hint">Noch keine Tickets.</p><% } %>
+<table>
+  <thead><tr><th>ID</th><th>Status</th><th>Owner</th><th>Zuständig</th><th>Grund</th><th>Erstellt</th><th>Transkript</th></tr></thead>
+  <tbody>
+    <% tickets.forEach((t) => { %>
+    <tr>
+      <td><%= t.id %></td>
+      <td><%= t.status %></td>
+      <td><%= t.owner_id %></td>
+      <td><%= t.claimed_by ? `<@${t.claimed_by}>` : '—' %></td>
+      <td><%= t.close_reason || '—' %></td>
+      <td class="nowrap"><%= new Date(t.created_at).toLocaleString('de-DE') %></td>
+      <td><% if (t.status === 'geschlossen') { %><a href="/dashboard/tickets/<%= t.id %>">Ansehen</a><% } else { %>—<% } %></td>
+    </tr>
+    <% }) %>
+  </tbody>
+</table>
+<%- include('partials/foot') %>

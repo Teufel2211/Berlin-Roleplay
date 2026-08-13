@@ -1,0 +1,20 @@
+<%- include('partials/head', { title, user, csrf }) %>
+<% if (locals.dbError) { %><div class="alert error"><%= dbError %></div><% } %>
+<h1>Dashboard</h1>
+<div class="stats">
+  <div class="card"><div class="value"><%= stats.tickets %></div><div class="label">Offene Tickets</div><a class="card-link" href="/dashboard/tickets">Ansehen</a></div>
+  <div class="card"><div class="value"><%= stats.applications %></div><div class="label">Offene Bewerbungen</div><a class="card-link" href="/dashboard/applications">Ansehen</a></div>
+  <div class="card"><div class="value"><%= stats.giveaways %></div><div class="label">Laufende Giveaways</div></div>
+  <div class="card"><div class="value"><%= stats.currentNumber %></div><div class="label">Zählerstand</div></div>
+  <div class="card"><div class="value"><%= stats.streak %></div><div class="label">Aktuelle Serie</div></div>
+  <div class="card"><div class="value <%= botOnline ? 'ok' : 'off' %>"><%= botOnline ? 'Online' : 'Offline' %></div><div class="label">Bot-Status</div></div>
+</div>
+<h2>Verwaltung</h2>
+<ul class="menu-list">
+  <li><a href="/dashboard/settings">Einstellungen</a><span>Rollen, Kanäle und Modul-Optionen</span></li>
+  <li><a href="/dashboard/verification">Verifizierung</a><span>Verifizierte Mitglieder und Status</span></li>
+  <li><a href="/dashboard/tickets">Tickets</a><span>Offene und geschlossene Tickets</span></li>
+  <li><a href="/dashboard/applications">Bewerbungen</a><span>Einreichungen und Auswertung</span></li>
+  <li><a href="/dashboard/audit">Audit-Log</a><span>Letzte 200 sicherheitsrelevante Aktionen</span></li>
+</ul>
+<%- include('partials/foot') %>

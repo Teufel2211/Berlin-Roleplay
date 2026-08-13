@@ -1,0 +1,16 @@
+node_modules/
+.env
+.env.local
+data/
+logs/
+supabase/.temp/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# npm
+npm-debug.log*
+package-lock.json.timestamp

@@ -1,0 +1,17 @@
+<%- include('partials/head', { title, user, csrf }) %>
+<h1>Verifizierung</h1>
+<% if (locals.dbError) { %><div class="alert error"><%= dbError %></div><% } %>
+<% if (users.length === 0) { %><p class="hint">Noch keine verifizierten Mitglieder.</p><% } %>
+<table>
+  <thead><tr><th>Mitglied</th><th>Verifiziert am</th><th>Status</th></tr></thead>
+  <tbody>
+    <% users.forEach((u) => { %>
+    <tr>
+      <td><%= u.username %> <span class="dim"><%= u.discord_id %></span></td>
+      <td class="nowrap"><%= u.verified_at ? new Date(u.verified_at).toLocaleString('de-DE') : '—' %></td>
+      <td><%= u.left_at ? 'Server verlassen' : 'Verifiziert' %></td>
+    </tr>
+    <% }) %>
+  </tbody>
+</table>
+<%- include('partials/foot') %>
