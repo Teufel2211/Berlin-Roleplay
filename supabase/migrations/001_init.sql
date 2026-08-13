@@ -105,6 +105,19 @@ create table if not exists public.eghr_settings (
   updated_at timestamptz default now()
 );
 
+-- RLS aktivieren (Service-Role-Key umgeht RLS; keine Policies -> anon/authenticated haben keinen Zugriff)
+alter table public.eghr_warteraum enable row level security;
+alter table public.eghr_users enable row level security;
+alter table public.eghr_giveaways enable row level security;
+alter table public.eghr_giveaway_participants enable row level security;
+alter table public.eghr_counting_stats enable row level security;
+alter table public.eghr_counting_state enable row level security;
+alter table public.eghr_applications enable row level security;
+alter table public.eghr_tickets enable row level security;
+alter table public.eghr_ticket_transcripts enable row level security;
+alter table public.eghr_audit_log enable row level security;
+alter table public.eghr_settings enable row level security;
+
 -- Default-Einstellungen
 insert into public.eghr_settings (key, value) values
   ('staff_role', 'Staff'),

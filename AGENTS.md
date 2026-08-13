@@ -6,7 +6,7 @@ Guidance for AI agents working on this repository: **Notruf Hamburg** – Discor
 
 # Overview
 
-One Node.js process (`discord.js` v14, CommonJS) runs both the Discord bot and an Express/EJS web dashboard on one port. Data lives in Supabase (`hfreshlzwukfaeyveddv`); all tables use the `eghr_` prefix. RLS is intentionally disabled.
+One Node.js process (`discord.js` v14, CommonJS) runs both the Discord bot and an Express/EJS web dashboard on one port. Data lives in Supabase (`hfreshlzwukfaeyveddv`); all tables use the `eghr_` prefix. RLS is enabled on all tables; no policies are defined, so only the service role key (used by the bot) can access them.
 
 ---
 
@@ -50,7 +50,7 @@ npm start         # Starts bot + dashboard (reads .env)
 - Roles are configurable via settings keys (`staff_role`, `admin_role`, `warteraum_role`, ...); Staff = moderator, Admin = admin.
 - All tables/queries use the `eghr_` prefix (defined once in `src/supabase.js`).
 - `MASTERPROMPT.md` is the behavioral source of truth. If spec and code diverge, ask before changing either.
-- No RLS on Supabase tables by design (per spec).
+- RLS is enabled on all Supabase tables (no policies). The bot uses the service role key, which bypasses RLS; anon/authenticated clients get no access.
 - No code comments unless asked; follow existing style (CommonJS, `require`/`module.exports`).
 
 ---
