@@ -91,3 +91,9 @@ Setup order: fill `.env` → `npm run migrate` → `npm run deploy` → `npm sta
 - Supabase project: `hfreshlzwukfaeyveddv` (https://hfreshlzwukfaeyveddv.supabase.co).
 - The service role key / DB password are NOT retrievable via MCP tools; user must provide them.
 - MASTERPROMPT.md was cleaned of Roblox/webhook content; that cleanup must not be reverted.
+
+---
+
+# Reporting (user request)
+
+After **every** change to the bot or dashboard code, always tell the user briefly what was changed last (commit hash, files, and what it does). Do this even if the change seems trivial.
