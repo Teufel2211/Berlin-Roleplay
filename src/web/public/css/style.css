@@ -48,6 +48,14 @@ body {
 
 nav { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
 
+.topbar-right {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
 nav a {
   color: var(--text);
   text-decoration: none;
