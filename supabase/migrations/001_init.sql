@@ -113,6 +113,18 @@ create table if not exists public.eghr_sessions (
 
 create index if not exists eghr_sessions_expire_idx on public.eghr_sessions (expire);
 
+create table if not exists public.eghr_admin_codes (
+  id uuid primary key default gen_random_uuid(),
+  code text not null,
+  user_id text not null,
+  used boolean not null default false,
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null
+);
+
+create index if not exists eghr_admin_codes_user_idx on public.eghr_admin_codes (user_id);
+create index if not exists eghr_admin_codes_expires_idx on public.eghr_admin_codes (expires_at);
+
 -- RLS aktivieren (Service-Role-Key umgeht RLS; keine Policies -> anon/authenticated haben keinen Zugriff)
 alter table public.eghr_warteraum enable row level security;
 alter table public.eghr_users enable row level security;
@@ -126,6 +138,7 @@ alter table public.eghr_ticket_transcripts enable row level security;
 alter table public.eghr_audit_log enable row level security;
 alter table public.eghr_settings enable row level security;
 alter table public.eghr_sessions enable row level security;
+alter table public.eghr_admin_codes enable row level security;
 
 -- Default-Einstellungen
 insert into public.eghr_settings (key, value) values

@@ -38,6 +38,7 @@ const config = {
   discordToken: process.env.DISCORD_TOKEN || '',
   clientId: process.env.CLIENT_ID || '',
   guildId: process.env.GUILD_ID || '',
+  ownerUserId: process.env.OWNER_USER_ID || '1370372526001356972',
   discordClientSecret: process.env.DISCORD_CLIENT_SECRET || '',
   supabaseUrl: process.env.SUPABASE_URL || '',
   supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '',

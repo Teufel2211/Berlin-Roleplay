@@ -1,18 +1,23 @@
 <%- include('partials/head', { title, user, csrf }) %>
 <% if (locals.locked) { %>
-<div class="login-box">
-  <h2>Einstellungen gesperrt</h2>
-  <p class="muted">Gib den Admin-Code ein, um die Server-Einstellungen zu öffnen.</p>
-  <% if (locals.codeError) { %><p class="alert error">Falscher Code.</p><% } %>
+<div class="code-box">
+  <h2>Mit Code einloggen</h2>
+  <p class="muted">Ein einmaliger Code wurde dir als Discord-Nachricht geschickt (10 Min. gültig, nur 1× verwendbar).</p>
+  <% if (locals.codeSent === false) { %><p class="alert error">Der Code konnte nicht gesendet werden (Bot offline oder keine DM möglich).</p><% } %>
+  <% if (locals.codeError) { %><p class="alert error">Code ungültig, abgelaufen oder bereits benutzt.</p><% } %>
   <form method="post" action="/dashboard/settings/unlock">
     <input type="hidden" name="_csrf" value="<%= csrf %>">
-    <label>Admin-Code<input type="password" name="code" required autofocus></label>
+    <input type="password" name="code" inputmode="numeric" maxlength="6" pattern="[0-9]*" required autofocus placeholder="·······">
     <button type="submit" class="primary">Freischalten</button>
+  </form>
+  <form method="post" action="/dashboard/settings/code" class="inline">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <button type="submit" class="btn-secondary">Neuen Code anfordern</button>
   </form>
 </div>
 <% } else { %>
 <h1>Einstellungen</h1>
-<p class="hint">Rollen und Kanäle wählst du direkt aus einer Liste aus (live aus Discord geladen). Fehlt die Liste (z. B. Bot nicht im Server), bleiben die Felder Freitext. Alle Änderungen werden sofort wirksam und im Audit-Log protokolliert.</p>
+<p class="hint">Rollen und Kanäle wählst du direkt aus einer Liste aus (live aus Discord geladen). Unter „Sicherheit" kannst du den Admin-Schutz einschalten (Code eintragen + speichern): Danach ist die Seite gesperrt und du erhältst bei jedem Aufruf einen einmaligen Code per Discord-Nachricht.</p>
 <form method="post" action="/dashboard/settings">
   <input type="hidden" name="_csrf" value="<%= csrf %>">
   <% groups.forEach((g) => { %>

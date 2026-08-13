@@ -15,6 +15,9 @@ const webSettings = require('./settings');
 const webAudit = require('./audit');
 const SupabaseSessionStore = require('./sessionStore');
 const discordApi = require('./discordApi');
+const { generateAdminCode, verifyAdminCode } = require('./adminCode');
+
+const settingsLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 20 });
 
 const CHANNEL_KEYS = [
   'verify_channel_id', 'verify_log_channel_id', 'counting_channel_id', 'counting_milestone_channel_id',
@@ -36,7 +39,7 @@ const SETTING_GROUPS = [
 ];
 
 const LABELS = {
-  admin_code: 'Admin-Code (leer = freigeschaltet)',
+  admin_code: 'Admin-Schutz (leer = aus)',
   staff_role: 'Staff-Rolle',
   admin_role: 'Admin-Rolle',
   verified_role: 'Verifizierte Rolle',
@@ -154,11 +157,21 @@ function createApp() {
     const all = await settingsService.getAll().catch(() => ({}));
     const locked = Boolean(all.admin_code) && req.session.settingsUnlocked !== true;
     if (locked) {
+      let codeSent = true;
+      if (req.query.code !== 'sent') {
+        try {
+          await generateAdminCode();
+        } catch (err) {
+          codeSent = false;
+          logger.warn(`Admin-Code konnte nicht generiert/gesendet werden: ${err.message}`);
+        }
+      }
       return res.render('settings', {
         title: 'Einstellungen',
         user: req.session.user,
         csrf: auth.csrfToken(req),
         locked: true,
+        codeSent,
         codeError: req.query.error === 'code',
       });
     }
@@ -181,14 +194,22 @@ function createApp() {
     }));
     res.render('settings', { title: 'Einstellungen', user: req.session.user, csrf: auth.csrfToken(req), groups, channelOptions, roleOptions });
   });
-  app.post('/dashboard/settings/unlock', auth.csrfCheck, async (req, res) => {
-    const all = await settingsService.getAll().catch(() => ({}));
-    if (all.admin_code && req.body.code === all.admin_code) {
+  app.post('/dashboard/settings/unlock', settingsLimiter, auth.csrfCheck, async (req, res) => {
+    const result = await verifyAdminCode(req.body && req.body.code);
+    if (result.ok) {
       req.session.settingsUnlocked = true;
       res.redirect('/dashboard/settings');
     } else {
       res.redirect('/dashboard/settings?error=code');
     }
+  });
+  app.post('/dashboard/settings/code', settingsLimiter, auth.csrfCheck, async (req, res) => {
+    try {
+      await generateAdminCode();
+    } catch (err) {
+      logger.warn(`Admin-Code-Resend fehlgeschlagen: ${err.message}`);
+    }
+    res.redirect('/dashboard/settings?code=sent');
   });
   app.post('/dashboard/settings', async (req, res) => {
     const all = await settingsService.getAll().catch(() => ({}));

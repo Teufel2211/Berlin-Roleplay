@@ -37,4 +37,20 @@ async function fetchRoles() {
     .map((r) => ({ id: r.id, name: r.name }));
 }
 
-module.exports = { fetchChannels, fetchRoles };
+async function sendDirectMessage(userId, content) {
+  const dm = await fetch(`${OAUTH_BASE}/users/${userId}/channels`, {
+    method: 'POST',
+    headers: { Authorization: `Bot ${config.discordToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ recipient_id: userId }),
+  });
+  if (!dm.ok) throw new Error(`DM-Kanal fehlgeschlagen (${dm.status})`);
+  const { id } = await dm.json();
+  const msg = await fetch(`${OAUTH_BASE}/channels/${id}/messages`, {
+    method: 'POST',
+    headers: { Authorization: `Bot ${config.discordToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content }),
+  });
+  if (!msg.ok) throw new Error(`DM-Sendung fehlgeschlagen (${msg.status})`);
+}
+
+module.exports = { fetchChannels, fetchRoles, sendDirectMessage };
