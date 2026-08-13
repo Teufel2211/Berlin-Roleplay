@@ -43,7 +43,7 @@ const config = {
   supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
   supabaseDbUrl: process.env.SUPABASE_DB_URL || '',
   webPort: parseInt(process.env.WEB_PORT || '3000', 10),
-  webUrl: process.env.WEB_URL || 'http://localhost:3000',
+  webUrl: (process.env.WEB_URL || 'http://localhost:3000').replace(/\/+$/, ''),
   dashboardUser: process.env.DASHBOARD_USER || 'admin',
   dashboardPasswordHash: process.env.DASHBOARD_PASSWORD_HASH || '',
   sessionSecret: process.env.SESSION_SECRET || 'notruf-hamburg-dev-secret',
