@@ -20,14 +20,17 @@ function csrfToken(req) {
 
 function csrfCheck(req, res, next) {
   const token = (req.body && req.body._csrf) || req.headers['x-csrf-token'];
-  let originOk = true;
-  if (req.headers.origin) originOk = req.headers.origin === config.webUrl;
-  let hostOk = true;
-  try {
-    const allowedHost = new URL(config.webUrl).host;
-    hostOk = !req.headers.host || req.headers.host === allowedHost;
-  } catch (err) { hostOk = true; }
-  if (!req.session || !token || token !== req.session.csrf || !originOk || !hostOk) {
+  let sameOrigin = true;
+  if (req.headers.origin) {
+    try {
+      const proto = req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http');
+      const o = new URL(req.headers.origin);
+      sameOrigin = o.host === req.headers.host && o.protocol === proto + ':';
+    } catch (err) {
+      sameOrigin = false;
+    }
+  }
+  if (!req.session || !token || token !== req.session.csrf || !sameOrigin) {
     logger.warn(`CSRF-Ablehnung von ${req.ip}`);
     return res.status(403).render('error', { title: 'Fehler', user: null, csrf: csrfToken(req), message: 'Ungültige Anfrage (CSRF-Schutz)' });
   }
