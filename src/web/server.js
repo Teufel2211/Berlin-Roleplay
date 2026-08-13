@@ -117,6 +117,16 @@ function createApp() {
 
   app.use('/dashboard', auth.requireAuth);
 
+  app.use('/dashboard', async (req, res, next) => {
+    try {
+      const adminCode = await settingsService.get('admin_code');
+      res.locals.settingsLocked = Boolean(adminCode) && req.session.settingsUnlocked !== true;
+    } catch (err) {
+      res.locals.settingsLocked = false;
+    }
+    next();
+  });
+
   app.get('/dashboard', async (req, res) => {
     try {
       const [tickets, apps, giveaways] = await Promise.all([

@@ -80,6 +80,29 @@ nav a:hover { background: var(--panel-2); color: var(--accent); }
 
 .settings-btn:hover { background: var(--accent-dark); color: #fff !important; }
 
+.code-widget {
+  background: var(--panel);
+  border: 2px solid #d4af37;
+  border-radius: 8px;
+  padding: 10px 14px;
+  box-shadow: 0 0 12px rgba(212, 175, 55, 0.2);
+  text-align: center;
+}
+
+.code-widget strong { color: #d4af37; display: block; margin-bottom: 8px; font-size: 0.9rem; }
+
+.code-widget input[type='password'] {
+  width: 130px;
+  text-align: center;
+  letter-spacing: 3px;
+  padding: 6px;
+  font-size: 1rem;
+  min-width: 0;
+}
+
+.code-widget button.primary { padding: 6px 14px; margin-top: 8px; font-size: 0.85rem; }
+.code-widget .btn-secondary { padding: 4px 10px; margin-top: 6px; font-size: 0.8rem; }
+
 .inline { display: inline; }
 
 .link-btn {

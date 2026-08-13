@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const { config } = require('../config');
 const logger = require('../logger');
+const settingsService = require('../services/settingsService');
 const { discordAuthStart, discordAuthCallback } = require('./discordAuth');
 
 const LOGIN_ERRORS = {
@@ -43,12 +44,17 @@ function requireAuthApi(req, res, next) {
   return res.status(401).json({ error: 'Nicht angemeldet' });
 }
 
-function loginPage(req, res) {
+async function loginPage(req, res) {
+  let settingsLocked = false;
+  try {
+    settingsLocked = Boolean(await settingsService.get('admin_code'));
+  } catch (err) { /* keine Settings verfügbar */ }
   res.render('login', {
     title: 'Login',
     user: null,
     error: LOGIN_ERRORS[req.query.error] || null,
     csrf: csrfToken(req),
+    settingsLocked,
   });
 }
 
