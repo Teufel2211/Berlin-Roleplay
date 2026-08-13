@@ -58,6 +58,18 @@ nav a {
 
 nav a:hover { background: var(--panel-2); color: var(--accent); }
 
+.settings-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--accent);
+  color: #fff !important;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.settings-btn:hover { background: var(--accent-dark); color: #fff !important; }
+
 .inline { display: inline; }
 
 .link-btn {
