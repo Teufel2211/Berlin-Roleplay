@@ -14,6 +14,15 @@ const auth = require('./auth');
 const webSettings = require('./settings');
 const webAudit = require('./audit');
 const SupabaseSessionStore = require('./sessionStore');
+const discordApi = require('./discordApi');
+
+const CHANNEL_KEYS = [
+  'verify_channel_id', 'verify_log_channel_id', 'counting_channel_id', 'counting_milestone_channel_id',
+  'ticket_category_id', 'ticket_panel_channel_id', 'ticket_log_channel_id', 'application_category_id',
+  'giveaway_channel_id', 'giveaway_announce_channel_id', 'warteraum_voice_channel_id', 'warteraum_target_channel_id',
+];
+
+const ROLE_KEYS = ['staff_role', 'admin_role', 'verified_role', 'warteraum_role', 'giveaway_required_role'];
 
 const SETTING_GROUPS = [
   { group: 'Rollen', keys: ['staff_role', 'admin_role', 'verified_role'] },
@@ -140,6 +149,13 @@ function createApp() {
   });
 
   app.get('/dashboard/settings', async (req, res) => {
+    let channelOptions = null;
+    let roleOptions = null;
+    try {
+      [channelOptions, roleOptions] = await Promise.all([discordApi.fetchChannels(), discordApi.fetchRoles()]);
+    } catch (err) {
+      logger.warn(`Discord-Optionen für Einstellungen nicht verfügbar: ${err.message}`);
+    }
     const all = await settingsService.getAll().catch(() => ({}));
     const groups = SETTING_GROUPS.map((g) => ({
       group: g.group,
@@ -148,9 +164,10 @@ function createApp() {
         label: LABELS[key] || key,
         value: all[key] || '',
         boolean: isBooleanValue(key, all[key]),
+        type: CHANNEL_KEYS.includes(key) ? 'channel' : ROLE_KEYS.includes(key) ? 'role' : 'text',
       })),
     }));
-    res.render('settings', { title: 'Einstellungen', user: req.session.user, csrf: auth.csrfToken(req), groups });
+    res.render('settings', { title: 'Einstellungen', user: req.session.user, csrf: auth.csrfToken(req), groups, channelOptions, roleOptions });
   });
   app.post('/dashboard/settings', webSettings.saveForm);
 

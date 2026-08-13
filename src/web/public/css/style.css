@@ -166,7 +166,7 @@ code { background: var(--panel-2); padding: 2px 6px; border-radius: 4px; font-si
 .setting-row:last-child { border-bottom: none; }
 .setting-row span { font-size: 0.9rem; }
 
-input[type='text'], input[type='password'], textarea {
+input[type='text'], input[type='password'], select, textarea {
   background: var(--panel-2);
   border: 1px solid var(--border);
   color: var(--text);

@@ -1,6 +1,6 @@
 <%- include('partials/head', { title, user, csrf }) %>
 <h1>Einstellungen</h1>
-<p class="hint">Alle Änderungen werden sofort wirksam und im Audit-Log protokolliert. Kanal-IDs findest du in Discord mit aktiviertem Entwicklermodus (Rechtsklick → Kanal-ID kopieren).</p>
+<p class="hint">Rollen und Kanäle wählst du direkt aus einer Liste aus (live aus Discord geladen). Fehlt die Liste (z. B. Bot nicht im Server), bleiben die Felder Freitext. Alle Änderungen werden sofort wirksam und im Audit-Log protokolliert.</p>
 <form method="post" action="/dashboard/settings">
   <input type="hidden" name="_csrf" value="<%= csrf %>">
   <% groups.forEach((g) => { %>
@@ -14,6 +14,20 @@
         <input type="checkbox" name="settings[<%= f.key %>]" value="true" <%= f.value === 'true' ? 'checked' : '' %>>
       <% } else if (f.key === 'application_questions') { %>
         <textarea name="settings[<%= f.key %>]" rows="4"><%= f.value %></textarea>
+      <% } else if (f.type === 'channel' && locals.channelOptions) { %>
+        <select name="settings[<%= f.key %>]">
+          <option value="">— nicht gesetzt —</option>
+          <% channelOptions.forEach((o) => { %>
+          <option value="<%= o.id %>" <%= f.value === o.id ? 'selected' : '' %>><%= o.label %></option>
+          <% }) %>
+        </select>
+      <% } else if (f.type === 'role' && locals.roleOptions) { %>
+        <select name="settings[<%= f.key %>]">
+          <option value="">— nicht gesetzt —</option>
+          <% roleOptions.forEach((o) => { %>
+          <option value="<%= o.name %>" <%= f.value === o.name ? 'selected' : '' %>><%= o.name %></option>
+          <% }) %>
+        </select>
       <% } else { %>
         <input type="text" name="settings[<%= f.key %>]" value="<%= f.value %>">
       <% } %>
