@@ -1,13 +1,34 @@
-const crypto = require('crypto');
+﻿const crypto = require('crypto');
 const { config } = require('../config');
 const settingsService = require('../services/settingsService');
 const auditService = require('../services/auditService');
 const logger = require('../logger');
 
 const OAUTH_BASE = 'https://discord.com/api';
+const STATE_COOKIE = 'oauth_state';
 
 function redirectUri() {
   return new URL('/dashboard/auth/discord/callback', config.webUrl).href;
+}
+
+function cookieOptions() {
+  return {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: config.webUrl.startsWith('https://'),
+    signed: true,
+    maxAge: 10 * 60 * 1000,
+  };
+}
+
+function clearCookieOptions() {
+  return {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: config.webUrl.startsWith('https://'),
+    signed: true,
+    path: '/',
+  };
 }
 
 function authorizeUrl(state) {
@@ -78,18 +99,23 @@ function discordAuthStart(req, res) {
     return res.status(500).render('error', { title: 'Fehler', user: null, message: 'Discord-OAuth2 ist nicht konfiguriert (DISCORD_CLIENT_SECRET fehlt).' });
   }
   const state = crypto.randomBytes(24).toString('hex');
-  req.session.oauthState = state;
+  res.cookie(STATE_COOKIE, state, cookieOptions());
   res.redirect(authorizeUrl(state));
 }
 
 async function discordAuthCallback(req, res) {
   const { code, state, error } = req.query;
-  if (error) return res.redirect('/dashboard/login?error=denied');
-  if (!code || !state || !req.session.oauthState || state !== req.session.oauthState) {
+  const cookieState = req.signedCookies && req.signedCookies[STATE_COOKIE];
+  if (error) {
+    res.clearCookie(STATE_COOKIE, clearCookieOptions());
+    return res.redirect('/dashboard/login?error=denied');
+  }
+  if (!code || !state || !cookieState || state !== cookieState) {
     logger.warn(`OAuth-State-Mismatch von ${req.ip}`);
+    res.clearCookie(STATE_COOKIE, clearCookieOptions());
     return res.redirect('/dashboard/login?error=state');
   }
-  delete req.session.oauthState;
+  res.clearCookie(STATE_COOKIE, clearCookieOptions());
   try {
     const token = await exchangeCode(code);
     const user = await fetchDiscordUser(token.access_token);
@@ -119,3 +145,4 @@ async function discordAuthCallback(req, res) {
 }
 
 module.exports = { discordAuthStart, discordAuthCallback };
+
