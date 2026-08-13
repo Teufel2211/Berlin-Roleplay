@@ -31,7 +31,20 @@ body {
   border-bottom: 2px solid var(--accent);
 }
 
-.brand { font-weight: 700; font-size: 1.2rem; letter-spacing: 0.5px; }
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 1.2rem;
+  letter-spacing: 0.5px;
+}
+
+.brand-logo {
+  height: 34px;
+  width: auto;
+  border-radius: 6px;
+}
 
 nav { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
 
@@ -193,6 +206,27 @@ button.primary:hover { background: var(--accent-dark); }
 
 .login-box label { display: block; margin-bottom: 14px; font-size: 0.9rem; color: var(--dim); }
 .login-box input { display: block; width: 100%; margin-top: 6px; }
+
+.login-box .muted { color: var(--dim); font-size: 0.9rem; margin: 0 0 18px; }
+
+.discord-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  background: #5865f2;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 12px 20px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.discord-btn:hover { background: #4752c4; }
 
 .app-card {
   background: var(--panel);

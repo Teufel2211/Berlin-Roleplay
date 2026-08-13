@@ -1,22 +1,15 @@
 const crypto = require('crypto');
-const bcrypt = require('bcryptjs');
 const { config } = require('../config');
-const auditService = require('../services/auditService');
 const logger = require('../logger');
+const { discordAuthStart, discordAuthCallback } = require('./discordAuth');
 
-const attempts = new Map();
-const MAX_ATTEMPTS = 5;
-const WINDOW_MS = 15 * 60 * 1000;
-
-function getState(ip) {
-  if (!attempts.has(ip)) attempts.set(ip, { count: 0, until: 0 });
-  const s = attempts.get(ip);
-  if (s.until && Date.now() >= s.until) {
-    attempts.set(ip, { count: 0, until: 0 });
-    return attempts.get(ip);
-  }
-  return s;
-}
+const LOGIN_ERRORS = {
+  denied: 'Die Anmeldung wurde abgebrochen.',
+  state: 'Ungültige Anmeldung. Bitte erneut versuchen.',
+  oauth: 'Anmeldung fehlgeschlagen. Bitte erneut versuchen.',
+  notmember: 'Du bist kein Mitglied des Discord-Servers.',
+  norole: 'Du hast keine Berechtigung für das Dashboard (Staff/Admin).',
+};
 
 function csrfToken(req) {
   if (!req.session.csrf) req.session.csrf = crypto.randomBytes(32).toString('hex');
@@ -51,43 +44,11 @@ function requireAuthApi(req, res, next) {
 }
 
 function loginPage(req, res) {
-  const state = getState(req.ip);
-  let error = null;
-  if (state.until && Date.now() < state.until) {
-    error = `Zu viele Fehlversuche. Bitte warte ${Math.ceil((state.until - Date.now()) / 60000)} Minute(n).`;
-  } else if (req.query.error) {
-    error = 'Falscher Benutzername oder falsches Passwort.';
-  }
-  res.render('login', { title: 'Login', user: null, error, csrf: csrfToken(req) });
-}
-
-async function login(req, res) {
-  const state = getState(req.ip);
-  if (state.until && Date.now() < state.until) {
-    return res.redirect('/dashboard/login?lockout=1');
-  }
-  const { username, password } = req.body || {};
-  let ok = false;
-  if (username === config.dashboardUser && config.dashboardPasswordHash && password) {
-    try {
-      ok = await bcrypt.compare(String(password), config.dashboardPasswordHash);
-    } catch (err) {
-      logger.error(`bcrypt-Vergleich fehlgeschlagen: ${err.message}`);
-    }
-  }
-  if (!ok) {
-    state.count += 1;
-    if (state.count >= MAX_ATTEMPTS) state.until = Date.now() + WINDOW_MS;
-    await auditService.log(`IP ${req.ip}`, 'login.fail', { username });
-    return res.redirect('/dashboard/login?error=1');
-  }
-  attempts.delete(req.ip);
-  await auditService.log(username, 'login.success', {});
-  req.session.regenerate((err) => {
-    if (err) logger.error(`Session-Regeneration fehlgeschlagen: ${err.message}`);
-    req.session.user = username;
-    req.session.csrf = crypto.randomBytes(32).toString('hex');
-    res.redirect('/dashboard');
+  res.render('login', {
+    title: 'Login',
+    user: null,
+    error: LOGIN_ERRORS[req.query.error] || null,
+    csrf: csrfToken(req),
   });
 }
 
@@ -95,4 +56,13 @@ function logout(req, res) {
   req.session.destroy(() => res.redirect('/dashboard/login'));
 }
 
-module.exports = { csrfToken, csrfCheck, requireAuth, requireAuthApi, loginPage, login, logout };
+module.exports = {
+  csrfToken,
+  csrfCheck,
+  requireAuth,
+  requireAuthApi,
+  loginPage,
+  logout,
+  discordAuthStart,
+  discordAuthCallback,
+};

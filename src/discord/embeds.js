@@ -11,7 +11,7 @@ const COLORS = {
 
 function decorate(embed, guild) {
   if (guild) {
-    embed.setFooter({ text: `🏥 Notruf Hamburg • ${guild.name}` });
+    embed.setFooter({ text: `Emergency Hamburg Roleplay • ${guild.name}` });
   }
   embed.setTimestamp(new Date());
   return embed;

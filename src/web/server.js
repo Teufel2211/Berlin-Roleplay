@@ -94,7 +94,8 @@ function createApp() {
   );
 
   app.get('/dashboard/login', auth.loginPage);
-  app.post('/dashboard/login', auth.csrfCheck, auth.login);
+  app.get('/dashboard/auth/discord', auth.discordAuthStart);
+  app.get('/dashboard/auth/discord/callback', auth.discordAuthCallback);
   app.post('/dashboard/logout', auth.csrfCheck, auth.logout);
 
   app.use('/dashboard', auth.requireAuth);
