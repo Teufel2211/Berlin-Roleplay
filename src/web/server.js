@@ -13,6 +13,7 @@ const countingService = require('../services/countingService');
 const auth = require('./auth');
 const webSettings = require('./settings');
 const webAudit = require('./audit');
+const SupabaseSessionStore = require('./sessionStore');
 
 const SETTING_GROUPS = [
   { group: 'Rollen', keys: ['staff_role', 'admin_role', 'verified_role'] },
@@ -69,13 +70,14 @@ function createApp() {
   app.use(cookieParser(config.sessionSecret));
   app.use(
     session({
+      store: new SupabaseSessionStore(),
       secret: config.sessionSecret,
       resave: false,
       saveUninitialized: false,
       rolling: true,
       cookie: {
         httpOnly: true,
-        sameSite: 'strict',
+        sameSite: 'lax',
         secure: config.webUrl.startsWith('https://'),
         maxAge: 24 * 60 * 60 * 1000,
       },

@@ -16,6 +16,7 @@ const TABLES = {
   ticketTranscripts: 'eghr_ticket_transcripts',
   auditLog: 'eghr_audit_log',
   settings: 'eghr_settings',
+  sessions: 'eghr_sessions',
 };
 
 function getClient() {

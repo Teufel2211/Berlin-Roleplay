@@ -105,6 +105,14 @@ create table if not exists public.eghr_settings (
   updated_at timestamptz default now()
 );
 
+create table if not exists public.eghr_sessions (
+  sid text primary key,
+  sess jsonb not null,
+  expire timestamptz not null
+);
+
+create index if not exists eghr_sessions_expire_idx on public.eghr_sessions (expire);
+
 -- RLS aktivieren (Service-Role-Key umgeht RLS; keine Policies -> anon/authenticated haben keinen Zugriff)
 alter table public.eghr_warteraum enable row level security;
 alter table public.eghr_users enable row level security;
@@ -117,6 +125,7 @@ alter table public.eghr_tickets enable row level security;
 alter table public.eghr_ticket_transcripts enable row level security;
 alter table public.eghr_audit_log enable row level security;
 alter table public.eghr_settings enable row level security;
+alter table public.eghr_sessions enable row level security;
 
 -- Default-Einstellungen
 insert into public.eghr_settings (key, value) values
