@@ -25,6 +25,7 @@ const CHANNEL_KEYS = [
 const ROLE_KEYS = ['staff_role', 'admin_role', 'verified_role', 'warteraum_role', 'giveaway_required_role'];
 
 const SETTING_GROUPS = [
+  { group: 'Sicherheit', keys: ['admin_code'] },
   { group: 'Rollen', keys: ['staff_role', 'admin_role', 'verified_role'] },
   { group: 'Verifizierung', keys: ['verify_channel_id', 'verify_dm', 'verify_log_channel_id'] },
   { group: 'Warteraum', keys: ['warteraum_role', 'warteraum_voice_channel_id', 'warteraum_target_channel_id'] },
@@ -35,6 +36,7 @@ const SETTING_GROUPS = [
 ];
 
 const LABELS = {
+  admin_code: 'Admin-Code (leer = freigeschaltet)',
   staff_role: 'Staff-Rolle',
   admin_role: 'Admin-Rolle',
   verified_role: 'Verifizierte Rolle',
@@ -149,6 +151,17 @@ function createApp() {
   });
 
   app.get('/dashboard/settings', async (req, res) => {
+    const all = await settingsService.getAll().catch(() => ({}));
+    const locked = Boolean(all.admin_code) && req.session.settingsUnlocked !== true;
+    if (locked) {
+      return res.render('settings', {
+        title: 'Einstellungen',
+        user: req.session.user,
+        csrf: auth.csrfToken(req),
+        locked: true,
+        codeError: req.query.error === 'code',
+      });
+    }
     let channelOptions = null;
     let roleOptions = null;
     try {
@@ -156,7 +169,6 @@ function createApp() {
     } catch (err) {
       logger.warn(`Discord-Optionen für Einstellungen nicht verfügbar: ${err.message}`);
     }
-    const all = await settingsService.getAll().catch(() => ({}));
     const groups = SETTING_GROUPS.map((g) => ({
       group: g.group,
       fields: g.keys.map((key) => ({
@@ -169,7 +181,22 @@ function createApp() {
     }));
     res.render('settings', { title: 'Einstellungen', user: req.session.user, csrf: auth.csrfToken(req), groups, channelOptions, roleOptions });
   });
-  app.post('/dashboard/settings', webSettings.saveForm);
+  app.post('/dashboard/settings/unlock', auth.csrfCheck, async (req, res) => {
+    const all = await settingsService.getAll().catch(() => ({}));
+    if (all.admin_code && req.body.code === all.admin_code) {
+      req.session.settingsUnlocked = true;
+      res.redirect('/dashboard/settings');
+    } else {
+      res.redirect('/dashboard/settings?error=code');
+    }
+  });
+  app.post('/dashboard/settings', async (req, res) => {
+    const all = await settingsService.getAll().catch(() => ({}));
+    if (all.admin_code && req.session.settingsUnlocked !== true) {
+      return res.redirect('/dashboard/settings?error=code');
+    }
+    webSettings.saveForm(req, res);
+  });
 
   app.get('/dashboard/audit', async (req, res) => {
     try {

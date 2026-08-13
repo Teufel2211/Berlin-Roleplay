@@ -23,7 +23,11 @@ async function applyChanges(user, settings) {
   await settingsService.setMany(entries);
   const changes = {};
   for (const [k, v] of Object.entries(entries)) {
-    if ((before[k] || '') !== v) changes[k] = { vorher: before[k] || '', nachher: v };
+    if ((before[k] || '') !== v) {
+      changes[k] = k === 'admin_code'
+        ? { vorher: before[k] ? '***' : '', nachher: v ? '***' : '' }
+        : { vorher: before[k] || '', nachher: v };
+    }
   }
   if (Object.keys(changes).length) {
     await auditService.log(user, 'settings.update', changes);

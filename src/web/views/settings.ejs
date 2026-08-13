@@ -1,4 +1,16 @@
 <%- include('partials/head', { title, user, csrf }) %>
+<% if (locals.locked) { %>
+<div class="login-box">
+  <h2>Einstellungen gesperrt</h2>
+  <p class="muted">Gib den Admin-Code ein, um die Server-Einstellungen zu öffnen.</p>
+  <% if (locals.codeError) { %><p class="alert error">Falscher Code.</p><% } %>
+  <form method="post" action="/dashboard/settings/unlock">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <label>Admin-Code<input type="password" name="code" required autofocus></label>
+    <button type="submit" class="primary">Freischalten</button>
+  </form>
+</div>
+<% } else { %>
 <h1>Einstellungen</h1>
 <p class="hint">Rollen und Kanäle wählst du direkt aus einer Liste aus (live aus Discord geladen). Fehlt die Liste (z. B. Bot nicht im Server), bleiben die Felder Freitext. Alle Änderungen werden sofort wirksam und im Audit-Log protokolliert.</p>
 <form method="post" action="/dashboard/settings">
@@ -37,4 +49,5 @@
   <% }) %>
   <button type="submit" class="primary">Speichern</button>
 </form>
+<% } %>
 <%- include('partials/foot') %>

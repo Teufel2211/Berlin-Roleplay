@@ -27,7 +27,7 @@ function csrfCheck(req, res, next) {
   } catch (err) { hostOk = true; }
   if (!req.session || !token || token !== req.session.csrf || !originOk || !hostOk) {
     logger.warn(`CSRF-Ablehnung von ${req.ip}`);
-    return res.status(403).render('error', { title: 'Fehler', user: null, message: 'Ungültige Anfrage (CSRF-Schutz)' });
+    return res.status(403).render('error', { title: 'Fehler', user: null, csrf: csrfToken(req), message: 'Ungültige Anfrage (CSRF-Schutz)' });
   }
   return next();
 }
