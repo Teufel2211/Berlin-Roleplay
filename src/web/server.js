@@ -58,7 +58,7 @@ function isBooleanValue(key, value) {
   return value === 'true' || value === 'false';
 }
 
-function startWebServer() {
+function createApp() {
   const app = express();
   app.set('view engine', 'ejs');
   app.set('views', path.join(__dirname, 'views'));
@@ -215,10 +215,15 @@ function startWebServer() {
     res.status(500).render('error', { title: 'Fehler', user: null, csrf: auth.csrfToken(req), message: 'Interner Fehler' });
   });
 
+  return app;
+}
+
+function startWebServer() {
+  const app = createApp();
   const server = app.listen(config.webPort, () => {
     logger.info(`HTTP-Server läuft auf Port ${config.webPort}`);
   });
   return server;
 }
 
-module.exports = { startWebServer };
+module.exports = { createApp, startWebServer };
