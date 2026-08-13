@@ -208,11 +208,11 @@ function startWebServer() {
   app.post('/api/settings', auth.requireAuthApi, auth.csrfCheck, webSettings.saveApi);
   app.get('/api/audit', auth.requireAuthApi, webAudit.getApi);
 
-  app.use((req, res) => res.status(404).render('error', { title: 'Fehler', user: null, message: 'Seite nicht gefunden' }));
+  app.use((req, res) => res.status(404).render('error', { title: 'Fehler', user: null, csrf: auth.csrfToken(req), message: 'Seite nicht gefunden' }));
   app.use((err, req, res, next) => {
     logger.error(`Web-Fehler: ${err.stack || err.message}`);
     if (res.headersSent) return next(err);
-    res.status(500).render('error', { title: 'Fehler', user: null, message: 'Interner Fehler' });
+    res.status(500).render('error', { title: 'Fehler', user: null, csrf: auth.csrfToken(req), message: 'Interner Fehler' });
   });
 
   const server = app.listen(config.webPort, () => {

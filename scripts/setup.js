@@ -70,7 +70,7 @@ async function main() {
   }
 
   try {
-    const { count } = await getClient().from(TABLES.settings).select('id', { count: 'exact', head: true });
+    const { count } = await getClient().from(TABLES.settings).select('key', { count: 'exact', head: true });
     logger.info(`Datenbank erreichbar (eghr_settings: ${count} Zeilen)`);
   } catch (err) {
     logger.error(`Supabase-Verbindung fehlgeschlagen: ${err.message}`);
