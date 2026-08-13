@@ -14,3 +14,5 @@ desktop.ini
 # npm
 npm-debug.log*
 package-lock.json.timestamp
+
+.vercel
