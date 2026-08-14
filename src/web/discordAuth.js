@@ -1,4 +1,4 @@
-﻿const crypto = require('crypto');
+const crypto = require('crypto');
 const { config } = require('../config');
 const settingsService = require('../services/settingsService');
 const { parseRoleSetting } = require('../discord/helpers');
@@ -78,6 +78,24 @@ async function fetchMyGuilds(accessToken) {
   });
   if (!res.ok) throw new Error(`Serverliste fehlgeschlagen (${res.status})`);
   return res.json();
+}
+
+async function fetchBotGuilds() {
+  if (!config.discordToken) throw new Error('DISCORD_TOKEN fehlt.');
+  const res = await fetch(`${OAUTH_BASE}/users/@me/guilds`, {
+    headers: { Authorization: `Bot ${config.discordToken}` },
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Bot-Serverliste fehlgeschlagen (${res.status}) ${text}`);
+  }
+  const guilds = await res.json();
+  return Array.isArray(guilds) ? guilds : [];
+}
+
+async function fetchGuild(guildId) {
+  const guilds = await fetchBotGuilds();
+  return guilds.find((guild) => guild.id === guildId) || null;
 }
 
 function isGuildOwner(guild) {
@@ -173,9 +191,10 @@ async function discordAuthCallback(req, res) {
       };
       req.session.accessToken = token.access_token;
       req.session.refreshToken = token.refresh_token || null;
+      req.session.tokenExpiresAt = Date.now() + Number(token.expires_in || 604800) * 1000;
       req.session.guilds = guilds;
-      req.session.csrf = crypto.randomBytes(32).toString('hex');
-      auditService.log(null, `${req.session.user.tag} (${user.id})`, 'login.success', { accessibleGuilds: accessible.length });
+      req.session.guildsSyncedAt = Date.now();
+      auditService.log(null, `${req.session.user.tag} (${user.id})`, 'login.success', { accessibleGuilds: accessible.length, owner: user.id === config.ownerUserId });
       res.redirect('/dashboard');
     });
   } catch (err) {
@@ -191,7 +210,10 @@ module.exports = {
   accessibleGuilds,
   isGuildOwner,
   hasManageGuild,
+  isOwner,
   canManageGuild,
   fetchGuildMember,
   fetchGuildRoles,
+  fetchBotGuilds,
+  fetchGuild,
 };
