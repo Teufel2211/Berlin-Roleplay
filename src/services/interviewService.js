@@ -21,10 +21,19 @@ function intToScore(value) {
   return value / 10;
 }
 
+function questionMaxPoints(question) {
+  const value = Number(question && question.max_points);
+  return Number.isFinite(value) && value >= 0 ? value : 2;
+}
+
+function getMaxPoints(questions) {
+  return questions.reduce((sum, q) => sum + questionMaxPoints(q), 0);
+}
+
 async function ensureQuestions(guildId) {
   const { data } = await withRetry(() => getClient().from(TABLES.interviewQuestions).select('id').eq('guild_id', guildId).limit(1));
   if (data && data.length) return;
-  const rows = DEFAULT_INTERVIEW_QUESTIONS.map((q, i) => ({ guild_id: guildId, section: q.section, frage: q.frage, sort: i + 1 }));
+  const rows = DEFAULT_INTERVIEW_QUESTIONS.map((q, i) => ({ guild_id: guildId, section: q.section, frage: q.frage, sort: i + 1, max_points: 2 }));
   await withRetry(() => getClient().from(TABLES.interviewQuestions).insert(rows));
 }
 
@@ -51,19 +60,22 @@ function buildScoreButtons(interviewId, q, scores) {
   const current = scores && scores[q.id];
   return new ActionRowBuilder().addComponents(SCORE_VALUES.map((v) => {
     const chosen = current !== undefined && current === v;
+    const max = questionMaxPoints(q);
+    if (v > max) return null;
     return new ButtonBuilder().setCustomId(`interview_${interviewId}_${q.id}_${scoreToInt(v)}`).setLabel(chosen ? `✅ ${SCORE_LABELS[v]}` : SCORE_LABELS[v]).setStyle(scoreStyle(v));
-  }));
+  }).filter(Boolean));
 }
 
 function buildSectionEmbed(interview, chunk, startIndex, questions) {
   const scoredCount = Object.keys(interview.scores || {}).length;
   const total = questions.length;
-  const fields = chunk.map((q, i) => ({ name: `Frage ${startIndex + i + 1} — Abschnitt ${q.section}`, value: `${q.frage}\n**Punktzahl: ${interview.scores[q.id] !== undefined ? SCORE_LABELS[interview.scores[q.id]] : '—'}**` }));
+  const maxPoints = getMaxPoints(questions);
+  const fields = chunk.map((q, i) => ({ name: `Frage ${startIndex + i + 1} — Abschnitt ${q.section}`, value: `${q.frage}\n**Punktzahl: ${interview.scores[q.id] !== undefined ? SCORE_LABELS[interview.scores[q.id]] : '—'} / ${questionMaxPoints(q)}**` }));
   const done = scoredCount >= total;
   return {
     color: 0xe8453c,
     title: `🎤 Interview: ${interview.applicant_name || interview.applicant_id}`,
-    description: `${done ? '✅ **Fertig**' : `**Bewertet: ${scoredCount}/${total} Fragen**`}${done ? ` — Ergebnis: **${interview.total}** Punkte` : ''}`,
+    description: `${done ? '✅ **Fertig**' : `**Bewertet: ${scoredCount}/${total} Fragen**`}${done ? ` — Ergebnis: **${interview.total} / ${maxPoints} Punkte**` : ''}`,
     fields,
     footer: { text: 'Bewertung ändern: einfach neuen Button klicken' },
   };
@@ -119,7 +131,6 @@ async function handleScore(interaction) {
   const m = /^interview_(\d+)_(\d+)_(\d+)$/.exec(interaction.customId);
   if (!m) return;
 
-  // Acknowledge immediately. Settings/DB queries can otherwise exceed Discord's interaction window.
   if (!interaction.deferred && !interaction.replied) await interaction.deferUpdate();
 
   const interviewId = Number(m[1]);
@@ -139,8 +150,9 @@ async function handleScore(interaction) {
 
   const questions = await getQuestions(gid);
   const totalQuestions = questions.length;
+  const maxTotal = getMaxPoints(questions);
   const scoredCount = Object.keys(scores).length;
-  const sum = Object.values(scores).reduce((a, b) => a + b, 0);
+  const sum = Object.values(scores).reduce((a, b) => a + Number(b || 0), 0);
   const threshold = Number(settings.interview_pass_threshold || 45);
   const passed = sum >= threshold;
   const status = scoredCount >= totalQuestions ? 'fertig' : 'offen';
@@ -182,11 +194,11 @@ async function handleScore(interaction) {
       const result = {
         color: passed ? 0x2ecc71 : 0xe74c3c,
         title: passed ? '🎉 Interview bestanden' : '❌ Interview nicht bestanden',
-        description: `**${interview.applicant_name || interview.applicant_id}** hat **${sum.toLocaleString('de-DE')}** von **${totalQuestions * 2}** Punkten erreicht.\nBestanden ab **${threshold}** Punkten.`,
+        description: `**${interview.applicant_name || interview.applicant_id}** hat **${sum.toLocaleString('de-DE')}** von **${maxTotal.toLocaleString('de-DE')}** Punkten erreicht.\nBestanden ab **${threshold}** Punkten.`,
         footer: { text: 'Emergency Hamburg Roleplay • Bewertung abgeschlossen' },
       };
       await channel.send({ embeds: [result] });
-      await auditService.log(gid, interaction.user.tag, 'interview.complete', { applicant: interview.applicant_name || interview.applicant_id, total: sum, passed });
+      await auditService.log(gid, interaction.user.tag, 'interview.complete', { applicant: interview.applicant_name || interview.applicant_id, total: sum, maxTotal, passed });
     } catch (err) {
       logger.warn(`Interview-Ergebnis nicht gesendet: ${err.message}`);
     }
@@ -205,4 +217,4 @@ async function getResultDetail(interviewId, guildId) {
   return { row, questions };
 }
 
-module.exports = { startInterview, handleScore, getQuestions, ensureQuestions, getResults, getResultDetail };
+module.exports = { startInterview, handleScore, getQuestions, ensureQuestions, getResults, getResultDetail, getMaxPoints };
