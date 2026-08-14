@@ -26,9 +26,10 @@ function csrfFailReason(req) {
   if (token !== req.session.csrf) return 'tokenMismatch';
   if (req.headers.origin) {
     try {
-      if (new URL(req.headers.origin).host !== req.headers.host) return 'originMismatch';
+      const o = new URL(req.headers.origin);
+      if (o.host !== req.headers.host) return 'originMismatch';
     } catch (err) {
-      return 'originInvalid';
+      // Origin nicht parsbar (z. B. "null") -> Token-Check + SameSite-Cookie reichen
     }
   }
   return null;
