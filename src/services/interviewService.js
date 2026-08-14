@@ -1,4 +1,4 @@
-const { ActionRowBuilder, ButtonBuilder } = require('discord.js');
+const { ActionRowBuilder, ButtonBuilder, MessageFlags } = require('discord.js');
 const { getClient, TABLES, withRetry } = require('../supabase');
 const { config } = require('../config');
 const settingsService = require('./settingsService');
@@ -104,25 +104,25 @@ async function startInterview(interaction, target, channel) {
   const gid = guild.id;
   const settings = await settingsService.getAll(gid);
   if (!helpersCanManage(interaction, settings)) {
-    return interaction.reply({ embeds: [embeds.error('Keine Berechtigung', 'Nur Staff kann Interviews starten.', guild)], ephemeral: true });
+    return interaction.reply({ embeds: [embeds.error('Keine Berechtigung', 'Nur Staff kann Interviews starten.', guild)], flags: MessageFlags.Ephemeral });
   }
 
   const questions = await getQuestions(gid);
   if (!questions.length) {
-    return interaction.reply({ embeds: [embeds.error('Keine Fragen', 'Für diesen Server sind keine Interview-Fragen hinterlegt.', guild)], ephemeral: true });
+    return interaction.reply({ embeds: [embeds.error('Keine Fragen', 'Für diesen Server sind keine Interview-Fragen hinterlegt.', guild)], flags: MessageFlags.Ephemeral });
   }
 
   const channelId = channel ? channel.id : settings.interview_channel_id || interaction.channel.id;
   const targetChannel = guild.channels.cache.get(channelId) || interaction.channel;
   if (!targetChannel || !targetChannel.isTextBased()) {
-    return interaction.reply({ embeds: [embeds.error('Kein Kanal', 'Der angegebene Kanal ist kein Textkanal.', guild)], ephemeral: true });
+    return interaction.reply({ embeds: [embeds.error('Kein Kanal', 'Der angegebene Kanal ist kein Textkanal.', guild)], flags: MessageFlags.Ephemeral });
   }
 
   const { data: row } = await withRetry(() =>
     getClient().from(TABLES.interviews).insert({ guild_id: gid, applicant_id: target.id, applicant_name: target.tag, status: 'offen', scores: {}, channel_id: targetChannel.id }).select().single()
   );
   if (!row) {
-    return interaction.reply({ embeds: [embeds.error('Fehler', 'Das Interview konnte nicht angelegt werden.', guild)], ephemeral: true });
+    return interaction.reply({ embeds: [embeds.error('Fehler', 'Das Interview konnte nicht angelegt werden.', guild)], flags: MessageFlags.Ephemeral });
   }
 
   const chunks = chunkQuestions(questions);
@@ -144,7 +144,7 @@ async function startInterview(interaction, target, channel) {
   await auditService.log(gid, interaction.user.tag, 'interview.start', { applicant: target.tag, channel: targetChannel.id, fragen: questions.length });
   return interaction.reply({
     embeds: [embeds.success('Interview gestartet', `Das Interview von **${target.tag}** wurde in <#${targetChannel.id}> gestartet (${questions.length} Fragen).`, guild)],
-    ephemeral: true,
+    flags: MessageFlags.Ephemeral,
   });
 }
 
@@ -157,6 +157,14 @@ function helpersCanManage(interaction, settings) {
 async function handleScore(interaction) {
   const m = /^interview_(\d+)_(\d+)_(\d+)$/.exec(interaction.customId);
   if (!m) return;
+
+  // Acknowledge the button immediately. DB/settings calls below can take longer
+  // than Discord's interaction response window. After deferUpdate(), use
+  // editReply() instead of update() for the original component message.
+  if (!interaction.deferred && !interaction.replied) {
+    await interaction.deferUpdate();
+  }
+
   const interviewId = Number(m[1]);
   const questionId = Number(m[2]);
   const score = intToScore(Number(m[3]));
@@ -165,12 +173,12 @@ async function handleScore(interaction) {
   const gid = interaction.guild.id;
   const settings = await settingsService.getAll(gid);
   if (!helpersCanManage(interaction, settings)) {
-    return interaction.reply({ embeds: [embedsError('Keine Berechtigung', 'Nur Staff kann Interviews bewerten.', interaction.guild)], ephemeral: true });
+    return interaction.editReply({ embeds: [embedsError('Keine Berechtigung', 'Nur Staff kann Interviews bewerten.', interaction.guild)], components: [] });
   }
 
   const row = await getInterview(interviewId, gid);
   if (!row) {
-    return interaction.reply({ embeds: [embedsError('Nicht gefunden', 'Das Interview existiert nicht mehr.', interaction.guild)], ephemeral: true });
+    return interaction.editReply({ embeds: [embedsError('Nicht gefunden', 'Das Interview existiert nicht mehr.', interaction.guild)], components: [] });
   }
 
   const scores = Object.assign({}, row.scores || {});
@@ -198,7 +206,7 @@ async function handleScore(interaction) {
     for (let i = 0; i < chunkIndex; i++) start += chunks[i].length;
     const payload = buildSectionMessage(interview, chunks[chunkIndex], start, questions);
     if (messageId === interaction.message.id) {
-      await interaction.update(payload);
+      await interaction.editReply(payload);
     } else {
       try {
         const channel = await interaction.client.channels.fetch(entry.channelId);
@@ -215,7 +223,7 @@ async function handleScore(interaction) {
       await updateMessage(i, entry.messageIds[i]);
     }
   } else if (clickedIndex === -1) {
-    return interaction.update({ content: '⏳ Das Interview wurde durch einen Neustart unterbrochen. Bitte neu starten.', components: [] });
+    return interaction.editReply({ content: '⏳ Das Interview wurde durch einen Neustart unterbrochen. Bitte neu starten.', components: [] });
   }
 
   if (status === 'fertig' && entry && !entry.resultPosted) {
