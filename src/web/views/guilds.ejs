@@ -1,4 +1,121 @@
 <%- include('partials/head', { title, user, csrf }) %>
+
+<% if (user && user.isOwner) { %>
+<style>
+  .owner-shell { display: grid; gap: 24px; }
+  .owner-hero { padding: 24px; border: 1px solid #2a2a2a; border-radius: 14px; background: linear-gradient(135deg, #171717, #0f0f0f); }
+  .owner-kicker { color: #9b9b9b; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; }
+  .owner-hero h1 { margin: 6px 0 8px; }
+  .owner-hero p { margin: 0; color: #aaa; }
+  .owner-stats { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 18px; }
+  .owner-stat { min-width: 150px; padding: 14px 16px; border: 1px solid #292929; border-radius: 12px; background: #131313; }
+  .owner-stat strong { display: block; font-size: 24px; }
+  .owner-stat span { color: #8f8f8f; font-size: 12px; }
+  .owner-toolbar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .owner-search { flex: 1; min-width: 220px; }
+  .owner-grid { margin-top: 0; }
+  .owner-card { position: relative; }
+  .owner-badge { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; color: #bfbfbf; font-size: 12px; }
+</style>
+
+<section class="page owner-shell">
+  <div class="owner-hero">
+    <div class="owner-kicker">Global Bot Owner</div>
+    <h1>Owner Dashboard</h1>
+    <p>Vollzugriff auf alle Discord-Server, auf denen der Bot installiert ist.</p>
+    <div class="owner-stats">
+      <div class="owner-stat">
+        <strong id="owner-server-count"><%= guilds.length %></strong>
+        <span>Bot-Server</span>
+      </div>
+      <div class="owner-stat">
+        <strong>Vollzugriff</strong>
+        <span>Servereinstellungen</span>
+      </div>
+      <div class="owner-stat">
+        <strong>Live</strong>
+        <span>Serverliste synchronisiert</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="owner-toolbar">
+    <input id="owner-server-search" class="owner-search" type="search" placeholder="Server suchen…" autocomplete="off">
+    <span class="muted" id="owner-refresh-status">Wird automatisch aktualisiert.</span>
+  </div>
+
+  <div class="guild-grid owner-grid" id="owner-guild-grid">
+    <% guilds.forEach(function (g) { %>
+    <div class="guild-card has-bot owner-card" data-server-name="<%= g.name.toLowerCase() %>">
+      <a href="/dashboard/servers/<%= g.id %>" class="guild-card-link">
+        <div class="guild-icon">
+          <% if (g.icon) { %>
+          <img src="https://cdn.discordapp.com/icons/<%= g.id %>/<%= g.icon %>.png?size=128" alt="" onerror="this.parentElement.textContent='<%= g.name.charAt(0) %>'">
+          <% } else { %><span class="guild-fallback"><%= g.name.charAt(0) %></span><% } %>
+        </div>
+        <div class="guild-name"><%= g.name %></div>
+        <div class="guild-meta">Bot installiert · Owner-Zugriff</div>
+        <div class="owner-badge">⚙️ Einstellungen verwalten</div>
+      </a>
+    </div>
+    <% }) %>
+  </div>
+
+  <% if (!guilds.length) { %>
+  <div class="empty-state">
+    <p>Der Bot ist aktuell auf keinem Server installiert.</p>
+  </div>
+  <% } %>
+</section>
+
+<script>
+(() => {
+  const search = document.getElementById('owner-server-search');
+  const status = document.getElementById('owner-refresh-status');
+  const count = document.getElementById('owner-server-count');
+
+  function filter() {
+    const term = (search?.value || '').trim().toLowerCase();
+    const cards = Array.from(document.querySelectorAll('.owner-card'));
+    let visible = 0;
+    cards.forEach((card) => {
+      const match = !term || (card.dataset.serverName || '').includes(term);
+      card.style.display = match ? '' : 'none';
+      if (match) visible += 1;
+    });
+    if (count) count.textContent = term ? `${visible} / ${cards.length}` : String(cards.length);
+  }
+
+  search?.addEventListener('input', filter);
+
+  async function refresh() {
+    try {
+      status.textContent = 'Serverliste wird aktualisiert…';
+      const response = await fetch('/dashboard', { headers: { 'X-Owner-Refresh': '1' }, cache: 'no-store' });
+      if (!response.ok) throw new Error('refresh failed');
+      const html = await response.text();
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      const nextGrid = doc.getElementById('owner-guild-grid');
+      const nextCount = doc.getElementById('owner-server-count');
+      const currentGrid = document.getElementById('owner-guild-grid');
+      if (nextGrid && currentGrid) currentGrid.innerHTML = nextGrid.innerHTML;
+      if (nextCount && count) count.textContent = nextCount.textContent;
+      status.textContent = 'Zuletzt aktualisiert: ' + new Date().toLocaleTimeString('de-DE');
+      filter();
+    } catch {
+      status.textContent = 'Aktualisierung fehlgeschlagen.';
+    }
+  }
+
+  setInterval(refresh, 30000);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) refresh();
+  });
+})();
+</script>
+
+<% } else { %>
 <section class="page">
   <h1>Server wählen</h1>
   <p class="muted">Wähle einen Server, den du verwaltest, um ihn zu konfigurieren.</p>
@@ -33,21 +150,18 @@
   (() => {
     const status = document.getElementById('guild-sync-status');
     let reloading = false;
-
     const refresh = () => {
       if (reloading || document.visibilityState !== 'visible') return;
       reloading = true;
       if (status) status.textContent = 'Serverliste wird aktualisiert …';
       window.location.reload();
     };
-
-    // Discord kann sich während der geöffneten Dashboard-Seite ändern, z. B.
-    // wenn der Bot in einen neuen Server eingeladen oder aus einem Server entfernt wird.
     setInterval(refresh, 30000);
-
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') refresh();
     });
   })();
 </script>
+<% } %>
+
 <%- include('partials/foot') %>
