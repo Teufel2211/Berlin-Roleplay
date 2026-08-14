@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const logger = require('../logger');
+const { config } = require('../config');
 const { discordAuthStart, discordAuthCallback } = require('./discordAuth');
 
 const LOGIN_ERRORS = {
@@ -8,6 +9,8 @@ const LOGIN_ERRORS = {
   oauth: 'Anmeldung fehlgeschlagen. Bitte erneut versuchen.',
   session: 'Sitzung abgelaufen – Seite wurde neu geladen. Bitte erneut versuchen.',
 };
+
+const OAUTH_BASE = 'https://discord.com/api';
 
 function csrfToken(req) {
   if (!req.session.csrf) req.session.csrf = crypto.randomBytes(32).toString('hex');
@@ -48,10 +51,35 @@ function csrfLoginCheck(req, res, next) {
   return next();
 }
 
-function requireAuth(req, res, next) {
+async function refreshDiscordGuilds(req) {
+  if (!req.session || !req.session.user || !req.session.accessToken) return;
+
+  try {
+    const res = await fetch(`${OAUTH_BASE}/users/@me/guilds`, {
+      headers: { Authorization: `Bearer ${req.session.accessToken}` },
+    });
+
+    if (!res.ok) {
+      logger.warn(`Discord-Serverliste konnte nicht aktualisiert werden (${res.status}).`);
+      return;
+    }
+
+    const guilds = await res.json();
+    req.session.guilds = Array.isArray(guilds) ? guilds : [];
+    req.session.guildsSyncedAt = Date.now();
+  } catch (err) {
+    logger.warn(`Discord-Serverliste konnte nicht synchronisiert werden: ${err.message}`);
+  }
+}
+
+async function requireAuth(req, res, next) {
   if (req.path === '/login' || req.path === '/logout') return next();
-  if (req.session && req.session.user) return next();
-  return res.redirect('/dashboard/login');
+  if (!req.session || !req.session.user) return res.redirect('/dashboard/login');
+
+  // Die Discord-Guild-Liste wird bei jedem Dashboard-Request aktualisiert.
+  // Dadurch sind neue/entfernte Server sichtbar, ohne dass der Nutzer sich neu anmelden muss.
+  await refreshDiscordGuilds(req);
+  return next();
 }
 
 function requireAuthApi(req, res, next) {
@@ -83,4 +111,5 @@ module.exports = {
   logout,
   discordAuthStart,
   discordAuthCallback,
+  refreshDiscordGuilds,
 };
