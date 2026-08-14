@@ -8,6 +8,6 @@
   <div class="stat-card"><div class="stat-value"><%= data.stats.streak %></div><div class="stat-label">Counting-Streak</div></div>
 </div>
 <div class="bot-status">
-  <span class="status-dot <%= data.botOnline ? 'online' : 'offline' %>"></span>
-  Bot <%= data.botOnline ? 'ist online' : 'ist offline' %>
+  <span class="status-dot <%= activeGuild.botInstalled ? 'online' : 'offline' %>"></span>
+  Bot <%= activeGuild.botInstalled ? 'ist online' : 'ist nicht auf diesem Server' %>
 </div>
