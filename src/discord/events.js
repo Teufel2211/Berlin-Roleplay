@@ -1,4 +1,4 @@
-const { Events } = require('discord.js');
+const { Events, MessageFlags } = require('discord.js');
 const commands = require('../commands');
 const logger = require('../logger');
 const embeds = require('./embeds');
@@ -15,7 +15,7 @@ async function replyError(interaction, err) {
   logger.error(`Interaktion fehlgeschlagen: ${err.stack || err.message}`);
   if (!interaction.replied && !interaction.deferred) {
     try {
-      await interaction.reply({ embeds: [embeds.error('Fehler', 'Beim Ausführen ist ein Fehler aufgetreten.', interaction.guild)], ephemeral: true });
+      await interaction.reply({ embeds: [embeds.error('Fehler', 'Beim Ausführen ist ein Fehler aufgetreten.', interaction.guild)], flags: MessageFlags.Ephemeral });
     } catch (e) { /* ignorieren */ }
   }
 }
@@ -41,7 +41,7 @@ function registerEvents(client) {
         if (id.startsWith('ticket_close_')) return await ticketService.showCloseModal(interaction);
         if (id.startsWith('app_accept_') || id.startsWith('app_reject_')) return await applicationService.handleDecisionButton(interaction);
         if (id.startsWith('interview_')) return await interviewService.handleScore(interaction);
-        if (id.startsWith('emb_')) return interaction.reply({ embeds: [embeds.info('Embed-Button', 'Für diesen Button ist keine Aktion konfiguriert.', interaction.guild)], ephemeral: true });
+        if (id.startsWith('emb_')) return interaction.reply({ embeds: [embeds.info('Embed-Button', 'Für diesen Button ist keine Aktion konfiguriert.', interaction.guild)], flags: MessageFlags.Ephemeral });
         return;
       }
       if (interaction.isModalSubmit()) {
