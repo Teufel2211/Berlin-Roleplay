@@ -137,7 +137,8 @@ async function fetchGuildMember(userId, guildId) {
 
 function discordAuthStart(req, res) {
   if (!config.discordClientSecret) {
-    return res.status(500).render('error', { title: 'Fehler', user: null, message: 'Discord-OAuth2 ist nicht konfiguriert (DISCORD_CLIENT_SECRET fehlt).' });
+    const csrf = (req.session && req.session.csrf) || crypto.randomBytes(32).toString('hex');
+    return res.status(500).render('error', { title: 'Fehler', user: null, csrf, message: 'Discord-OAuth2 ist nicht konfiguriert (DISCORD_CLIENT_SECRET fehlt).' });
   }
   const state = crypto.randomBytes(24).toString('hex');
   res.cookie(STATE_COOKIE, state, cookieOptions());
