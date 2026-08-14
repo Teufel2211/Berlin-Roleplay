@@ -1,0 +1,36 @@
+const DEFAULT_INTERVIEW_QUESTIONS = [
+  { section: 1, frage: 'Warum möchtest du bei uns Moderator werden?' },
+  { section: 1, frage: 'Warum sollten wir gerade dich ins Team aufnehmen?' },
+  { section: 1, frage: 'Was macht für dich einen guten Moderator aus?' },
+  { section: 1, frage: 'Was ist eine persönliche Stärke und Schwäche von dir?' },
+  { section: 1, frage: 'Wie gehst du mit Kritik von anderen Teammitgliedern um?' },
+  { section: 1, frage: 'Was bedeutet Teamarbeit für dich?' },
+  { section: 1, frage: 'Wie würdest du einen neuen Moderator im Team unterstützen?' },
+  { section: 1, frage: 'Was würdest du tun, wenn du mit der Entscheidung eines anderen Teammitglieds nicht einverstanden bist?' },
+  { section: 1, frage: 'Wie gehst du mit Stress oder hohem Arbeitsaufkommen um?' },
+  { section: 1, frage: 'Was motiviert dich, auch langfristig im Team zu bleiben?' },
+  { section: 2, frage: 'Was bedeutet RDM und nenne ein Beispiel?' },
+  { section: 2, frage: 'Was ist der Unterschied zwischen IC und OOC?' },
+  { section: 2, frage: 'Was versteht man unter Meta Gaming und nenne ein Beispiel?' },
+  { section: 2, frage: 'Was bedeutet Power-RP und nenne ein Beispiel?' },
+  { section: 2, frage: 'Ab wie viel km/h muss Crash-RP ausgespielt werden?' },
+  { section: 2, frage: 'Was ist unter Fear-RP zu verstehen?' },
+  { section: 2, frage: 'Wie lange darf ein normales Fahrzeug Frei Flucht bekommen und wie lange ein E-Fahrzeug?' },
+  { section: 2, frage: 'Was ist für ein unrealistischer Skin?' },
+  { section: 2, frage: 'Was verstößt gegen die Roblox ToS?' },
+  { section: 2, frage: 'Welche Safezones gibt es?' },
+  { section: 3, frage: 'Was würdest du tun, wenn sich zwei Spieler streiten?' },
+  { section: 3, frage: 'Wie würdest du bei einem Streit zwischen Teammitgliedern reagieren?' },
+  { section: 3, frage: 'Was würdest du tun, wenn ein Spieler dich beleidigt?' },
+  { section: 3, frage: 'Wie würdest du reagieren, wenn ein Freund von dir gegen eine Regel verstößt?' },
+  { section: 3, frage: 'Was würdest du tun, wenn mehrere Spieler gleichzeitig deine Hilfe benötigen?' },
+  { section: 3, frage: 'Wie würdest du mit einem Spieler umgehen, der eine Entscheidung nicht akzeptiert?' },
+  { section: 3, frage: 'Was würdest du tun, wenn du dir bei einer Entscheidung unsicher bist?' },
+  { section: 3, frage: 'Wie würdest du reagieren, wenn ein Teammitglied gegen Regeln verstößt?' },
+  { section: 3, frage: 'Was würdest du tun, wenn ein anderer Moderator deiner Meinung nach falsch handelt?' },
+  { section: 3, frage: 'Wie würdest du reagieren, wenn ein Spieler absichtlich eine Regel-Lücke ausnutzt?' },
+];
+
+const SCORE_VALUES = [0, 0.5, 1, 1.5, 2];
+
+module.exports = { DEFAULT_INTERVIEW_QUESTIONS, SCORE_VALUES };

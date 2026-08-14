@@ -14,8 +14,8 @@ function channelLabel(c) {
   }
 }
 
-async function fetchChannels() {
-  const res = await fetch(`${OAUTH_BASE}/guilds/${config.guildId}/channels`, {
+async function fetchChannels(guildId) {
+  const res = await fetch(`${OAUTH_BASE}/guilds/${guildId}/channels`, {
     headers: { Authorization: `Bot ${config.discordToken}` },
   });
   if (!res.ok) throw new Error(`Kanal-Abruf fehlgeschlagen (${res.status})`);
@@ -26,8 +26,8 @@ async function fetchChannels() {
     .map((c) => ({ id: c.id, label: channelLabel(c) }));
 }
 
-async function fetchRoles() {
-  const res = await fetch(`${OAUTH_BASE}/guilds/${config.guildId}/roles`, {
+async function fetchRoles(guildId) {
+  const res = await fetch(`${OAUTH_BASE}/guilds/${guildId}/roles`, {
     headers: { Authorization: `Bot ${config.discordToken}` },
   });
   if (!res.ok) throw new Error(`Rollen-Abruf fehlgeschlagen (${res.status})`);

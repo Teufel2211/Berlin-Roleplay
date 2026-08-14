@@ -17,7 +17,9 @@ const TABLES = {
   auditLog: 'eghr_audit_log',
   settings: 'eghr_settings',
   sessions: 'eghr_sessions',
-  adminCodes: 'eghr_admin_codes',
+  embeds: 'eghr_embeds',
+  interviews: 'eghr_interviews',
+  interviewQuestions: 'eghr_interview_questions',
 };
 
 function getClient() {

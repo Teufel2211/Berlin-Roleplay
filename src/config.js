@@ -1,13 +1,14 @@
 const path = require('path');
 require('dotenv').config();
 
-const REQUIRED_SECRETS = ['DISCORD_TOKEN', 'CLIENT_ID', 'GUILD_ID', 'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'];
+const REQUIRED_SECRETS = ['DISCORD_TOKEN', 'CLIENT_ID', 'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'];
 
 const DEFAULT_SETTINGS = {
-  staff_role: 'Staff',
-  admin_role: 'Admin',
-  warteraum_role: 'Warteraum',
-  verified_role: '',
+  staff_roles: '',
+  admin_roles: '',
+  warteraum_roles: '',
+  verified_roles: '',
+  giveaway_required_roles: '',
   verify_channel_id: '',
   verify_dm: 'true',
   verify_log_channel_id: '',
@@ -27,17 +28,18 @@ const DEFAULT_SETTINGS = {
   application_questions: '',
   giveaway_channel_id: '',
   giveaway_default_winners: '1',
-  giveaway_required_role: '',
   giveaway_announce_channel_id: '',
   warteraum_voice_channel_id: '',
   warteraum_target_channel_id: '',
+  interview_channel_id: '',
+  interview_max_per_section: '20',
+  interview_pass_threshold: '45',
 };
 
 const config = {
   requiredSecrets: REQUIRED_SECRETS,
   discordToken: process.env.DISCORD_TOKEN || '',
   clientId: process.env.CLIENT_ID || '',
-  guildId: process.env.GUILD_ID || '',
   ownerUserId: process.env.OWNER_USER_ID || '1370372526001356972',
   discordClientSecret: process.env.DISCORD_CLIENT_SECRET || '',
   supabaseUrl: process.env.SUPABASE_URL || '',
@@ -45,8 +47,6 @@ const config = {
   supabaseDbUrl: process.env.SUPABASE_DB_URL || '',
   webPort: parseInt(process.env.WEB_PORT || '3000', 10),
   webUrl: (process.env.WEB_URL || 'http://localhost:3000').replace(/\/+$/, ''),
-  dashboardUser: process.env.DASHBOARD_USER || 'admin',
-  dashboardPasswordHash: process.env.DASHBOARD_PASSWORD_HASH || '',
   sessionSecret: process.env.SESSION_SECRET || 'notruf-hamburg-dev-secret',
   debug: process.env.DEBUG === '1',
   dataDir: path.join(__dirname, '..', 'data'),

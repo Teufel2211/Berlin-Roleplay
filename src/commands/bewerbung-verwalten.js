@@ -21,7 +21,7 @@ module.exports = {
 
     if (sub === 'liste') return applicationService.list(interaction);
 
-    const settings = await settingsService.getAll();
+    const settings = await settingsService.getAll(interaction.guild.id);
     if (!helpers.isGuildModerator(interaction.member, settings)) {
       return interaction.reply({ embeds: [embeds.error('Keine Berechtigung', 'Nur Staff kann Bewerbungen schließen.', guild)], ephemeral: true });
     }

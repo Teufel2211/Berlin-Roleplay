@@ -1,0 +1,23 @@
+<h2 class="feature-title">Audit-Log</h2>
+<p class="muted">Alle Änderungen und Aktionen auf diesem Server werden hier protokolliert.</p>
+<% if (data.dbError) { %><div class="alert error"><%= data.dbError %></div><% } %>
+<% if (data.entries.length) { %>
+<div class="table-wrap">
+  <table class="data-table">
+    <thead><tr><th>Zeit</th><th>Akteur</th><th>Aktion</th><th>Details</th></tr></thead>
+    <tbody>
+      <% data.entries.forEach(function (e) { %>
+      <tr>
+        <td><%= new Date(e.created_at).toLocaleString('de-DE') %></td>
+        <td><%= e.actor %></td>
+        <td><span class="code"><%= e.action %></span></td>
+        <td class="detail-cell"><%= e.detail ? (JSON.stringify(e.detail)).substring(0, 120) : '—' %></td>
+      </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+<% } else { %>
+<div class="empty-state"><p>Noch keine Einträge.</p></div>
+<% } %>
+<%- include('_settings_form', { data, featureId: 'audit', guildId }) %>

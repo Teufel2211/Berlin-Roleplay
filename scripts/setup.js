@@ -1,51 +1,8 @@
-const fs = require('fs');
-const path = require('path');
-const crypto = require('crypto');
-const bcrypt = require('bcryptjs');
 require('dotenv').config();
-const { config, DEFAULT_SETTINGS } = require('../src/config');
+const { config } = require('../src/config');
 const logger = require('../src/logger');
 const { getClient, TABLES } = require('../src/supabase');
 const { client, login } = require('../src/discord/client');
-
-async function seedSettings() {
-  const entries = Object.entries(DEFAULT_SETTINGS).map(([key, value]) => ({
-    key,
-    value: String(value),
-    updated_at: new Date().toISOString(),
-  }));
-  const { error } = await getClient().from(TABLES.settings).upsert(entries, { onConflict: 'key' });
-  if (error) throw error;
-  logger.info(`Settings-Defaults gesetzt (${entries.length} Keys)`);
-}
-
-async function ensurePassword() {
-  if (config.dashboardPasswordHash) {
-    logger.info('DASHBOARD_PASSWORD_HASH ist bereits gesetzt.');
-    return;
-  }
-  const password = crypto.randomBytes(6).toString('base64url').slice(0, 10);
-  const hash = await bcrypt.hash(password, 10);
-  const envPath = path.join(__dirname, '..', '.env');
-  let content = '';
-  if (fs.existsSync(envPath)) {
-    content = fs.readFileSync(envPath, 'utf8');
-  }
-  const line = `DASHBOARD_PASSWORD_HASH=${hash}`;
-  if (content.match(/^DASHBOARD_PASSWORD_HASH=.*$/m)) {
-    content = content.replace(/^DASHBOARD_PASSWORD_HASH=.*$/m, line);
-  } else {
-    content += (content.endsWith('\n') ? '' : '\n') + line + '\n';
-  }
-  fs.writeFileSync(envPath, content, 'utf8');
-  console.log('');
-  console.log('  ======================================================');
-  console.log(`   Dashboard-Passwort (einmalig): ${password}`);
-  console.log('   Hash wurde in .env gespeichert.');
-  console.log('  ======================================================');
-  console.log('');
-  logger.info('Neues Dashboard-Passwort generiert.');
-}
 
 async function testBotToken() {
   if (!config.discordToken) {
@@ -54,7 +11,7 @@ async function testBotToken() {
   }
   try {
     await login();
-    logger.info(`Bot-Token gültig (eingeloggt als ${client.user.tag})`);
+    logger.info(`Bot-Token gültig (eingeloggt als ${client.user.tag}, ${client.guilds.cache.size} Server)`);
     await client.destroy();
   } catch (err) {
     logger.error(`Bot-Token ungültig: ${err.message}`);
@@ -77,8 +34,6 @@ async function main() {
     process.exit(1);
   }
 
-  await seedSettings();
-  await ensurePassword();
   await testBotToken();
 
   if (process.exitCode) {

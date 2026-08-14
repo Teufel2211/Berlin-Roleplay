@@ -1,11 +1,13 @@
 ﻿const crypto = require('crypto');
 const { config } = require('../config');
 const settingsService = require('../services/settingsService');
+const { parseRoleSetting } = require('../discord/helpers');
 const auditService = require('../services/auditService');
 const logger = require('../logger');
 
 const OAUTH_BASE = 'https://discord.com/api';
 const STATE_COOKIE = 'oauth_state';
+const MANAGE_GUILD = 32n;
 
 function redirectUri() {
   return new URL('/dashboard/auth/discord/callback', config.webUrl).href;
@@ -78,28 +80,59 @@ async function fetchMyGuilds(accessToken) {
   return res.json();
 }
 
-async function fetchGuildRoles() {
-  const res = await fetch(`${OAUTH_BASE}/guilds/${config.guildId}/roles`, {
+function isGuildOwner(guild) {
+  return Boolean(guild && guild.owner);
+}
+
+function hasManageGuild(guild) {
+  if (!guild || typeof guild.permissions !== 'string') return false;
+  try {
+    return (BigInt(guild.permissions) & MANAGE_GUILD) === MANAGE_GUILD;
+  } catch (err) {
+    return false;
+  }
+}
+
+function canAccessGuild(guild) {
+  return Boolean(guild && (isGuildOwner(guild) || hasManageGuild(guild)));
+}
+
+function accessibleGuilds(guilds) {
+  return (guilds || []).filter(canAccessGuild);
+}
+
+function isOwner(session) {
+  return Boolean(session && session.user && session.user.id === config.ownerUserId);
+}
+
+async function canManageGuild(session, guild) {
+  if (isOwner(session)) return true;
+  if (!canAccessGuild(guild)) return false;
+  const member = await fetchGuildMember(session.user.id, guild.id);
+  if (!member) return canAccessGuild(guild);
+  const settings = await settingsService.getAll(guild.id);
+  const roleNames = new Set([...parseRoleSetting(settings.staff_roles), ...parseRoleSetting(settings.admin_roles)]);
+  if (!roleNames.size) return true;
+  const guildRoles = await fetchGuildRoles(guild.id);
+  const allowedIds = new Set(guildRoles.filter((r) => roleNames.has(r.name)).map((r) => r.id));
+  return (member.roles || []).some((id) => allowedIds.has(id));
+}
+
+async function fetchGuildRoles(guildId) {
+  const res = await fetch(`${OAUTH_BASE}/guilds/${guildId}/roles`, {
     headers: { Authorization: `Bot ${config.discordToken}` },
   });
   if (!res.ok) throw new Error(`Rollenabruf fehlgeschlagen (${res.status})`);
   return res.json();
 }
 
-async function fetchGuildMember(userId) {
-  const res = await fetch(`${OAUTH_BASE}/guilds/${config.guildId}/members/${userId}`, {
+async function fetchGuildMember(userId, guildId) {
+  const res = await fetch(`${OAUTH_BASE}/guilds/${guildId}/members/${userId}`, {
     headers: { Authorization: `Bot ${config.discordToken}` },
   });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`Member-Abruf fehlgeschlagen (${res.status})`);
   return res.json();
-}
-
-function isStaff(memberRoleIds, roleList, settings) {
-  const allowed = new Set(
-    roleList.filter((r) => r.name === settings.staff_role || r.name === settings.admin_role).map((r) => r.id)
-  );
-  return memberRoleIds.some((id) => allowed.has(id));
 }
 
 function discordAuthStart(req, res) {
@@ -128,33 +161,20 @@ async function discordAuthCallback(req, res) {
     const token = await exchangeCode(code);
     const user = await fetchDiscordUser(token.access_token);
     const guilds = await fetchMyGuilds(token.access_token);
-    const guild = guilds.find((g) => g.id === config.guildId);
-    if (!guild) {
-      return res.redirect('/dashboard/login?error=notmember');
-    }
-    let allowed = guild.owner === true;
-    let denyReason = 'keine Staff-Rolle';
-    if (!allowed) {
-      const member = await fetchGuildMember(user.id);
-      if (member) {
-        const settings = await settingsService.getAll();
-        const roles = await fetchGuildRoles();
-        allowed = isStaff(member.roles || [], roles, settings);
-      } else {
-        denyReason = 'Member-Check nicht möglich (Bot nicht im Server?)';
-      }
-    }
-    if (!allowed) {
-      await auditService.log(`${user.username} (${user.id})`, 'login.denied', { reason: denyReason });
-      return res.redirect('/dashboard/login?error=norole');
-    }
-    const tag = user.global_name || user.username;
+    const accessible = accessibleGuilds(guilds);
+
     req.session.regenerate((err) => {
       if (err) logger.error(`Session-Regeneration fehlgeschlagen: ${err.message}`);
-      req.session.user = tag;
-      req.session.discordId = user.id;
+      req.session.user = {
+        id: user.id,
+        tag: user.global_name || user.username,
+        avatar: user.avatar || null,
+      };
+      req.session.accessToken = token.access_token;
+      req.session.refreshToken = token.refresh_token || null;
+      req.session.guilds = guilds;
       req.session.csrf = crypto.randomBytes(32).toString('hex');
-      auditService.log(`${tag} (${user.id})`, 'login.success', {});
+      auditService.log(null, `${req.session.user.tag} (${user.id})`, 'login.success', { accessibleGuilds: accessible.length });
       res.redirect('/dashboard');
     });
   } catch (err) {
@@ -163,5 +183,14 @@ async function discordAuthCallback(req, res) {
   }
 }
 
-module.exports = { discordAuthStart, discordAuthCallback };
-
+module.exports = {
+  discordAuthStart,
+  discordAuthCallback,
+  canAccessGuild,
+  accessibleGuilds,
+  isGuildOwner,
+  hasManageGuild,
+  canManageGuild,
+  fetchGuildMember,
+  fetchGuildRoles,
+};

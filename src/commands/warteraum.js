@@ -14,7 +14,7 @@ module.exports = {
     .addSubcommand((s) => s.setName('weiter').setDescription('Ruft den nächsten aus der Queue auf')),
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();
-    const settings = await settingsService.getAll();
+    const settings = await settingsService.getAll(interaction.guild.id);
     const guild = interaction.guild;
     const staff = helpers.isGuildModerator(interaction.member, settings);
 

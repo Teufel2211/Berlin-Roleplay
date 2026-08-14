@@ -1,0 +1,9 @@
+<aside class="feature-sidebar">
+  <nav class="feature-nav">
+    <% features.forEach(function (f) { %>
+    <a href="/dashboard/servers/<%= guildId %>/feature/<%= f.id %>" class="feature-link<%= f.id === activeFeature ? ' active' : '' %>">
+      <span class="feature-icon"><%= f.icon %></span><span><%= f.name %></span>
+    </a>
+    <% }) %>
+  </nav>
+</aside>

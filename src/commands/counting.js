@@ -15,7 +15,7 @@ module.exports = {
     .addSubcommand((s) => s.setName('reset').setDescription('Setzt den Zähler zurück')),
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();
-    const settings = await settingsService.getAll();
+    const settings = await settingsService.getAll(interaction.guild.id);
     const guild = interaction.guild;
     const admin = helpers.isGuildAdmin(interaction.member, settings);
 

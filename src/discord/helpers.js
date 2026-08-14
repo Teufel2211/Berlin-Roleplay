@@ -1,8 +1,29 @@
 const { ActionRowBuilder, ButtonBuilder } = require('discord.js');
 
+function parseRoleSetting(value) {
+  if (!value) return [];
+  const trimmed = String(value).trim();
+  if (!trimmed) return [];
+  if (trimmed.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) return parsed.map(String).filter(Boolean);
+    } catch (err) {
+      return [];
+    }
+    return [];
+  }
+  return [trimmed];
+}
+
 function findRole(guild, name) {
   if (!name) return null;
   return guild.roles.cache.find((r) => r.name === name);
+}
+
+function resolveRoles(guild, value) {
+  const names = parseRoleSetting(value);
+  return names.map((name) => findRole(guild, name)).filter(Boolean);
 }
 
 function findChannel(guild, id) {
@@ -17,6 +38,10 @@ function hasRole(member, roleName) {
 
 function memberHasAnyRole(member, roleNames) {
   return roleNames.some((name) => hasRole(member, name));
+}
+
+function memberHasAnyRoleSetting(member, value) {
+  return memberHasAnyRole(member, parseRoleSetting(value));
 }
 
 function parseDuration(str) {
@@ -75,20 +100,25 @@ function row(...buttons) {
 }
 
 function isGuildModerator(member, settings) {
-  const staff = settings.staff_role;
-  const admin = settings.admin_role;
-  return Boolean(staff && hasRole(member, staff)) || Boolean(admin && hasRole(member, admin));
+  if (member && member.id === member.guild.ownerId) return true;
+  const staff = settings.staff_roles;
+  const admin = settings.admin_roles;
+  return Boolean(staff && memberHasAnyRoleSetting(member, staff)) || Boolean(admin && memberHasAnyRoleSetting(member, admin));
 }
 
 function isGuildAdmin(member, settings) {
-  return Boolean(settings.admin_role && hasRole(member, settings.admin_role));
+  if (member && member.id === member.guild.ownerId) return true;
+  return Boolean(settings.admin_roles && memberHasAnyRoleSetting(member, settings.admin_roles));
 }
 
 module.exports = {
+  parseRoleSetting,
+  resolveRoles,
   findRole,
   findChannel,
   hasRole,
   memberHasAnyRole,
+  memberHasAnyRoleSetting,
   parseDuration,
   formatRemaining,
   formatNumber,

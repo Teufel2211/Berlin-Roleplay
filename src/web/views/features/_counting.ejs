@@ -1,0 +1,32 @@
+<h2 class="feature-title">Counting</h2>
+<p class="muted">Fortlaufende Zahl im Zähl-Kanal mit Streak, Dezimalzahlen und Meilensteinen.</p>
+<% if (data.dbError) { %><div class="alert error"><%= data.dbError %></div><% } %>
+<% if (data.state) { %>
+<%
+  var milestones = [100, 500, 1000, 2500, 5000, 10000];
+  var cur = Number(data.state.current_number) || 0;
+  var next = null;
+  for (var i = 0; i < milestones.length; i++) { if (cur < milestones[i]) { next = milestones[i]; break; } }
+  if (!next && cur >= 10000) next = Math.ceil((cur + 1) / 10000) * 10000;
+%>
+<div class="stat-grid">
+  <div class="stat-card"><div class="stat-value"><%= data.state.current_number %></div><div class="stat-label">Aktuelle Zahl</div></div>
+  <div class="stat-card"><div class="stat-value"><%= data.state.streak %></div><div class="stat-label">Streak</div></div>
+  <div class="stat-card"><div class="stat-value"><%= data.all.counting_target || '∞' %></div><div class="stat-label">Ziel</div></div>
+  <div class="stat-card"><div class="stat-value"><%= next || '—' %></div><div class="stat-label">Nächster Meilenstein</div></div>
+</div>
+<% } %>
+<% if (data.top.length) { %>
+<h3 class="list-title">Top-Zähler</h3>
+<div class="table-wrap">
+  <table class="data-table">
+    <thead><tr><th>#</th><th>Nutzer</th><th>Zahlen</th></tr></thead>
+    <tbody>
+      <% data.top.forEach(function (r, i) { %>
+      <tr><td><%= i + 1 %></td><td><%= r.discord_id %></td><td><%= r.count %></td></tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+<% } %>
+<%- include('_settings_form', { data, featureId: 'counting', guildId }) %>

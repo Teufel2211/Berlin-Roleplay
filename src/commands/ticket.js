@@ -15,7 +15,7 @@ module.exports = {
     .addSubcommand((s) => s.setName('hinzufügen').setDescription('Fügt jemanden zum Ticket hinzu').addUserOption((o) => o.setName('user').setDescription('Benutzer').setRequired(true))),
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();
-    const settings = await settingsService.getAll();
+    const settings = await settingsService.getAll(interaction.guild.id);
     const guild = interaction.guild;
     const staff = helpers.isGuildModerator(interaction.member, settings);
 

@@ -6,5 +6,6 @@ const application = require('./application');
 const bewerbungVerwalten = require('./bewerbung-verwalten');
 const ticket = require('./ticket');
 const admin = require('./admin');
+const interview = require('./interview');
 
-module.exports = [verify, warteraum, giveaway, counting, application, bewerbungVerwalten, ticket, admin];
+module.exports = [verify, warteraum, giveaway, counting, application, bewerbungVerwalten, ticket, admin, interview];

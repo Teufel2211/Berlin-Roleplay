@@ -24,7 +24,7 @@ module.exports = {
     .addSubcommand((s) => s.setName('liste').setDescription('Zeigt laufende Giveaways')),
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();
-    const settings = await settingsService.getAll();
+    const settings = await settingsService.getAll(interaction.guild.id);
     const guild = interaction.guild;
     if (!helpers.isGuildModerator(interaction.member, settings)) {
       return interaction.reply({ embeds: [embeds.error('Keine Berechtigung', 'Nur Staff kann Giveaways verwalten.', guild)], ephemeral: true });

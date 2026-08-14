@@ -1,0 +1,31 @@
+<%- include('partials/head', { title, user, csrf, guildId }) %>
+<section class="page">
+  <h1>Server wählen</h1>
+  <p class="muted">Wähle einen Server, den du verwaltest, um ihn zu konfigurieren.</p>
+  <% if (!guilds.length) { %>
+  <div class="empty-state">
+    <p>Du verwaltest aktuell keinen Server. Lade den Bot in deinen Server ein und verwalte ihn dann hier.</p>
+    <a href="<%= inviteUrl %>" class="discord-btn" target="_blank" rel="noopener">Bot einladen</a>
+  </div>
+  <% } else { %>
+  <div class="guild-grid">
+    <% guilds.forEach(function (g) { %>
+    <div class="guild-card<%= g.botIn ? ' has-bot' : '' %>">
+      <% if (g.botIn) { %><a href="/dashboard/servers/<%= g.id %>" class="guild-card-link"><% } %>
+      <div class="guild-icon">
+        <% if (g.icon) { %>
+        <img src="https://cdn.discordapp.com/icons/<%= g.id %>/<%= g.icon %>.png?size=128" alt="" onerror="this.parentElement.textContent='<%= g.name.charAt(0) %>'">
+        <% } else { %><span class="guild-fallback"><%= g.name.charAt(0) %></span><% } %>
+      </div>
+      <div class="guild-name"><%= g.name %></div>
+      <div class="guild-meta"><%= g.botIn ? (g.botOnline ? 'Bot online' : 'Bot offline') : 'Bot nicht eingeladen' %></div>
+      <% if (g.botIn) { %></a><% } %>
+      <% if (!g.botIn) { %>
+      <a href="<%= inviteUrl %>" class="btn invite-btn" target="_blank" rel="noopener">Bot hinzufügen</a>
+      <% } %>
+    </div>
+    <% }) %>
+  </div>
+  <% } %>
+</section>
+<%- include('partials/foot') %>

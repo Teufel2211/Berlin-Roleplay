@@ -17,7 +17,7 @@ async function main() {
     console.error('  Anleitung:');
     console.error('    1. Kopiere .env.example zu .env');
     console.error('    2. Trage die Secrets ein (Discord + Supabase)');
-    console.error('    3. npm run migrate && npm run setup && npm run deploy');
+    console.error('    3. npm run migrate && npm run deploy');
     console.error('');
     process.exit(1);
   }

@@ -16,7 +16,7 @@ module.exports = {
     .addSubcommand((s) => s.setName('dashboard').setDescription('Zeigt die Dashboard-URL')),
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();
-    const settings = await settingsService.getAll();
+    const settings = await settingsService.getAll(interaction.guild.id);
     const guild = interaction.guild;
     if (!helpers.isGuildAdmin(interaction.member, settings)) {
       return interaction.reply({ embeds: [embeds.error('Keine Berechtigung', 'Nur Admin kann diesen Befehl nutzen.', guild)], ephemeral: true });
@@ -29,16 +29,21 @@ module.exports = {
       });
     }
     if (sub === 'rollen') {
+      const show = (key) => {
+        const names = helpers.parseRoleSetting(settings[key]);
+        if (!names.length) return 'nicht gesetzt';
+        return names.map((n) => `@${n}`).join(', ');
+      };
       const lines = [
-        `👮 **Staff:** ${settings.staff_role || 'nicht gesetzt'}`,
-        `🛡️ **Admin:** ${settings.admin_role || 'nicht gesetzt'}`,
-        `✅ **Verifiziert:** ${settings.verified_role || 'nicht gesetzt'}`,
-        `🎧 **Warteraum:** ${settings.warteraum_role || 'nicht gesetzt'}`,
+        `👮 **Staff:** ${show('staff_roles')}`,
+        `🛡️ **Admin:** ${show('admin_roles')}`,
+        `✅ **Verifiziert:** ${show('verified_roles')}`,
+        `🎧 **Warteraum:** ${show('warteraum_roles')}`,
       ];
       return interaction.reply({ embeds: [embeds.info('Konfigurierte Rollen', lines.join('\n'), guild)], ephemeral: true });
     }
     if (sub === 'setup') {
-      await auditService.log(interaction.user.tag, 'admin.setup', {});
+      await auditService.log(guild.id, interaction.user.tag, 'admin.setup', {});
       const messages = [];
       if (settings.verify_channel_id) {
         await verifyService.postPanel(interaction);

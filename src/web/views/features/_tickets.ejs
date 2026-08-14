@@ -1,0 +1,24 @@
+<h2 class="feature-title">Tickets</h2>
+<p class="muted">Support-Tickets über ein Panel. Konfiguriere Kategorie, Panel- und Log-Kanal.</p>
+<% if (data.dbError) { %><div class="alert error"><%= data.dbError %></div><% } %>
+<% if (data.records.length) { %>
+<h3 class="list-title">Tickets</h3>
+<div class="table-wrap">
+  <table class="data-table">
+    <thead><tr><th>#</th><th>Thema</th><th>Status</th><th>Ersteller</th><th>Übernommen von</th><th>Erstellt am</th></tr></thead>
+    <tbody>
+      <% data.records.forEach(function (t) { %>
+      <tr>
+        <td><%= t.id %></td>
+        <td><%= t.topic %></td>
+        <td><span class="badge <%= t.status %>"><%= t.status %></span></td>
+        <td><%= t.owner_id %></td>
+        <td><%= t.claimed_by || '—' %></td>
+        <td><%= t.created_at ? new Date(t.created_at).toLocaleString('de-DE') : '—' %></td>
+      </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+<% } %>
+<%- include('_settings_form', { data, featureId: 'tickets', guildId }) %>

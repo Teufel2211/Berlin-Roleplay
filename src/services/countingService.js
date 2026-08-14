@@ -7,27 +7,25 @@ const logger = require('../logger');
 
 const MILESTONES = [100, 500, 1000, 2500, 5000, 10000];
 
-let state = null;
-let loading = null;
+const states = new Map();
 
-async function getState() {
-  if (state) return state;
-  if (!loading) {
-    loading = (async () => {
-      const { data } = await withRetry(() =>
-        getClient().from(TABLES.countingState).select('*').eq('id', true).maybeSingle()
-      );
-      state = data || { id: true, current_number: 0, last_user_id: null, streak: 0, best_streak: 0 };
-      if (!data) {
-        await withRetry(() => getClient().from(TABLES.countingState).insert({ id: true, current_number: 0, last_user_id: null, streak: 0, best_streak: 0 }));
-      }
-      return state;
-    })();
+async function getState(guildId) {
+  if (states.has(guildId)) return states.get(guildId);
+  const { data } = await withRetry(() =>
+    getClient().from(TABLES.countingState).select('*').eq('guild_id', guildId).maybeSingle()
+  );
+  let state = data || { guild_id: guildId, current_number: 0, last_user_id: null, streak: 0, best_streak: 0 };
+  if (!data) {
+    await withRetry(() =>
+      getClient().from(TABLES.countingState).insert({ guild_id: guildId, current_number: 0, last_user_id: null, streak: 0, best_streak: 0 })
+    );
   }
-  return loading;
+  states.set(guildId, state);
+  return state;
 }
 
-async function saveState() {
+async function saveState(guildId) {
+  const state = states.get(guildId);
   if (!state) return;
   await withRetry(() =>
     getClient()
@@ -38,25 +36,27 @@ async function saveState() {
         streak: state.streak,
         best_streak: state.best_streak,
       })
-      .eq('id', true)
+      .eq('guild_id', guildId)
   );
 }
 
-async function bumpStats(discordId, { count = 0, wrong = false } = {}) {
+async function bumpStats(guildId, discordId, { count = 0, wrong = false } = {}) {
   const { data: cur } = await withRetry(() =>
-    getClient().from(TABLES.countingStats).select('*').eq('discord_id', discordId).maybeSingle()
+    getClient().from(TABLES.countingStats).select('*').eq('guild_id', guildId).eq('discord_id', discordId).maybeSingle()
   );
   const next = {
+    guild_id: guildId,
     discord_id: discordId,
     count: (cur ? cur.count : 0) + count,
     wrong_counts: (cur ? cur.wrong_counts : 0) + (wrong ? 1 : 0),
   };
-  await withRetry(() => getClient().from(TABLES.countingStats).upsert(next, { onConflict: 'discord_id' }));
+  await withRetry(() => getClient().from(TABLES.countingStats).upsert(next, { onConflict: 'guild_id,discord_id' }));
 }
 
 async function handleMessage(message) {
-  if (message.author.bot) return;
-  const settings = await settingsService.getAll();
+  if (message.author.bot || !message.guild) return;
+  const gid = message.guild.id;
+  const settings = await settingsService.getAll(gid);
   if (!settings.counting_channel_id || message.channelId !== settings.counting_channel_id) return;
 
   const raw = message.content.trim();
@@ -69,19 +69,19 @@ async function handleMessage(message) {
     value = parseInt(raw, 10);
   }
 
-  const st = await getState();
+  const st = await getState(gid);
   const expected = st.current_number + 1;
 
   if (value === null) {
-    await wrong(message, settings, st, 'das ist keine Zahl', raw);
+    await wrong(message, settings, st, gid, 'das ist keine Zahl', raw);
     return;
   }
   if (st.last_user_id === message.author.id) {
-    await wrong(message, settings, st, 'du darfst nicht zweimal hintereinander zählen', raw);
+    await wrong(message, settings, st, gid, 'du darfst nicht zweimal hintereinander zählen', raw);
     return;
   }
   if (value !== expected) {
-    await wrong(message, settings, st, `du hast \`${raw}\` gesagt, erwartet wurde \`${expected}\``, raw);
+    await wrong(message, settings, st, gid, `du hast \`${raw}\` gesagt, erwartet wurde \`${expected}\``, raw);
     return;
   }
 
@@ -89,8 +89,8 @@ async function handleMessage(message) {
   st.last_user_id = message.author.id;
   st.streak += 1;
   if (st.streak > st.best_streak) st.best_streak = st.streak;
-  await saveState();
-  await bumpStats(message.author.id, { count: 1 });
+  await saveState(gid);
+  await bumpStats(gid, message.author.id, { count: 1 });
 
   try { await message.react('✅'); } catch (err) { /* ignorieren */ }
 
@@ -115,7 +115,7 @@ async function handleMessage(message) {
     st.current_number = 0;
     st.streak = 0;
     st.last_user_id = null;
-    await saveState();
+    await saveState(gid);
   }
 }
 
@@ -125,12 +125,12 @@ function isMilestone(n) {
   return null;
 }
 
-async function wrong(message, settings, st, reason, raw) {
+async function wrong(message, settings, st, gid, reason, raw) {
   st.current_number = 0;
   st.streak = 0;
   st.last_user_id = null;
-  await saveState();
-  await bumpStats(message.author.id, { wrong: true });
+  await saveState(gid);
+  await bumpStats(gid, message.author.id, { wrong: true });
 
   const ch = message.guild.channels.cache.get(settings.counting_channel_id);
   if (ch) {
@@ -144,8 +144,9 @@ async function wrong(message, settings, st, reason, raw) {
 
 async function leaderboard(interaction) {
   const guild = interaction.guild;
+  const gid = guild.id;
   const { data } = await withRetry(() =>
-    getClient().from(TABLES.countingStats).select('discord_id, count').order('count', { ascending: false }).limit(10)
+    getClient().from(TABLES.countingStats).select('discord_id, count').eq('guild_id', gid).order('count', { ascending: false }).limit(10)
   );
   if (!data || data.length === 0) {
     return interaction.reply({ embeds: [embeds.info('📊 Counting Leaderboard', 'Noch keine Daten vorhanden.', guild)] });
@@ -159,11 +160,12 @@ async function leaderboard(interaction) {
 
 async function stats(interaction, target) {
   const guild = interaction.guild;
+  const gid = guild.id;
   const discordId = target ? target.id : interaction.user.id;
   const { data } = await withRetry(() =>
-    getClient().from(TABLES.countingStats).select('*').eq('discord_id', discordId).maybeSingle()
+    getClient().from(TABLES.countingStats).select('*').eq('guild_id', gid).eq('discord_id', discordId).maybeSingle()
   );
-  const st = await getState();
+  const st = await getState(gid);
   const isSelf = !target || target.id === interaction.user.id;
   if (!data) {
     return interaction.reply({
@@ -184,38 +186,42 @@ async function stats(interaction, target) {
 
 async function setNumber(interaction, value) {
   const guild = interaction.guild;
-  const st = await getState();
+  const gid = guild.id;
+  const st = await getState(gid);
   st.current_number = value;
   st.streak = 0;
   st.last_user_id = null;
-  await saveState();
-  await auditService.log(interaction.user.tag, 'counting.set', { value });
+  await saveState(gid);
+  await auditService.log(gid, interaction.user.tag, 'counting.set', { value });
   return interaction.reply({ embeds: [embeds.success('Zähler gesetzt', `Der Zählerstand wurde auf **${helpers.formatNumber(value)}** gesetzt.`, guild)], ephemeral: true });
 }
 
 async function setTarget(interaction, value) {
   const guild = interaction.guild;
-  await settingsService.setMany({ counting_target: String(value) });
-  await auditService.log(interaction.user.tag, 'counting.target', { value });
+  const gid = guild.id;
+  await settingsService.setMany(gid, { counting_target: String(value) });
+  await auditService.log(gid, interaction.user.tag, 'counting.target', { value });
   return interaction.reply({ embeds: [embeds.success('Ziel gesetzt', `Neues Zähl-Ziel: **${helpers.formatNumber(value)}**.`, guild)], ephemeral: true });
 }
 
 async function clearTarget(interaction) {
   const guild = interaction.guild;
-  await settingsService.setMany({ counting_target: '' });
-  await auditService.log(interaction.user.tag, 'counting.target.clear', {});
+  const gid = guild.id;
+  await settingsService.setMany(gid, { counting_target: '' });
+  await auditService.log(gid, interaction.user.tag, 'counting.target.clear', {});
   return interaction.reply({ embeds: [embeds.success('Ziel entfernt', 'Das Zähl-Ziel wurde entfernt (unendlich).', guild)], ephemeral: true });
 }
 
 async function reset(interaction) {
   const guild = interaction.guild;
-  const st = await getState();
+  const gid = guild.id;
+  const st = await getState(gid);
   st.current_number = 0;
   st.streak = 0;
   st.last_user_id = null;
   st.best_streak = 0;
-  await saveState();
-  await auditService.log(interaction.user.tag, 'counting.reset', {});
+  await saveState(gid);
+  await auditService.log(gid, interaction.user.tag, 'counting.reset', {});
   return interaction.reply({ embeds: [embeds.success('Zähler zurückgesetzt', 'Der Zähler wurde auf **0** zurückgesetzt.', guild)], ephemeral: true });
 }
 

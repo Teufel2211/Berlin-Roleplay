@@ -1,16 +1,11 @@
 const crypto = require('crypto');
-const { config } = require('../config');
 const logger = require('../logger');
-const { ensureAdminCode } = require('./adminCode');
 const { discordAuthStart, discordAuthCallback } = require('./discordAuth');
 
 const LOGIN_ERRORS = {
   denied: 'Die Anmeldung wurde abgebrochen.',
   state: 'Ungültige Anmeldung. Bitte erneut versuchen.',
   oauth: 'Anmeldung fehlgeschlagen. Bitte erneut versuchen.',
-  notmember: 'Du bist kein Mitglied des Discord-Servers.',
-  norole: 'Du hast keine Berechtigung für das Dashboard (nur Server-Owner, Staff und Admin).',
-  code: 'Code ungültig, abgelaufen oder bereits benutzt.',
   session: 'Sitzung abgelaufen – Seite wurde neu geladen. Bitte erneut versuchen.',
 };
 
@@ -66,16 +61,10 @@ function requireAuthApi(req, res, next) {
 
 async function loginPage(req, res) {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
-  try {
-    await ensureAdminCode();
-  } catch (err) {
-    logger.warn(`Login-Seite: Admin-Code konnte nicht generiert/gesendet werden: ${err.message}`);
-  }
   res.render('login', {
     title: 'Login',
     user: null,
     error: LOGIN_ERRORS[req.query.error] || null,
-    codeError: req.query.error === 'code' || req.query.error === 'session',
     csrf: csrfToken(req),
   });
 }

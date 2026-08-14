@@ -1,0 +1,22 @@
+<h2 class="feature-title">Bewerbung</h2>
+<p class="muted">Bewerbungen werden über ein Modal eingereicht und von Staff/Admin entschieden.</p>
+<% if (data.dbError) { %><div class="alert error"><%= data.dbError %></div><% } %>
+<% if (data.records.length) { %>
+<h3 class="list-title">Bewerbungen</h3>
+<div class="table-wrap">
+  <table class="data-table">
+    <thead><tr><th>Nutzer</th><th>Typ</th><th>Status</th><th>Erstellt am</th></tr></thead>
+    <tbody>
+      <% data.records.forEach(function (a) { %>
+      <tr>
+        <td><%= a.discord_tag || a.discord_id %></td>
+        <td><%= a.bewerbung_type || '—' %></td>
+        <td><span class="badge <%= a.status %>"><%= a.status %></span></td>
+        <td><%= a.created_at ? new Date(a.created_at).toLocaleString('de-DE') : '—' %></td>
+      </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+<% } %>
+<%- include('_settings_form', { data, featureId: 'bewerbung', guildId }) %>

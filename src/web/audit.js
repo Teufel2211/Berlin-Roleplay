@@ -6,6 +6,7 @@ async function getApi(req, res) {
     const { data } = await getClient()
       .from(TABLES.auditLog)
       .select('*')
+      .eq('guild_id', req.guildId)
       .order('created_at', { ascending: false })
       .limit(200);
     res.json(data || []);

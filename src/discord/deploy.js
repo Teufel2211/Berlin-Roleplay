@@ -8,13 +8,13 @@ function commandData() {
 }
 
 async function registerCommands() {
-  if (!config.discordToken || !config.clientId || !config.guildId) {
-    throw new Error('DISCORD_TOKEN, CLIENT_ID und GUILD_ID müssen in .env stehen (npm run deploy)');
+  if (!config.discordToken || !config.clientId) {
+    throw new Error('DISCORD_TOKEN und CLIENT_ID müssen in .env stehen (npm run deploy)');
   }
   const rest = new REST({ version: '10' }).setToken(config.discordToken);
   const body = commandData();
-  logger.info(`Registriere ${body.length} Slash-Kommandos...`);
-  const data = await rest.put(Routes.applicationGuildCommands(config.clientId, config.guildId), { body });
+  logger.info(`Registriere ${body.length} Slash-Kommandos (global)...`);
+  const data = await rest.put(Routes.applicationCommands(config.clientId), { body });
   logger.info(`Erfolgreich registriert: ${data.length} Kommandos`);
   return data;
 }

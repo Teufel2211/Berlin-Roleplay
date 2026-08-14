@@ -1,0 +1,62 @@
+<% if (data.groups.length === 0) { %>
+<div class="empty-state"><p>Für dieses Feature gibt es keine Einstellungen.</p></div>
+<% } else { %>
+<form method="post" action="/dashboard/servers/<%= guildId %>/feature/<%= featureId %>" class="settings-form">
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+  <% data.groups.forEach(function (group) { %>
+  <div class="settings-group">
+    <h3 class="settings-subgroup"><%= group.subgroup %></h3>
+    <div class="settings-fields">
+      <% group.fields.forEach(function (f) { %>
+        <% if (f.type === 'channel') { %>
+        <label class="field">
+          <span class="field-label"><%= f.label %></span>
+          <% if (!data.channelOptions) { %>
+          <input type="text" name="settings[<%= f.key %>]" value="<%= f.value %>" placeholder="Kanal-ID oder Name">
+          <% } else { %>
+          <select name="settings[<%= f.key %>]">
+            <option value="">— Keiner —</option>
+            <% data.channelOptions.forEach(function (c) { %>
+            <option value="<%= c.id %>"<%= String(f.value) === String(c.id) ? ' selected' : '' %>><%= c.name %></option>
+            <% }) %>
+          </select>
+          <% } %>
+        </label>
+        <% } else if (f.type === 'roles') { %>
+        <div class="field">
+          <span class="field-label"><%= f.label %></span>
+          <% if (!data.roleOptions) { %>
+          <input type="text" name="settings[<%= f.key %>]" value="<%= f.value %>" placeholder="Rollen-IDs (JSON-Array)">
+          <% } else { %>
+          <div class="role-checkboxes">
+            <% var sel = (function () { try { var arr = JSON.parse(f.value || '[]'); return Array.isArray(arr) ? arr.map(String) : []; } catch (e) { return f.value ? [String(f.value)] : []; } })(); %>
+            <% data.roleOptions.forEach(function (r) { %>
+            <label class="role-checkbox">
+              <input type="checkbox" name="settings[<%= f.key %>][]" value="<%= r.id %>"<%= sel.indexOf(String(r.id)) !== -1 ? ' checked' : '' %>>
+              <span><%= r.name %></span>
+            </label>
+            <% }) %>
+          </div>
+          <% } %>
+        </div>
+        <% } else if (f.boolean) { %>
+        <label class="field">
+          <span class="field-label"><%= f.label %></span>
+          <select name="settings[<%= f.key %>]">
+            <option value="true"<%= f.value === 'true' ? ' selected' : '' %>>Ja</option>
+            <option value="false"<%= f.value === 'false' ? ' selected' : '' %>>Nein</option>
+          </select>
+        </label>
+        <% } else { %>
+        <label class="field">
+          <span class="field-label"><%= f.label %></span>
+          <input type="text" name="settings[<%= f.key %>]" value="<%= f.value %>">
+        </label>
+        <% } %>
+      <% }) %>
+    </div>
+  </div>
+  <% }) %>
+  <button type="submit" class="btn primary">Speichern</button>
+</form>
+<% } %>

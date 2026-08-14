@@ -15,7 +15,7 @@ module.exports = {
     ),
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();
-    const settings = await settingsService.getAll();
+    const settings = await settingsService.getAll(interaction.guild.id);
     const guild = interaction.guild;
 
     if (sub === 'panel') {
