@@ -1,7 +1,8 @@
 const crypto = require('crypto');
 const logger = require('../logger');
 const { config } = require('../config');
-const { discordAuthStart, discordAuthCallback } = require('./discordAuth');
+const discordAuth = require('./discordAuth');
+const { discordAuthStart, discordAuthCallback } = discordAuth;
 
 const LOGIN_ERRORS = {
   denied: 'Die Anmeldung wurde abgebrochen.',
@@ -52,9 +53,22 @@ function csrfLoginCheck(req, res, next) {
 }
 
 async function refreshDiscordGuilds(req) {
-  if (!req.session || !req.session.user || !req.session.accessToken) return;
+  if (!req.session || !req.session.user) return;
 
   try {
+    // Der globale Owner bekommt ausschließlich die Bot-Guilds. Dadurch kann
+    // der Owner auch Server verwalten, in denen sein persönlicher Discord-Account
+    // keine MANAGE_GUILD-Berechtigung besitzt.
+    if (discordAuth.isOwner(req.session)) {
+      const botGuilds = await discordAuth.fetchBotGuilds();
+      req.session.guilds = botGuilds.map((guild) => ({ ...guild, ownerAccess: true }));
+      req.session.guildsSyncedAt = Date.now();
+      req.session.user.isOwner = true;
+      return;
+    }
+
+    if (!req.session.accessToken) return;
+
     const res = await fetch(`${OAUTH_BASE}/users/@me/guilds`, {
       headers: { Authorization: `Bearer ${req.session.accessToken}` },
     });
@@ -67,6 +81,7 @@ async function refreshDiscordGuilds(req) {
     const guilds = await res.json();
     req.session.guilds = Array.isArray(guilds) ? guilds : [];
     req.session.guildsSyncedAt = Date.now();
+    req.session.user.isOwner = false;
   } catch (err) {
     logger.warn(`Discord-Serverliste konnte nicht synchronisiert werden: ${err.message}`);
   }
@@ -77,7 +92,7 @@ async function requireAuth(req, res, next) {
   if (!req.session || !req.session.user) return res.redirect('/dashboard/login');
 
   // Die Discord-Guild-Liste wird bei jedem Dashboard-Request aktualisiert.
-  // Dadurch sind neue/entfernte Server sichtbar, ohne dass der Nutzer sich neu anmelden muss.
+  // Owner: alle Server des Bots. Nutzer: Server mit Owner/MANAGE_GUILD.
   await refreshDiscordGuilds(req);
   return next();
 }
