@@ -2,6 +2,7 @@
 <section class="page">
   <h1>Server wählen</h1>
   <p class="muted">Wähle einen Server, den du verwaltest, um ihn zu konfigurieren.</p>
+  <p class="muted" id="guild-sync-status">Serverliste wird automatisch mit Discord synchronisiert.</p>
   <% if (!guilds.length) { %>
   <div class="empty-state">
     <p>Du verwaltest aktuell keinen Server. Lade den Bot in deinen Server ein und verwalte ihn dann hier.</p>
@@ -28,4 +29,25 @@
   </div>
   <% } %>
 </section>
+<script>
+  (() => {
+    const status = document.getElementById('guild-sync-status');
+    let reloading = false;
+
+    const refresh = () => {
+      if (reloading || document.visibilityState !== 'visible') return;
+      reloading = true;
+      if (status) status.textContent = 'Serverliste wird aktualisiert …';
+      window.location.reload();
+    };
+
+    // Discord kann sich während der geöffneten Dashboard-Seite ändern, z. B.
+    // wenn der Bot in einen neuen Server eingeladen oder aus einem Server entfernt wird.
+    setInterval(refresh, 30000);
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') refresh();
+    });
+  })();
+</script>
 <%- include('partials/foot') %>
