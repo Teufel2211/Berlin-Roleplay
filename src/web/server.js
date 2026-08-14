@@ -114,7 +114,7 @@ function createApp() {
   app.get('/dashboard/auth/discord', auth.discordAuthStart);
   app.get('/dashboard/auth/discord/callback', auth.discordAuthCallback);
   app.post('/dashboard/logout', auth.csrfCheck, auth.logout);
-  app.post('/dashboard/login/code', settingsLimiter, auth.csrfCheck, async (req, res) => {
+  app.post('/dashboard/login/code', settingsLimiter, auth.csrfLoginCheck, async (req, res) => {
     const result = await verifyAdminCode(req.body && req.body.code);
     if (result.ok) {
       req.session.user = { username: 'Owner', id: config.ownerUserId, isOwner: true };
@@ -124,7 +124,7 @@ function createApp() {
       res.redirect('/dashboard/login?error=code');
     }
   });
-  app.post('/dashboard/login/code/request', settingsLimiter, auth.csrfCheck, async (req, res) => {
+  app.post('/dashboard/login/code/request', settingsLimiter, auth.csrfLoginCheck, async (req, res) => {
     try {
       await generateAdminCode();
     } catch (err) {
