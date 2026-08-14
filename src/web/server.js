@@ -118,22 +118,51 @@ function settingsGroupsFor(featureId, all, channelOptions, roleOptions) {
   }));
 }
 
-function guildFromSession(req, guildId) {
-  const guilds = req.session && req.session.guilds ? req.session.guilds : [];
-  return guilds.find((g) => g.id === guildId) || null;
+function isOwnerRequest(req) {
+  return discordAuth.isOwner(req.session);
 }
 
-function guildAccessCheck(req, res, next) {
+async function getDashboardGuilds(req) {
+  if (isOwnerRequest(req)) {
+    return discordAuth.fetchBotGuilds();
+  }
+  return discordAuth.accessibleGuilds(req.session.guilds);
+}
+
+async function guildAccessCheck(req, res, next) {
   const guildId = req.params.guildId;
-  const guild = guildFromSession(req, guildId);
+  if (isOwnerRequest(req)) {
+    try {
+      const guild = await discordAuth.fetchGuild(guildId);
+      if (!guild) {
+        return res.status(404).render('error', { title: 'Server nicht gefunden', user: req.session.user, csrf: auth.csrfToken(req), message: 'Der Bot befindet sich nicht auf diesem Server.' });
+      }
+      req.guildId = guildId;
+      req.guild = guild;
+      req.ownerAccess = true;
+      res.locals.guildId = guildId;
+      res.locals.guilds = await discordAuth.fetchBotGuilds();
+      res.locals.activeGuild = guild;
+      res.locals.ownerAccess = true;
+      return next();
+    } catch (err) {
+      logger.warn(`Owner-Serverprüfung fehlgeschlagen: ${err.message}`);
+      return res.status(503).render('error', { title: 'Discord nicht erreichbar', user: req.session.user, csrf: auth.csrfToken(req), message: 'Die Bot-Serverliste konnte momentan nicht geladen werden.' });
+    }
+  }
+
+  const guilds = req.session && req.session.guilds ? req.session.guilds : [];
+  const guild = guilds.find((g) => g.id === guildId) || null;
   if (!guild || !discordAuth.canAccessGuild(guild)) {
     return res.status(403).render('error', { title: 'Fehler', user: req.session.user, csrf: auth.csrfToken(req), message: 'Kein Zugriff auf diesen Server.' });
   }
   req.guildId = guildId;
   req.guild = guild;
+  req.ownerAccess = false;
   res.locals.guildId = guildId;
-  res.locals.guilds = discordAuth.accessibleGuilds(req.session.guilds);
+  res.locals.guilds = discordAuth.accessibleGuilds(guilds);
   res.locals.activeGuild = guild;
+  res.locals.ownerAccess = false;
   return next();
 }
 
@@ -199,19 +228,42 @@ function createApp() {
   app.use('/dashboard', auth.requireAuth);
 
   app.get('/dashboard', async (req, res) => {
-    const guilds = discordAuth.accessibleGuilds(req.session.guilds);
-    const withBot = guilds.map((g) => ({
-      ...g,
-      botIn: Boolean(client && client.guilds.cache.has(g.id)),
-      botOnline: Boolean(client && client.isReady() && client.guilds.cache.has(g.id)),
-    }));
-    res.render('guilds', {
-      title: 'Server wählen',
-      user: req.session.user,
-      csrf: auth.csrfToken(req),
-      guilds: withBot,
-      inviteUrl: `https://discord.com/oauth2/authorize?client_id=${config.clientId}&scope=bot&permissions=0`,
-    });
+    try {
+      const isOwner = isOwnerRequest(req);
+      const guilds = await getDashboardGuilds(req);
+      const withBot = guilds.map((g) => ({
+        ...g,
+        botIn: isOwner ? true : Boolean(client && client.guilds && client.guilds.cache.has(g.id)),
+        botOnline: Boolean(client && client.isReady() && client.guilds && client.guilds.cache.has(g.id)),
+      }));
+
+      if (isOwner) {
+        return res.render('owner-guilds', {
+          title: 'Owner Dashboard',
+          user: req.session.user,
+          csrf: auth.csrfToken(req),
+          guilds: withBot,
+          serverCount: withBot.length,
+          owner: true,
+        });
+      }
+
+      res.render('guilds', {
+        title: 'Server wählen',
+        user: req.session.user,
+        csrf: auth.csrfToken(req),
+        guilds: withBot,
+        inviteUrl: `https://discord.com/oauth2/authorize?client_id=${config.clientId}&scope=bot&permissions=0`,
+      });
+    } catch (err) {
+      logger.error(`Dashboard-Serverliste fehlgeschlagen: ${err.stack || err.message}`);
+      return res.status(503).render('error', { title: 'Discord nicht erreichbar', user: req.session.user, csrf: auth.csrfToken(req), message: 'Die Serverliste konnte nicht geladen werden. Bitte später erneut versuchen.' });
+    }
+  });
+
+  app.get('/dashboard/owner', async (req, res) => {
+    if (!isOwnerRequest(req)) return res.status(403).render('error', { title: 'Kein Zugriff', user: req.session.user, csrf: auth.csrfToken(req), message: 'Nur der Bot-Owner kann diese Seite öffnen.' });
+    return res.redirect('/dashboard');
   });
 
   app.use('/dashboard/servers/:guildId', guildAccessCheck);
@@ -232,6 +284,7 @@ function createApp() {
       activeFeature: 'interview',
       feature,
       data: { detail, all },
+      ownerAccess: req.ownerAccess,
     });
   });
 
@@ -247,6 +300,7 @@ function createApp() {
       features: FEATURES,
       activeFeature: feature.id,
       feature,
+      ownerAccess: req.ownerAccess,
     };
 
     let all = {};
@@ -304,114 +358,41 @@ function createApp() {
     if (feature.id === 'counting') {
       try {
         const cs = await countingService.getState(gid);
-        const { data: top } = await getClient().from(TABLES.countingStats).select('discord_id, count').eq('guild_id', gid).order('count', { ascending: false }).limit(10);
+        const { data: top } = await getClient().from(TABLES.countingStats).select('*').eq('guild_id', gid).order('count', { ascending: false }).limit(50);
         return res.render('server', { ...base, data: { ...sdata, state: cs, top: top || [] } });
       } catch (err) {
         return res.render('server', { ...base, data: { ...sdata, state: null, top: [], dbError: 'Datenbank nicht erreichbar.' } });
       }
     }
 
-    if (feature.id === 'embeds') {
-      try {
-        const { data: embeds } = await getClient().from(TABLES.embeds).select('*').eq('guild_id', gid).order('created_at', { ascending: false }).limit(100);
-        let edit = null;
-        if (req.query.edit) {
-          const { data: row } = await getClient().from(TABLES.embeds).select('*').eq('id', Number(req.query.edit)).eq('guild_id', gid).maybeSingle();
-          edit = row || null;
-        }
-        let channelOptions = null;
-        try { channelOptions = await discordApi.fetchChannels(gid); } catch (err) { logger.warn(`Kanaloptionen nicht verfügbar: ${err.message}`); }
-        return res.render('server', { ...base, data: { embeds: embeds || [], edit, channelOptions, flash: String(req.query.msg || '') } });
-      } catch (err) {
-        return res.render('server', { ...base, data: { embeds: [], edit: null, channelOptions: null, flash: String(req.query.msg || ''), dbError: 'Datenbank nicht erreichbar.' } });
-      }
+    if (feature.id === 'warteraum') {
+      return res.render('server', { ...base, data: sdata });
     }
 
     if (feature.id === 'interview') {
       try {
-        const [results, questions] = await Promise.all([interviewService.getResults(gid), interviewService.getQuestions(gid)]);
+        const results = await interviewService.getResults(gid);
+        const questions = await interviewService.getQuestions(gid);
         return res.render('server', { ...base, data: { ...sdata, results, questions } });
       } catch (err) {
-        return res.render('server', { ...base, data: { ...sdata, results: [], questions: [], dbError: 'Datenbank nicht erreichbar.' } });
-      }
-    }
-
-    if (feature.id === 'overview') {
-      try {
-        const [tickets, apps, giveaways] = await Promise.all([
-          getClient().from(TABLES.tickets).select('id', { count: 'exact' }).eq('guild_id', gid).eq('status', 'offen'),
-          getClient().from(TABLES.applications).select('id', { count: 'exact' }).eq('guild_id', gid).eq('status', 'offen'),
-          getClient().from(TABLES.giveaways).select('id', { count: 'exact' }).eq('guild_id', gid).eq('ended', false),
-        ]);
-        const cs = await countingService.getState(gid).catch(() => null);
-        return res.render('server', {
-          ...base,
-          data: {
-            ...sdata,
-            stats: {
-              tickets: tickets.count || 0,
-              applications: apps.count || 0,
-              giveaways: giveaways.count || 0,
-              currentNumber: cs ? cs.current_number : 0,
-              streak: cs ? cs.streak : 0,
-            },
-            botOnline: Boolean(client && client.isReady() && client.guilds.cache.has(gid)),
-          },
-        });
-      } catch (err) {
-        return res.render('server', { ...base, data: { ...sdata, stats: { tickets: '-', applications: '-', giveaways: '-', currentNumber: '-', streak: '-' }, botOnline: false, dbError: 'Datenbank nicht erreichbar.' } });
+        return res.render('server', { ...base, data: { ...sdata, results: [], questions: [], dbError: 'Interview-Daten nicht verfügbar.' } });
       }
     }
 
     return res.render('server', { ...base, data: sdata });
   });
 
-  app.post('/dashboard/servers/:guildId/feature/embeds', settingsLimiter, requireCanManage, auth.csrfCheck, embedAdmin.handleAction);
-  app.post('/dashboard/servers/:guildId/feature/interview/questions', settingsLimiter, requireCanManage, auth.csrfCheck, interviewAdmin.handleQuestions);
-  app.post('/dashboard/servers/:guildId/feature/:feature', settingsLimiter, requireCanManage, auth.csrfCheck, webSettings.saveForm);
-
-  app.use('/api/settings', auth.requireAuthApi, apiGuildMiddleware, requireCanManageApi);
-  app.use('/api/audit', auth.requireAuthApi, apiGuildMiddleware);
-  app.get('/api/settings', webSettings.getApi);
-  app.post('/api/settings', auth.csrfCheck, webSettings.saveApi);
-  app.get('/api/audit', webAudit.getApi);
-
-  app.use((req, res) => res.status(404).render('error', { title: 'Fehler', user: null, csrf: auth.csrfToken(req), message: 'Seite nicht gefunden' }));
-  app.use((err, req, res, next) => {
-    logger.error(`Web-Fehler: ${err.stack || err.message}`);
-    if (res.headersSent) return next(err);
-    res.status(500).render('error', { title: 'Fehler', user: null, csrf: auth.csrfToken(req), message: 'Interner Fehler' });
-  });
+  app.use('/dashboard/servers/:guildId/settings', guildAccessCheck, requireCanManage, webSettings.router({ getGuild: () => null }));
+  app.use('/dashboard/servers/:guildId/audit', guildAccessCheck, webAudit.router());
+  app.use('/dashboard/servers/:guildId/embeds', guildAccessCheck, requireCanManage, embedAdmin.router());
+  app.use('/dashboard/servers/:guildId/interview', guildAccessCheck, requireCanManage, interviewAdmin.router());
 
   return app;
 }
 
-function apiGuildMiddleware(req, res, next) {
-  const guildId = String(req.query.guild || (req.body && req.body.guild) || '');
-  const guild = guildFromSession(req, guildId);
-  if (!guild || !discordAuth.canAccessGuild(guild)) {
-    return res.status(403).json({ error: 'Kein Zugriff auf diesen Server.' });
-  }
-  req.guildId = guildId;
-  req.guild = guild;
-  return next();
-}
-
-function requireCanManageApi(req, res, next) {
-  discordAuth
-    .canManageGuild(req.session, req.guild)
-    .then((ok) => {
-      if (!ok) return res.status(403).json({ error: 'Nur Staff/Admin können Einstellungen ändern.' });
-      return next();
-    })
-    .catch(() => next());
-}
-
 function startWebServer() {
   const app = createApp();
-  const server = app.listen(config.webPort, () => {
-    logger.info(`HTTP-Server läuft auf Port ${config.webPort}`);
-  });
+  const server = app.listen(config.webPort, () => logger.info(`Web-Dashboard auf Port ${config.webPort} gestartet.`));
   return server;
 }
 
