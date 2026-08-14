@@ -112,7 +112,7 @@ function hasManageGuild(guild) {
 }
 
 function canAccessGuild(guild) {
-  return Boolean(guild && (isGuildOwner(guild) || hasManageGuild(guild)));
+  return Boolean(guild && (guild.ownerAccess === true || isGuildOwner(guild) || hasManageGuild(guild)));
 }
 
 function accessibleGuilds(guilds) {
@@ -180,7 +180,7 @@ async function discordAuthCallback(req, res) {
     const token = await exchangeCode(code);
     const user = await fetchDiscordUser(token.access_token);
     const guilds = await fetchMyGuilds(token.access_token);
-    const accessible = accessibleGuilds(guilds);
+    const ownerLogin = user.id === config.ownerUserId;
 
     req.session.regenerate((err) => {
       if (err) logger.error(`Session-Regeneration fehlgeschlagen: ${err.message}`);
@@ -188,13 +188,17 @@ async function discordAuthCallback(req, res) {
         id: user.id,
         tag: user.global_name || user.username,
         avatar: user.avatar || null,
+        isOwner: ownerLogin,
       };
       req.session.accessToken = token.access_token;
       req.session.refreshToken = token.refresh_token || null;
       req.session.tokenExpiresAt = Date.now() + Number(token.expires_in || 604800) * 1000;
-      req.session.guilds = guilds;
+      req.session.guilds = ownerLogin ? guilds.map((guild) => ({ ...guild, ownerAccess: true })) : guilds;
       req.session.guildsSyncedAt = Date.now();
-      auditService.log(null, `${req.session.user.tag} (${user.id})`, 'login.success', { accessibleGuilds: accessible.length, owner: user.id === config.ownerUserId });
+      auditService.log(null, `${req.session.user.tag} (${user.id})`, 'login.success', {
+        accessibleGuilds: accessibleGuilds(req.session.guilds).length,
+        owner: ownerLogin,
+      });
       res.redirect('/dashboard');
     });
   } catch (err) {
