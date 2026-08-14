@@ -56,12 +56,12 @@ async function refreshDiscordGuilds(req) {
   if (!req.session || !req.session.user) return;
 
   try {
-    // Der globale Owner bekommt ausschließlich die Bot-Guilds. Dadurch kann
-    // der Owner auch Server verwalten, in denen sein persönlicher Discord-Account
-    // keine MANAGE_GUILD-Berechtigung besitzt.
+    const botGuilds = await discordAuth.fetchBotGuilds();
+    const botGuildIds = new Set(botGuilds.map((guild) => guild.id));
+
+    // Der globale Owner bekommt alle Server des Bots und Vollzugriff.
     if (discordAuth.isOwner(req.session)) {
-      const botGuilds = await discordAuth.fetchBotGuilds();
-      req.session.guilds = botGuilds.map((guild) => ({ ...guild, ownerAccess: true }));
+      req.session.guilds = botGuilds.map((guild) => ({ ...guild, ownerAccess: true, botInstalled: true }));
       req.session.guildsSyncedAt = Date.now();
       req.session.user.isOwner = true;
       return;
@@ -79,7 +79,10 @@ async function refreshDiscordGuilds(req) {
     }
 
     const guilds = await res.json();
-    req.session.guilds = Array.isArray(guilds) ? guilds : [];
+    req.session.guilds = (Array.isArray(guilds) ? guilds : []).map((guild) => ({
+      ...guild,
+      botInstalled: botGuildIds.has(guild.id),
+    }));
     req.session.guildsSyncedAt = Date.now();
     req.session.user.isOwner = false;
   } catch (err) {
@@ -91,8 +94,7 @@ async function requireAuth(req, res, next) {
   if (req.path === '/login' || req.path === '/logout') return next();
   if (!req.session || !req.session.user) return res.redirect('/dashboard/login');
 
-  // Die Discord-Guild-Liste wird bei jedem Dashboard-Request aktualisiert.
-  // Owner: alle Server des Bots. Nutzer: Server mit Owner/MANAGE_GUILD.
+  // Serverliste und Bot-Installation werden bei jedem Dashboard-Request synchronisiert.
   await refreshDiscordGuilds(req);
   return next();
 }
