@@ -22,8 +22,8 @@ async function postPanel(interaction) {
       ephemeral: true,
     });
   }
-  const panel = embeds.info('Verifizierung', 'Klicke auf ✅, um dich als Mitglied zu verifizieren.', guild);
-  const row = helpers.row(helpers.primaryButton('verify_panel', 'Verifizieren', '✅'));
+  const panel = embeds.info('Verifizierung', 'Klicke auf **Verifizieren**, um dich als Mitglied zu verifizieren.', guild);
+  const row = helpers.row(helpers.primaryButton('verify_panel', 'Verifizieren'));
 
   let message = null;
   const existingId = await settingsService.get(gid, 'verify_panel_message_id');
@@ -120,7 +120,7 @@ async function status(interaction) {
     });
   }
   return interaction.reply({
-    embeds: [embeds.info('Nicht verifiziert', 'Du bist noch nicht verifiziert. Klicke im Verifizierungs-Panel auf ✅.', guild)],
+    embeds: [embeds.info('Nicht verifiziert', 'Du bist noch nicht verifiziert. Klicke im Verifizierungs-Panel auf **Verifizieren**.', guild)],
     ephemeral: true,
   });
 }
