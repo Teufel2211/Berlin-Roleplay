@@ -1,10 +1,10 @@
 <h2 class="feature-title">Interview</h2>
-<p class="muted">Interview-Bewertung im Discord-Chat. Bewertungsbögen können als TXT/MD hochgeladen werden und werden automatisch ausgewertet.</p>
+<p class="muted">Interview-Bewertung im Discord-Chat. Bewertungsbögen können direkt als Text eingefügt und automatisch ausgewertet werden.</p>
 <% if (data.dbError) { %><div class="alert error"><%= data.dbError %></div><% } %>
 <% if (data.flash) { %><div class="alert"><%= data.flash %></div><% } %>
 
-<h3 class="list-title">Bewertungsbogen importieren</h3>
-<p class="muted">Format: <code>1. Frage `1,5/2P`</code>. Die erreichten Punkte werden der ausgewählten Person zugeordnet.</p>
+<h3 class="list-title">Bewertungsbogen einfügen</h3>
+<p class="muted">Du kannst deinen kompletten Bewertungsbogen einfach hier hineinkopieren. Format z. B. <code>1. Frage `1,5/2P`</code>.</p>
 <form method="post" action="/dashboard/servers/<%= guildId %>/feature/interview/questions" class="question-add-form" id="grading-import-form">
   <input type="hidden" name="_csrf" value="<%= csrf %>">
   <input type="hidden" name="action" value="import">
@@ -14,24 +14,9 @@
       <option value="<%= r.id %>"><%= r.applicant_name || r.applicant_id %> — <%= new Date(r.created_at).toLocaleString('de-DE') %></option>
     <% }) %>
   </select>
-  <input type="file" id="grading-file" accept=".txt,.md,text/plain,text/markdown" required>
-  <textarea name="grading_sheet" id="grading-sheet" hidden></textarea>
-  <button type="submit" class="btn primary">Bewertungsbogen hochladen</button>
+  <textarea name="grading_sheet" id="grading-sheet" rows="18" placeholder="Abschnitt 1 - Einstellungsfragen\n\n1. Warum möchtest du bei uns Moderator werden? `1,5/2P`\n2. Warum sollten wir gerade dich ins Team aufnehmen? `2/2P`\n\nAbschnitt 2 - Regelwerkabfrage\n..." required></textarea>
+  <button type="submit" class="btn primary">Bewertungsbogen auswerten</button>
 </form>
-<script>
-(() => {
-  const form = document.getElementById('grading-import-form');
-  const file = document.getElementById('grading-file');
-  const target = document.getElementById('grading-sheet');
-  if (!form || !file || !target) return;
-  form.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    if (!file.files.length) return;
-    target.value = await file.files[0].text();
-    form.submit();
-  });
-})();
-</script>
 
 <h3 class="list-title">Fragen verwalten</h3>
 <form method="post" action="/dashboard/servers/<%= guildId %>/feature/interview/questions" class="question-add-form">
