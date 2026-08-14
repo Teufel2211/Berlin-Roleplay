@@ -26,7 +26,7 @@ function buildEmbed(data) {
     embed.fields = data.fields.slice(0, 25).map((f) => ({
       name: String(f.name || ' ').slice(0, 256),
       value: String(f.value || ' ').slice(0, 1024),
-      inline: f.inline === 'true',
+      inline: f.inline === true || f.inline === 'true',
     }));
   }
   return embed;
@@ -68,7 +68,7 @@ function parseData(row) {
 }
 
 async function postEmbed(row) {
-  const data = parseData(row);
+  const data = parseData(row) || {};
   const channel = await client.channels.fetch(row.channel_id);
   const msg = await channel.send({ embeds: [buildEmbed(data)], components: buildComponents(row.id, data.buttons) });
   await withRetry(() => getClient().from(TABLES.embeds).update({ message_id: msg.id }).eq('id', row.id));
@@ -76,7 +76,8 @@ async function postEmbed(row) {
 }
 
 async function editEmbed(row) {
-  const data = parseData(row);
+  if (!row.message_id) throw new Error('Dieses Embed wurde noch nicht gepostet.');
+  const data = parseData(row) || {};
   const channel = await client.channels.fetch(row.channel_id);
   const msg = await channel.messages.fetch(row.message_id);
   await msg.edit({ embeds: [buildEmbed(data)], components: buildComponents(row.id, data.buttons) });
@@ -96,10 +97,11 @@ async function deleteMessage(row) {
 
 function collect(body) {
   const arr = (v) => (Array.isArray(v) ? v : v === undefined || v === null ? [] : [v]);
+  const color = String(body.color_text || body.color || '').trim();
   const data = {
     title: String(body.title || ''),
     description: String(body.description || ''),
-    color: String(body.color || ''),
+    color,
     image: String(body.image || ''),
     footer: String(body.footer || ''),
     timestamp: body.timestamp === 'true' ? 'true' : 'false',
@@ -131,6 +133,9 @@ function collect(body) {
 
 async function saveRow(guildId, name, data, channelId, editId) {
   if (editId) {
+    const { data: existing } = await withRetry(() => getClient().from(TABLES.embeds).select('*').eq('id', editId).eq('guild_id', guildId).maybeSingle());
+    if (!existing) throw new Error('Embed nicht gefunden.');
+
     const payload = { name, data, updated_at: new Date().toISOString() };
     if (channelId) payload.channel_id = channelId;
     const { data: updated } = await withRetry(() => getClient().from(TABLES.embeds).update(payload).eq('id', editId).eq('guild_id', guildId).select().single());
@@ -152,7 +157,7 @@ async function handleAction(req, res) {
   const flash = (msg) => res.redirect(`${redirect}?msg=${encodeURIComponent(msg)}`);
 
   try {
-    if (!name) return flash('Bitte einen Namen angeben.');
+    if (!name && action !== 'delete') return flash('Bitte einen Namen angeben.');
 
     const data = collect(body);
     const channelId = String(body.channel || '').trim();
@@ -181,6 +186,8 @@ async function handleAction(req, res) {
       try {
         if (action === 'update' && row.message_id && row.channel_id && (channelId === row.channel_id || !channelId)) {
           await editEmbed(row);
+        } else if (action === 'repost') {
+          await postEmbed(row);
         } else {
           await postEmbed(row);
         }
@@ -195,8 +202,8 @@ async function handleAction(req, res) {
     return flash('Unbekannte Aktion.');
   } catch (err) {
     logger.error(`Embed-Aktion fehlgeschlagen: ${err.stack || err.message}`);
-    return flash('Fehler beim Speichern.');
+    return flash(`Fehler: ${err.message}`);
   }
 }
 
-module.exports = { handleAction, parseColor, buildEmbed, buildComponents };
+module.exports = { handleAction, parseColor, buildEmbed, buildComponents, parseData };
