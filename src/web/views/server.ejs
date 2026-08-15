@@ -7,10 +7,7 @@
         <img src="https://cdn.discordapp.com/icons/<%= activeGuild.id %>/<%= activeGuild.icon %>.png?size=128" alt="" onerror="this.parentElement.textContent='<%= activeGuild.name.charAt(0) %>'">
         <% } else { %><span class="guild-fallback"><%= activeGuild.name.charAt(0) %></span><% } %>
       </div>
-      <div class="server-head-text">
-        <h1 class="server-name"><%= activeGuild.name %></h1>
-        <span class="server-id">Server-ID: <%= activeGuild.id %></span>
-      </div>
+      <div class="server-head-text"><h1 class="server-name"><%= activeGuild.name %></h1><span class="server-id">Server-ID: <%= activeGuild.id %></span></div>
     </div>
     <a href="/dashboard" class="btn subtle">Server wechseln</a>
   </header>
@@ -18,29 +15,25 @@
     <%- include('partials/feature_sidebar', { features, activeFeature, guildId }) %>
     <div class="feature-content">
       <% if (feature.id === 'overview') { %>
-      <%- include('features/_overview', { data }) %>
+        <%- include('features/_overview', { data }) %>
       <% } else if (feature.id === 'verification') { %>
-      <%- include('features/_verification', { data }) %>
+        <%- include('features/_verification', { data }) %>
       <% } else if (feature.id === 'warteraum') { %>
-      <%- include('features/_settings_only', { data, featureId: 'warteraum', guildId }) %>
-      <% } else if (feature.id === 'counting') { %>
-      <%- include('features/_counting', { data, guildId }) %>
-      <% } else if (feature.id === 'giveaway') { %>
-      <%- include('features/_giveaway', { data, guildId }) %>
+        <%- include('features/_settings_only', { data, featureId: 'warteraum', guildId }) %>
       <% } else if (feature.id === 'tickets') { %>
-      <%- include('features/_tickets', { data, guildId }) %>
+        <%- include('features/_tickets', { data, guildId }) %>
       <% } else if (feature.id === 'bewerbung') { %>
-      <%- include('features/_bewerbung', { data, guildId }) %>
+        <%- include('features/_bewerbung', { data, guildId }) %>
+      <% } else if (feature.id === 'giveaway') { %>
+        <%- include('features/_giveaway', { data, guildId }) %>
       <% } else if (feature.id === 'interview') { %>
-      <% if (data.detail) { %>
-      <%- include('features/_interview_detail', { data, guildId }) %>
-      <% } else { %>
-      <%- include('features/_interview', { data, guildId }) %>
-      <% } %>
+        <% if (data.detail) { %><%- include('features/_interview_detail', { data, guildId }) %><% } else { %><%- include('features/_interview', { data, guildId }) %><% } %>
       <% } else if (feature.id === 'embeds') { %>
-      <%- include('features/_embeds', { data, guildId }) %>
+        <%- include('features/_embeds', { data, guildId }) %>
       <% } else if (feature.id === 'audit') { %>
-      <%- include('features/_audit', { data, guildId }) %>
+        <%- include('features/_audit', { data, guildId }) %>
+      <% } else if (['team','calendar','moderation','security','welcome'].includes(feature.id)) { %>
+        <%- include('features/_management', { data, guildId, feature, csrf }) %>
       <% } %>
     </div>
   </div>
