@@ -14,23 +14,11 @@ function redirectUri() {
 }
 
 function cookieOptions() {
-  return {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: config.webUrl.startsWith('https://'),
-    signed: true,
-    maxAge: 10 * 60 * 1000,
-  };
+  return { httpOnly: true, sameSite: 'lax', secure: config.webUrl.startsWith('https://'), signed: true, maxAge: 10 * 60 * 1000 };
 }
 
 function clearCookieOptions() {
-  return {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: config.webUrl.startsWith('https://'),
-    signed: true,
-    path: '/',
-  };
+  return { httpOnly: true, sameSite: 'lax', secure: config.webUrl.startsWith('https://'), signed: true, path: '/' };
 }
 
 function authorizeUrl(state) {
@@ -45,50 +33,28 @@ function authorizeUrl(state) {
 }
 
 async function exchangeCode(code) {
-  const body = new URLSearchParams({
-    client_id: config.clientId,
-    client_secret: config.discordClientSecret,
-    grant_type: 'authorization_code',
-    code,
-    redirect_uri: redirectUri(),
-  });
-  const res = await fetch(`${OAUTH_BASE}/oauth2/token`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: body.toString(),
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`Token-Austausch fehlgeschlagen (${res.status}) ${text}`);
-  }
+  const body = new URLSearchParams({ client_id: config.clientId, client_secret: config.discordClientSecret, grant_type: 'authorization_code', code, redirect_uri: redirectUri() });
+  const res = await fetch(`${OAUTH_BASE}/oauth2/token`, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: body.toString() });
+  if (!res.ok) throw new Error(`Token-Austausch fehlgeschlagen (${res.status})`);
   return res.json();
 }
 
 async function fetchDiscordUser(accessToken) {
-  const res = await fetch(`${OAUTH_BASE}/users/@me`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
+  const res = await fetch(`${OAUTH_BASE}/users/@me`, { headers: { Authorization: `Bearer ${accessToken}` } });
   if (!res.ok) throw new Error(`Nutzerabruf fehlgeschlagen (${res.status})`);
   return res.json();
 }
 
 async function fetchMyGuilds(accessToken) {
-  const res = await fetch(`${OAUTH_BASE}/users/@me/guilds`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
+  const res = await fetch(`${OAUTH_BASE}/users/@me/guilds`, { headers: { Authorization: `Bearer ${accessToken}` } });
   if (!res.ok) throw new Error(`Serverliste fehlgeschlagen (${res.status})`);
   return res.json();
 }
 
 async function fetchBotGuilds() {
   if (!config.discordToken) throw new Error('DISCORD_TOKEN fehlt.');
-  const res = await fetch(`${OAUTH_BASE}/users/@me/guilds`, {
-    headers: { Authorization: `Bot ${config.discordToken}` },
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`Bot-Serverliste fehlgeschlagen (${res.status}) ${text}`);
-  }
+  const res = await fetch(`${OAUTH_BASE}/users/@me/guilds`, { headers: { Authorization: `Bot ${config.discordToken}` } });
+  if (!res.ok) throw new Error(`Bot-Serverliste fehlgeschlagen (${res.status})`);
   const guilds = await res.json();
   return Array.isArray(guilds) ? guilds : [];
 }
@@ -98,30 +64,14 @@ async function fetchGuild(guildId) {
   return guilds.find((guild) => guild.id === guildId) || null;
 }
 
-function isGuildOwner(guild) {
-  return Boolean(guild && guild.owner);
-}
-
+function isGuildOwner(guild) { return Boolean(guild && guild.owner); }
 function hasManageGuild(guild) {
   if (!guild || typeof guild.permissions !== 'string') return false;
-  try {
-    return (BigInt(guild.permissions) & MANAGE_GUILD) === MANAGE_GUILD;
-  } catch (err) {
-    return false;
-  }
+  try { return (BigInt(guild.permissions) & MANAGE_GUILD) === MANAGE_GUILD; } catch (_) { return false; }
 }
-
-function canAccessGuild(guild) {
-  return Boolean(guild && (guild.ownerAccess === true || isGuildOwner(guild) || hasManageGuild(guild)));
-}
-
-function accessibleGuilds(guilds) {
-  return (guilds || []).filter(canAccessGuild);
-}
-
-function isOwner(session) {
-  return Boolean(session && session.user && session.user.id === config.ownerUserId);
-}
+function canAccessGuild(guild) { return Boolean(guild && (guild.ownerAccess === true || isGuildOwner(guild) || hasManageGuild(guild))); }
+function accessibleGuilds(guilds) { return (guilds || []).filter(canAccessGuild); }
+function isOwner(session) { return Boolean(session && session.user && session.user.id === config.ownerUserId); }
 
 async function canManageGuild(session, guild) {
   if (isOwner(session)) return true;
@@ -137,27 +87,20 @@ async function canManageGuild(session, guild) {
 }
 
 async function fetchGuildRoles(guildId) {
-  const res = await fetch(`${OAUTH_BASE}/guilds/${guildId}/roles`, {
-    headers: { Authorization: `Bot ${config.discordToken}` },
-  });
+  const res = await fetch(`${OAUTH_BASE}/guilds/${guildId}/roles`, { headers: { Authorization: `Bot ${config.discordToken}` } });
   if (!res.ok) throw new Error(`Rollenabruf fehlgeschlagen (${res.status})`);
   return res.json();
 }
 
 async function fetchGuildMember(userId, guildId) {
-  const res = await fetch(`${OAUTH_BASE}/guilds/${guildId}/members/${userId}`, {
-    headers: { Authorization: `Bot ${config.discordToken}` },
-  });
+  const res = await fetch(`${OAUTH_BASE}/guilds/${guildId}/members/${userId}`, { headers: { Authorization: `Bot ${config.discordToken}` } });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`Member-Abruf fehlgeschlagen (${res.status})`);
   return res.json();
 }
 
 function discordAuthStart(req, res) {
-  if (!config.discordClientSecret) {
-    const csrf = (req.session && req.session.csrf) || crypto.randomBytes(32).toString('hex');
-    return res.status(500).render('error', { title: 'Fehler', user: null, csrf, message: 'Discord-OAuth2 ist nicht konfiguriert (DISCORD_CLIENT_SECRET fehlt).' });
-  }
+  if (!config.discordClientSecret) return res.status(500).render('error', { title: 'Fehler', user: null, csrf: req.session?.csrf || '', message: 'Discord-OAuth2 ist nicht konfiguriert.' });
   const state = crypto.randomBytes(24).toString('hex');
   res.cookie(STATE_COOKIE, state, cookieOptions());
   res.redirect(authorizeUrl(state));
@@ -166,39 +109,23 @@ function discordAuthStart(req, res) {
 async function discordAuthCallback(req, res) {
   const { code, state, error } = req.query;
   const cookieState = req.signedCookies && req.signedCookies[STATE_COOKIE];
-  if (error) {
-    res.clearCookie(STATE_COOKIE, clearCookieOptions());
-    return res.redirect('/dashboard/login?error=denied');
-  }
-  if (!code || !state || !cookieState || state !== cookieState) {
-    logger.warn(`OAuth-State-Mismatch von ${req.ip}`);
-    res.clearCookie(STATE_COOKIE, clearCookieOptions());
-    return res.redirect('/dashboard/login?error=state');
-  }
+  if (error) { res.clearCookie(STATE_COOKIE, clearCookieOptions()); return res.redirect('/dashboard/login?error=denied'); }
+  if (!code || !state || !cookieState || state !== cookieState) { res.clearCookie(STATE_COOKIE, clearCookieOptions()); return res.redirect('/dashboard/login?error=state'); }
   res.clearCookie(STATE_COOKIE, clearCookieOptions());
   try {
     const token = await exchangeCode(code);
     const user = await fetchDiscordUser(token.access_token);
-    const guilds = await fetchMyGuilds(token.access_token);
     const ownerLogin = user.id === config.ownerUserId;
-
+    const guilds = ownerLogin ? (await fetchBotGuilds()).map((guild) => ({ ...guild, ownerAccess: true, botInstalled: true })) : await fetchMyGuilds(token.access_token);
     req.session.regenerate((err) => {
       if (err) logger.error(`Session-Regeneration fehlgeschlagen: ${err.message}`);
-      req.session.user = {
-        id: user.id,
-        tag: user.global_name || user.username,
-        avatar: user.avatar || null,
-        isOwner: ownerLogin,
-      };
+      req.session.user = { id: user.id, tag: user.global_name || user.username, avatar: user.avatar || null, isOwner: ownerLogin };
       req.session.accessToken = token.access_token;
       req.session.refreshToken = token.refresh_token || null;
       req.session.tokenExpiresAt = Date.now() + Number(token.expires_in || 604800) * 1000;
-      req.session.guilds = ownerLogin ? guilds.map((guild) => ({ ...guild, ownerAccess: true })) : guilds;
+      req.session.guilds = guilds;
       req.session.guildsSyncedAt = Date.now();
-      auditService.log(null, `${req.session.user.tag} (${user.id})`, 'login.success', {
-        accessibleGuilds: accessibleGuilds(req.session.guilds).length,
-        owner: ownerLogin,
-      });
+      auditService.log(null, `${req.session.user.tag} (${user.id})`, 'login.success', { accessibleGuilds: accessibleGuilds(guilds).length, owner: ownerLogin });
       res.redirect('/dashboard');
     });
   } catch (err) {
@@ -207,17 +134,4 @@ async function discordAuthCallback(req, res) {
   }
 }
 
-module.exports = {
-  discordAuthStart,
-  discordAuthCallback,
-  canAccessGuild,
-  accessibleGuilds,
-  isGuildOwner,
-  hasManageGuild,
-  isOwner,
-  canManageGuild,
-  fetchGuildMember,
-  fetchGuildRoles,
-  fetchBotGuilds,
-  fetchGuild,
-};
+module.exports = { discordAuthStart, discordAuthCallback, canAccessGuild, accessibleGuilds, isGuildOwner, hasManageGuild, isOwner, canManageGuild, fetchGuildMember, fetchGuildRoles, fetchBotGuilds, fetchGuild };
