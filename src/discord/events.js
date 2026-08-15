@@ -3,20 +3,20 @@ const commands = require('../commands');
 const logger = require('../logger');
 const embeds = require('./embeds');
 const { getClient, TABLES } = require('../supabase');
-const countingService = require('../services/countingService');
 const giveawayService = require('../services/giveawayService');
 const verifyService = require('../services/verifyService');
 const ticketService = require('../services/ticketService');
 const applicationService = require('../services/applicationService');
 const warteraumService = require('../services/warteraumService');
 const interviewService = require('../services/interviewService');
+const welcomeService = require('../services/welcomeService');
 
 async function replyError(interaction, err) {
   logger.error(`Interaktion fehlgeschlagen: ${err.stack || err.message}`);
   if (!interaction.replied && !interaction.deferred) {
     try {
       await interaction.reply({ embeds: [embeds.error('Fehler', 'Beim Ausführen ist ein Fehler aufgetreten.', interaction.guild)], flags: MessageFlags.Ephemeral });
-    } catch (e) { /* ignorieren */ }
+    } catch (_) { /* ignorieren */ }
   }
 }
 
@@ -55,8 +55,8 @@ function registerEvents(client) {
     }
   });
 
-  client.on(Events.MessageCreate, (message) => {
-    countingService.handleMessage(message).catch((err) => logger.error(`Counting fehlgeschlagen: ${err.message}`));
+  client.on(Events.GuildMemberAdd, (member) => {
+    welcomeService.handleMemberJoin(member).catch((err) => logger.error(`Welcome fehlgeschlagen: ${err.message}`));
   });
 
   client.on(Events.MessageReactionAdd, (reaction, user) => {
