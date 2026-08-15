@@ -2,6 +2,7 @@ const { config } = require('./config');
 const logger = require('./logger');
 const { client, login } = require('./discord/client');
 const { registerEvents } = require('./discord/events');
+const { registerCommands } = require('./discord/deploy');
 const { startWebServer } = require('./web/server');
 
 process.on('unhandledRejection', (reason) => logger.error(`unhandledRejection: ${reason}`));
@@ -17,7 +18,7 @@ async function main() {
     console.error('  Anleitung:');
     console.error('    1. Kopiere .env.example zu .env');
     console.error('    2. Trage die Secrets ein (Discord + Supabase)');
-    console.error('    3. npm run migrate && npm run deploy');
+    console.error('    3. npm run migrate');
     console.error('');
     process.exit(1);
   }
@@ -25,6 +26,11 @@ async function main() {
   try {
     registerEvents(client);
     await login();
+
+    // Keep Discord application commands canonical. This removes legacy guild
+    // commands and publishes one unique global command list on every restart.
+    await registerCommands();
+
     startWebServer();
   } catch (err) {
     logger.error(`Start fehlgeschlagen: ${err.stack || err.message}`);
