@@ -28,6 +28,15 @@ async function handleAction(req, res) {
         await teamService.promoteMember(guildId, String(body.discord_id), Number(body.rank_id), body.department_id ? Number(body.department_id) : null);
         await auditService.log(guildId, req.session.user.tag, 'team.member.promote', { discord_id: String(body.discord_id), rank_id: Number(body.rank_id) });
       }
+      if (body.action === 'add_absence' && body.discord_id && body.starts_at && body.ends_at) {
+        await teamService.addAbsence(guildId, {
+          discord_id: String(body.discord_id),
+          starts_at: new Date(body.starts_at).toISOString(),
+          ends_at: new Date(body.ends_at).toISOString(),
+          reason: String(body.reason || '').trim() || null,
+        });
+        await auditService.log(guildId, req.session.user.tag, 'team.absence.add', { discord_id: String(body.discord_id) });
+      }
       if (body.action === 'add_department' && String(body.name || '').trim()) {
         await withRetry(() => getClient().from(TABLES.teamDepartments).insert({ guild_id: guildId, name: String(body.name).trim(), description: String(body.description || '').trim() || null }));
       }
