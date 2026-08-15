@@ -40,6 +40,7 @@ const LABELS = {
   warteraum_voice_channel_id: 'Warteraum-Voice', warteraum_target_channel_id: 'Ziel-Voice', interview_channel_id: 'Interview-Kanal',
   welcome_channel_id: 'Willkommens-Kanal', moderation_log_channel_id: 'Moderations-Log', team_log_channel_id: 'Team-Log',
   interview_max_per_section: 'Max. Fragen pro Abschnitt', interview_pass_threshold: 'Bestanden ab Punktzahl', verify_dm: 'DM nach Verifizierung',
+  verify_min_account_age_days: 'Mindestalter des Discord-Accounts (Tage)',
 };
 
 const FEATURES = [
@@ -62,7 +63,7 @@ const FEATURES = [
 const SETTING_GROUPS = [
   { feature: 'verification', subgroup: 'Kanäle', keys: ['verify_channel_id', 'verify_log_channel_id'] },
   { feature: 'verification', subgroup: 'Rollen', keys: ['verified_roles'] },
-  { feature: 'verification', subgroup: 'Verhalten', keys: ['verify_dm'] },
+  { feature: 'verification', subgroup: 'Verhalten', keys: ['verify_dm', 'verify_min_account_age_days'] },
   { feature: 'warteraum', subgroup: 'Rollen', keys: ['warteraum_roles'] },
   { feature: 'warteraum', subgroup: 'Kanäle', keys: ['warteraum_voice_channel_id', 'warteraum_target_channel_id'] },
   { feature: 'giveaway', subgroup: 'Kanäle', keys: ['giveaway_channel_id', 'giveaway_announce_channel_id'] },
@@ -76,182 +77,61 @@ const SETTING_GROUPS = [
 ];
 
 function featureById(id) { return FEATURES.find((f) => f.id === id); }
-function guildFromSession(req, guildId) {
-  return (req.session?.guilds || []).find((g) => g.id === guildId) || null;
-}
+function guildFromSession(req, guildId) { return (req.session?.guilds || []).find((g) => g.id === guildId) || null; }
 function isBooleanValue(key, value) { return value === 'true' || value === 'false'; }
 function settingsGroupsFor(featureId, all) {
   return SETTING_GROUPS.filter((g) => g.feature === featureId).map((g) => ({
     subgroup: g.subgroup,
-    fields: g.keys.map((key) => ({
-      key, label: LABELS[key] || key, value: all[key] || '', boolean: isBooleanValue(key, all[key]),
-      type: CHANNEL_KEYS.includes(key) ? 'channel' : ROLE_KEYS.includes(key) ? 'roles' : 'text',
-    })),
+    fields: g.keys.map((key) => ({ key, label: LABELS[key] || key, value: all[key] || '', boolean: isBooleanValue(key, all[key]), type: CHANNEL_KEYS.includes(key) ? 'channel' : ROLE_KEYS.includes(key) ? 'roles' : 'text' })),
   }));
 }
-
 function guildAccessCheck(req, res, next) {
   const guild = guildFromSession(req, req.params.guildId);
   if (!guild || !discordAuth.canAccessGuild(guild)) return res.status(403).render('error', { title: 'Fehler', user: req.session.user, csrf: auth.csrfToken(req), message: 'Kein Zugriff auf diesen Server.' });
-  req.guildId = req.params.guildId;
-  req.guild = guild;
-  res.locals.guildId = req.params.guildId;
-  res.locals.guilds = discordAuth.accessibleGuilds(req.session.guilds);
-  res.locals.activeGuild = guild;
-  next();
+  req.guildId = req.params.guildId; req.guild = guild; res.locals.guildId = req.params.guildId; res.locals.guilds = discordAuth.accessibleGuilds(req.session.guilds); res.locals.activeGuild = guild; next();
 }
-
-async function requireCanManage(req, res, next) {
-  try {
-    if (!(await discordAuth.canManageGuild(req.session, req.guild))) return res.status(403).render('error', { title: 'Fehler', user: req.session.user, csrf: auth.csrfToken(req), message: 'Nur Staff/Admin können Einstellungen ändern.' });
-  } catch (_) {}
-  next();
-}
-
+async function requireCanManage(req, res, next) { try { if (!(await discordAuth.canManageGuild(req.session, req.guild))) return res.status(403).render('error', { title: 'Fehler', user: req.session.user, csrf: auth.csrfToken(req), message: 'Nur Staff/Admin können Einstellungen ändern.' }); } catch (_) {} next(); }
 async function syncSessionGuilds(req) {
   if (!req.session?.user) return;
   try {
     if (discordAuth.isOwner(req.session)) req.session.guilds = (await discordAuth.fetchBotGuilds()).map((g) => ({ ...g, ownerAccess: true, botInstalled: true }));
-    else if (req.session.accessToken) req.session.guilds = await fetch(`https://discord.com/api/users/@me/guilds`, { headers: { Authorization: `Bearer ${req.session.accessToken}` } }).then((r) => r.json());
+    else if (req.session.accessToken) req.session.guilds = await fetch('https://discord.com/api/users/@me/guilds', { headers: { Authorization: `Bearer ${req.session.accessToken}` } }).then((r) => r.json());
     req.session.guildsSyncedAt = Date.now();
   } catch (err) { logger.warn(`Server-Sync fehlgeschlagen: ${err.message}`); }
 }
 
 function createApp() {
   const app = express();
-  app.set('trust proxy', 1);
-  app.set('view engine', 'ejs');
-  app.set('views', path.join(__dirname, 'views'));
-  app.disable('x-powered-by');
-  app.use(helmet({ contentSecurityPolicy: false }));
-  app.use(express.json({ limit: '150kb' }));
-  app.use(express.urlencoded({ extended: true, limit: '150kb' }));
-  app.use(cookieParser(config.sessionSecret));
-  app.use(session({
-    store: new SupabaseSessionStore(), secret: config.sessionSecret, resave: false, saveUninitialized: false, rolling: true,
-    cookie: { httpOnly: true, sameSite: 'lax', secure: config.webUrl.startsWith('https://'), maxAge: 24 * 60 * 60 * 1000 },
-  }));
-  app.use('/dashboard', rateLimit({ windowMs: 15 * 60 * 1000, limit: 300 }));
-  app.use(express.static(path.join(__dirname, 'public')));
-
+  app.set('trust proxy', 1); app.set('view engine', 'ejs'); app.set('views', path.join(__dirname, 'views')); app.disable('x-powered-by');
+  app.use(helmet({ contentSecurityPolicy: false })); app.use(express.json({ limit: '150kb' })); app.use(express.urlencoded({ extended: true, limit: '150kb' })); app.use(cookieParser(config.sessionSecret));
+  app.use(session({ store: new SupabaseSessionStore(), secret: config.sessionSecret, resave: false, saveUninitialized: false, rolling: true, cookie: { httpOnly: true, sameSite: 'lax', secure: config.webUrl.startsWith('https://'), maxAge: 24 * 60 * 60 * 1000 } }));
+  app.use('/dashboard', rateLimit({ windowMs: 15 * 60 * 1000, limit: 300 })); app.use(express.static(path.join(__dirname, 'public')));
   app.get('/', (req, res) => res.render('landing', { title: 'Emergency Hamburg Roleplay Dashboard', user: req.session.user || null, csrf: auth.csrfToken(req), loggedIn: Boolean(req.session?.user) }));
   app.get('/api/status', (_, res) => res.json({ bot: client?.isReady() ? 'online' : 'offline', guilds: client?.guilds?.cache?.size || 0, uptime: Math.round(process.uptime()) }));
-  app.get('/dashboard/login', auth.loginPage);
-  app.get('/dashboard/auth/discord', auth.discordAuthStart);
-  app.get('/dashboard/auth/discord/callback', auth.discordAuthCallback);
-  app.post('/dashboard/logout', auth.csrfCheck, auth.logout);
-  app.use('/dashboard', auth.requireAuth);
-
-  app.get('/dashboard', async (req, res) => {
-    await syncSessionGuilds(req);
-    const guilds = discordAuth.accessibleGuilds(req.session.guilds);
-    const botGuilds = await discordAuth.fetchBotGuilds().catch(() => []);
-    const botIds = new Set(botGuilds.map((g) => g.id));
-    const withBot = guilds.map((g) => ({ ...g, botIn: botIds.has(g.id), botOnline: botIds.has(g.id) }));
-    res.render('guilds', { title: req.session.user.isOwner ? 'Owner Dashboard' : 'Server wählen', user: req.session.user, csrf: auth.csrfToken(req), guilds: withBot, inviteUrl: `https://discord.com/oauth2/authorize?client_id=${config.clientId}&scope=bot&permissions=0` });
-  });
-
+  app.get('/dashboard/login', auth.loginPage); app.get('/dashboard/auth/discord', auth.discordAuthStart); app.get('/dashboard/auth/discord/callback', auth.discordAuthCallback); app.post('/dashboard/logout', auth.csrfCheck, auth.logout); app.use('/dashboard', auth.requireAuth);
+  app.get('/dashboard', async (req, res) => { await syncSessionGuilds(req); const guilds = discordAuth.accessibleGuilds(req.session.guilds); const botGuilds = await discordAuth.fetchBotGuilds().catch(() => []); const botIds = new Set(botGuilds.map((g) => g.id)); const withBot = guilds.map((g) => ({ ...g, botIn: botIds.has(g.id), botOnline: botIds.has(g.id) })); res.render('guilds', { title: req.session.user.isOwner ? 'Owner Dashboard' : 'Server wählen', user: req.session.user, csrf: auth.csrfToken(req), guilds: withBot, inviteUrl: `https://discord.com/oauth2/authorize?client_id=${config.clientId}&scope=bot&permissions=0` }); });
   app.use('/dashboard/servers/:guildId', guildAccessCheck);
   app.get('/dashboard/servers/:guildId', (req, res) => res.redirect(`/dashboard/servers/${req.guildId}/feature/overview`));
-
-  app.get('/dashboard/servers/:guildId/feature/interview/:resultId', async (req, res, next) => {
-    const detail = await interviewService.getResultDetail(Number(req.params.resultId), req.guildId).catch(() => null);
-    if (!detail) return next();
-    res.render('server', { title: `Interview-Detail — ${req.guild.name}`, user: req.session.user, csrf: auth.csrfToken(req), features: FEATURES, activeFeature: 'interview', feature: featureById('interview'), data: { detail } });
-  });
-
+  app.get('/dashboard/servers/:guildId/feature/interview/:resultId', async (req, res, next) => { const detail = await interviewService.getResultDetail(Number(req.params.resultId), req.guildId).catch(() => null); if (!detail) return next(); res.render('server', { title: `Interview-Detail — ${req.guild.name}`, user: req.session.user, csrf: auth.csrfToken(req), features: FEATURES, activeFeature: 'interview', feature: featureById('interview'), data: { detail } }); });
   app.get('/dashboard/servers/:guildId/feature/:feature', async (req, res, next) => {
-    const feature = featureById(req.params.feature);
-    if (!feature) return next();
-    const gid = req.guildId;
-    const all = await settingsService.getAll(gid).catch(() => ({}));
-    const channelOptions = await discordApi.fetchChannels(gid).catch(() => []);
-    const roleOptions = await discordApi.fetchRoles(gid).catch(() => []);
-    const base = { title: `${feature.name} — ${req.guild.name}`, user: req.session.user, csrf: auth.csrfToken(req), features: FEATURES, activeFeature: feature.id, feature };
-    const sdata = { groups: settingsGroupsFor(feature.id, all), channelOptions, roleOptions, all, flash: String(req.query.msg || '') };
-
-    if (feature.id === 'overview') {
-      const [tickets, apps, giveaways, team] = await Promise.all([
-        getClient().from(TABLES.tickets).select('id', { count: 'exact' }).eq('guild_id', gid).eq('status', 'offen'),
-        getClient().from(TABLES.applications).select('id', { count: 'exact' }).eq('guild_id', gid).eq('status', 'offen'),
-        getClient().from(TABLES.giveaways).select('id', { count: 'exact' }).eq('guild_id', gid).eq('ended', false),
-        getClient().from(TABLES.teamMembers).select('id', { count: 'exact' }).eq('guild_id', gid),
-      ]);
-      const bot = await discordAuth.fetchGuild(gid).catch(() => null);
-      return res.render('server', { ...base, data: { ...sdata, stats: { tickets: tickets.count || 0, applications: apps.count || 0, giveaways: giveaways.count || 0, team: team.count || 0 }, botInstalled: Boolean(bot) } });
-    }
-
-    if (feature.id === 'verification' || feature.id === 'tickets' || feature.id === 'bewerbung') {
-      const table = feature.id === 'verification' ? TABLES.users : feature.id === 'tickets' ? TABLES.tickets : TABLES.applications;
-      const { data: records } = await getClient().from(table).select('*').eq('guild_id', gid).order('created_at', { ascending: false }).limit(200);
-      return res.render('server', { ...base, data: { ...sdata, records: records || [] } });
-    }
-
-    if (feature.id === 'giveaway') {
-      const { data: giveaways } = await getClient().from(TABLES.giveaways).select('*').eq('guild_id', gid).eq('ended', false).order('ends_at', { ascending: true }).limit(50);
-      return res.render('server', { ...base, data: { ...sdata, giveaways: giveaways || [] } });
-    }
-
-    if (feature.id === 'embeds') {
-      const { data: embeds } = await getClient().from(TABLES.embeds).select('*').eq('guild_id', gid).order('created_at', { ascending: false }).limit(100);
-      let edit = null;
-      if (req.query.edit) { const { data: row } = await getClient().from(TABLES.embeds).select('*').eq('id', Number(req.query.edit)).eq('guild_id', gid).maybeSingle(); edit = row || null; }
-      return res.render('server', { ...base, data: { ...sdata, embeds: embeds || [], edit } });
-    }
-
-    if (feature.id === 'interview') {
-      const [results, questions] = await Promise.all([interviewService.getResults(gid), interviewService.getQuestions(gid)]);
-      return res.render('server', { ...base, data: { ...sdata, results, questions } });
-    }
-
-    if (feature.id === 'team') {
-      const [members, ranks, departments, absences] = await Promise.all([teamService.listMembers(gid), teamService.listRanks(gid), teamService.listDepartments(gid), teamService.listAbsences(gid)]);
-      return res.render('server', { ...base, data: { ...sdata, members, ranks, departments, absences } });
-    }
-
+    const feature = featureById(req.params.feature); if (!feature) return next(); const gid = req.guildId; const all = await settingsService.getAll(gid).catch(() => ({})); const channelOptions = await discordApi.fetchChannels(gid).catch(() => []); const roleOptions = await discordApi.fetchRoles(gid).catch(() => []); const base = { title: `${feature.name} — ${req.guild.name}`, user: req.session.user, csrf: auth.csrfToken(req), features: FEATURES, activeFeature: feature.id, feature }; const sdata = { groups: settingsGroupsFor(feature.id, all), channelOptions, roleOptions, all, flash: String(req.query.msg || '') };
+    if (feature.id === 'overview') { const [tickets, apps, giveaways, team] = await Promise.all([getClient().from(TABLES.tickets).select('id', { count: 'exact' }).eq('guild_id', gid).eq('status', 'offen'), getClient().from(TABLES.applications).select('id', { count: 'exact' }).eq('guild_id', gid).eq('status', 'offen'), getClient().from(TABLES.giveaways).select('id', { count: 'exact' }).eq('guild_id', gid).eq('ended', false), getClient().from(TABLES.teamMembers).select('id', { count: 'exact' }).eq('guild_id', gid)]); const bot = await discordAuth.fetchGuild(gid).catch(() => null); return res.render('server', { ...base, data: { ...sdata, stats: { tickets: tickets.count || 0, applications: apps.count || 0, giveaways: giveaways.count || 0, team: team.count || 0 }, botInstalled: Boolean(bot) } }); }
+    if (feature.id === 'verification' || feature.id === 'tickets' || feature.id === 'bewerbung') { const table = feature.id === 'verification' ? TABLES.users : feature.id === 'tickets' ? TABLES.tickets : TABLES.applications; const { data: records } = await getClient().from(table).select('*').eq('guild_id', gid).order('created_at', { ascending: false }).limit(200); return res.render('server', { ...base, data: { ...sdata, records: records || [] } }); }
+    if (feature.id === 'giveaway') { const { data: giveaways } = await getClient().from(TABLES.giveaways).select('*').eq('guild_id', gid).eq('ended', false).order('ends_at', { ascending: true }).limit(50); return res.render('server', { ...base, data: { ...sdata, giveaways: giveaways || [] } }); }
+    if (feature.id === 'embeds') { const { data: embeds } = await getClient().from(TABLES.embeds).select('*').eq('guild_id', gid).order('created_at', { ascending: false }).limit(100); let edit = null; if (req.query.edit) { const { data: row } = await getClient().from(TABLES.embeds).select('*').eq('id', Number(req.query.edit)).eq('guild_id', gid).maybeSingle(); edit = row || null; } return res.render('server', { ...base, data: { ...sdata, embeds: embeds || [], edit } }); }
+    if (feature.id === 'interview') { const [results, questions] = await Promise.all([interviewService.getResults(gid), interviewService.getQuestions(gid)]); return res.render('server', { ...base, data: { ...sdata, results, questions } }); }
+    if (feature.id === 'team') { const [members, ranks, departments, absences] = await Promise.all([teamService.listMembers(gid), teamService.listRanks(gid), teamService.listDepartments(gid), teamService.listAbsences(gid)]); return res.render('server', { ...base, data: { ...sdata, members, ranks, departments, absences } }); }
     if (feature.id === 'calendar') return res.render('server', { ...base, data: { ...sdata, events: await teamService.listEvents(gid) } });
     if (feature.id === 'moderation' || feature.id === 'security') return res.render('server', { ...base, data: { ...sdata, cases: await moderationService.getCases(gid) } });
     if (feature.id === 'welcome') return res.render('server', { ...base, data: { ...sdata, config: await welcomeService.getConfig(gid) } });
-
-    if (feature.id === 'audit') {
-      const { data: entries } = await getClient().from(TABLES.auditLog).select('*').eq('guild_id', gid).order('created_at', { ascending: false }).limit(200);
-      return res.render('server', { ...base, data: { ...sdata, entries: entries || [] } });
-    }
-
+    if (feature.id === 'audit') { const { data: entries } = await getClient().from(TABLES.auditLog).select('*').eq('guild_id', gid).order('created_at', { ascending: false }).limit(200); return res.render('server', { ...base, data: { ...sdata, entries: entries || [] } }); }
     return res.render('server', { ...base, data: sdata });
   });
-
-  app.post('/dashboard/servers/:guildId/feature/embeds', settingsLimiter, requireCanManage, auth.csrfCheck, embedAdmin.handleAction);
-  app.post('/dashboard/servers/:guildId/feature/interview/questions', settingsLimiter, requireCanManage, auth.csrfCheck, interviewAdmin.handleQuestions);
-  app.post('/dashboard/servers/:guildId/feature/:feature/action', settingsLimiter, requireCanManage, auth.csrfCheck, managementAdmin.handleAction);
-  app.post('/dashboard/servers/:guildId/feature/:feature', settingsLimiter, requireCanManage, auth.csrfCheck, webSettings.saveForm);
-
-  app.use('/api/settings', auth.requireAuthApi, apiGuildMiddleware, requireCanManageApi);
-  app.use('/api/audit', auth.requireAuthApi, apiGuildMiddleware);
-  app.get('/api/settings', webSettings.getApi);
-  app.post('/api/settings', auth.csrfCheck, webSettings.saveApi);
-  app.get('/api/audit', webAudit.getApi);
-
-  app.use((req, res) => res.status(404).render('error', { title: 'Fehler', user: req.session.user || null, csrf: auth.csrfToken(req), message: 'Seite nicht gefunden' }));
-  app.use((err, req, res, next) => { logger.error(`Web-Fehler: ${err.stack || err.message}`); if (res.headersSent) return next(err); res.status(500).render('error', { title: 'Fehler', user: req.session.user || null, csrf: auth.csrfToken(req), message: 'Interner Fehler' }); });
+  app.post('/dashboard/servers/:guildId/feature/embeds', settingsLimiter, requireCanManage, auth.csrfCheck, embedAdmin.handleAction); app.post('/dashboard/servers/:guildId/feature/interview/questions', settingsLimiter, requireCanManage, auth.csrfCheck, interviewAdmin.handleQuestions); app.post('/dashboard/servers/:guildId/feature/:feature/action', settingsLimiter, requireCanManage, auth.csrfCheck, managementAdmin.handleAction); app.post('/dashboard/servers/:guildId/feature/:feature', settingsLimiter, requireCanManage, auth.csrfCheck, webSettings.saveForm);
+  app.use('/api/settings', auth.requireAuthApi, apiGuildMiddleware, requireCanManageApi); app.use('/api/audit', auth.requireAuthApi, apiGuildMiddleware); app.get('/api/settings', webSettings.getApi); app.post('/api/settings', auth.csrfCheck, webSettings.saveApi); app.get('/api/audit', webAudit.getApi); app.use((req, res) => res.status(404).render('error', { title: 'Fehler', user: req.session.user || null, csrf: auth.csrfToken(req), message: 'Seite nicht gefunden' })); app.use((err, req, res, next) => { logger.error(`Web-Fehler: ${err.stack || err.message}`); if (res.headersSent) return next(err); res.status(500).render('error', { title: 'Fehler', user: req.session.user || null, csrf: auth.csrfToken(req), message: 'Interner Fehler' }); });
   return app;
 }
-
-function apiGuildMiddleware(req, res, next) {
-  const guildId = String(req.query.guild || (req.body && req.body.guild) || '');
-  const guild = guildFromSession(req, guildId);
-  if (!guild || !discordAuth.canAccessGuild(guild)) return res.status(403).json({ error: 'Kein Zugriff auf diesen Server.' });
-  req.guildId = guildId; req.guild = guild; next();
-}
-
-function requireCanManageApi(req, res, next) {
-  discordAuth.canManageGuild(req.session, req.guild).then((ok) => ok ? next() : res.status(403).json({ error: 'Nur Staff/Admin können Einstellungen ändern.' })).catch(() => next());
-}
-
-function startWebServer() {
-  const app = createApp();
-  const server = app.listen(config.webPort, () => logger.info(`HTTP-Server läuft auf Port ${config.webPort}`));
-  return server;
-}
-
+function apiGuildMiddleware(req, res, next) { const guildId = String(req.query.guild || (req.body && req.body.guild) || ''); const guild = guildFromSession(req, guildId); if (!guild || !discordAuth.canAccessGuild(guild)) return res.status(403).json({ error: 'Kein Zugriff auf diesen Server.' }); req.guildId = guildId; req.guild = guild; next(); }
+function requireCanManageApi(req, res, next) { discordAuth.canManageGuild(req.session, req.guild).then((ok) => ok ? next() : res.status(403).json({ error: 'Nur Staff/Admin können Einstellungen ändern.' })).catch(() => next()); }
+function startWebServer() { const app = createApp(); const server = app.listen(config.webPort, () => logger.info(`HTTP-Server läuft auf Port ${config.webPort}`)); return server; }
 module.exports = { createApp, startWebServer };
