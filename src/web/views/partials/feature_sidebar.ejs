@@ -1,9 +1,35 @@
+<%
+  var groupDefs = [
+    { label: 'Übersicht', ids: ['overview'] },
+    { label: 'Community', ids: ['verification', 'warteraum', 'counting', 'welcome'] },
+    { label: 'Engagement', ids: ['giveaway', 'embeds'] },
+    { label: 'Support', ids: ['tickets', 'bewerbung', 'interview'] },
+    { label: 'Verwaltung', ids: ['team', 'calendar', 'moderation', 'security'] },
+    { label: 'System', ids: ['audit'] }
+  ];
+  var used = {};
+  var groups = groupDefs.map(function (g) {
+    var items = features.filter(function (f) {
+      if (g.ids.indexOf(f.id) === -1) return false;
+      used[f.id] = true;
+      return true;
+    });
+    return { label: g.label, items: items };
+  }).filter(function (g) { return g.items.length; });
+  var rest = features.filter(function (f) { return !used[f.id]; });
+  if (rest.length) groups.push({ label: 'Weitere', items: rest });
+%>
 <aside class="feature-sidebar">
-  <nav class="feature-nav">
-    <% features.forEach(function (f) { %>
-    <a href="/dashboard/servers/<%= guildId %>/feature/<%= f.id %>" class="feature-link<%= f.id === activeFeature ? ' active' : '' %>">
-      <span class="feature-icon"><%= f.icon %></span><span><%= f.name %></span>
-    </a>
-    <% }) %>
-  </nav>
+  <% groups.forEach(function (g) { %>
+  <div class="feature-nav-group">
+    <div class="feature-nav-label"><%= g.label %></div>
+    <nav class="feature-nav">
+      <% g.items.forEach(function (f) { %>
+      <a href="/dashboard/servers/<%= guildId %>/feature/<%= f.id %>" class="feature-link<%= f.id === activeFeature ? ' active' : '' %>">
+        <span class="feature-icon"><%= f.icon %></span><span><%= f.name %></span>
+      </a>
+      <% }) %>
+    </nav>
+  </div>
+  <% }) %>
 </aside>

@@ -1,23 +1,6 @@
 <%- include('partials/head', { title, user, csrf }) %>
 
 <% if (user && user.isOwner) { %>
-<style>
-  .owner-shell { display: grid; gap: 24px; }
-  .owner-hero { padding: 24px; border: 1px solid #2a2a2a; border-radius: 14px; background: linear-gradient(135deg, #171717, #0f0f0f); }
-  .owner-kicker { color: #9b9b9b; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; }
-  .owner-hero h1 { margin: 6px 0 8px; }
-  .owner-hero p { margin: 0; color: #aaa; }
-  .owner-stats { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 18px; }
-  .owner-stat { min-width: 150px; padding: 14px 16px; border: 1px solid #292929; border-radius: 12px; background: #131313; }
-  .owner-stat strong { display: block; font-size: 24px; }
-  .owner-stat span { color: #8f8f8f; font-size: 12px; }
-  .owner-toolbar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-  .owner-search { flex: 1; min-width: 220px; }
-  .owner-grid { margin-top: 0; }
-  .owner-card { position: relative; }
-  .owner-badge { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; color: #bfbfbf; font-size: 12px; }
-</style>
-
 <section class="page owner-shell">
   <div class="owner-hero">
     <div class="owner-kicker">Global Bot Owner</div>
@@ -117,9 +100,12 @@
 
 <% } else { %>
 <section class="page">
-  <h1>Server wählen</h1>
-  <p class="muted">Wähle einen Server, den du verwaltest, um ihn zu konfigurieren.</p>
-  <p class="muted" id="guild-sync-status">Serverliste wird automatisch mit Discord synchronisiert.</p>
+  <div class="page-head">
+    <div>
+      <h1>Server wählen</h1>
+      <p class="muted" id="guild-sync-status">Serverliste wird automatisch mit Discord synchronisiert.</p>
+    </div>
+  </div>
   <% if (!guilds.length) { %>
   <div class="empty-state">
     <p>Du verwaltest aktuell keinen Server. Lade den Bot in deinen Server ein und verwalte ihn dann hier.</p>

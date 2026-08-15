@@ -1,6 +1,7 @@
 <%- include('partials/head', { title, user, csrf }) %>
 <section class="landing">
   <div class="landing-hero">
+    <span class="landing-eyebrow"><span class="dot"></span>Bot online · Dashboard aktiv</span>
     <h1>Emergency Hamburg Roleplay</h1>
     <p class="muted">Der zentrale Bot für deinen Server: Verifizierung, Warteraum, Counting, Giveaways, Tickets, Bewerbungen, Interviews und mehr.</p>
     <% if (loggedIn) { %>
@@ -14,15 +15,15 @@
   </div>
   <div class="landing-features">
     <ul class="feature-list" id="featureList">
-      <li data-feature="verification" class="active"><span class="feature-icon">✅</span>Verifizierung</li>
-      <li data-feature="warteraum"><span class="feature-icon">🎧</span>Warteraum</li>
-      <li data-feature="counting"><span class="feature-icon">🔢</span>Counting</li>
-      <li data-feature="giveaway"><span class="feature-icon">🎉</span>Giveaway</li>
-      <li data-feature="tickets"><span class="feature-icon">🎫</span>Tickets</li>
-      <li data-feature="bewerbung"><span class="feature-icon">📝</span>Bewerbung</li>
-      <li data-feature="interview"><span class="feature-icon">🎤</span>Interview</li>
-      <li data-feature="embeds"><span class="feature-icon">🖼️</span>Embed-Builder</li>
-      <li data-feature="audit"><span class="feature-icon">🛡️</span>Audit-Log</li>
+      <li data-feature="verification" class="active"><span class="feature-icon">✅</span><span class="feature-item-name">Verifizierung</span></li>
+      <li data-feature="warteraum"><span class="feature-icon">🎧</span><span class="feature-item-name">Warteraum</span></li>
+      <li data-feature="counting"><span class="feature-icon">🔢</span><span class="feature-item-name">Counting</span></li>
+      <li data-feature="giveaway"><span class="feature-icon">🎉</span><span class="feature-item-name">Giveaway</span></li>
+      <li data-feature="tickets"><span class="feature-icon">🎫</span><span class="feature-item-name">Tickets</span></li>
+      <li data-feature="bewerbung"><span class="feature-icon">📝</span><span class="feature-item-name">Bewerbung</span></li>
+      <li data-feature="interview"><span class="feature-icon">🎤</span><span class="feature-item-name">Interview</span></li>
+      <li data-feature="embeds"><span class="feature-icon">🖼️</span><span class="feature-item-name">Embed-Builder</span></li>
+      <li data-feature="audit"><span class="feature-icon">🛡️</span><span class="feature-item-name">Audit-Log</span></li>
     </ul>
     <div class="feature-detail" id="featureDetail">
       <h2 id="detailTitle">Verifizierung</h2>
@@ -50,10 +51,11 @@
       var li = e.target.closest('li');
       if (!li) return;
       var feat = li.getAttribute('data-feature');
+      var name = li.querySelector('.feature-item-name');
       var items = list.querySelectorAll('li');
       for (var i = 0; i < items.length; i++) items[i].classList.remove('active');
       li.classList.add('active');
-      title.textContent = li.textContent.trim();
+      title.textContent = name ? name.textContent.trim() : li.textContent.trim();
       text.textContent = desc[feat] || '';
     });
   })();
