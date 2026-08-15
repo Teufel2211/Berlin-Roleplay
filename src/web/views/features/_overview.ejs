@@ -4,10 +4,9 @@
   <div class="stat-card"><div class="stat-value"><%= data.stats.tickets %></div><div class="stat-label">Offene Tickets</div></div>
   <div class="stat-card"><div class="stat-value"><%= data.stats.applications %></div><div class="stat-label">Offene Bewerbungen</div></div>
   <div class="stat-card"><div class="stat-value"><%= data.stats.giveaways %></div><div class="stat-label">Aktive Giveaways</div></div>
-  <div class="stat-card"><div class="stat-value"><%= data.stats.currentNumber %></div><div class="stat-label">Aktuelle Zahl</div></div>
-  <div class="stat-card"><div class="stat-value"><%= data.stats.streak %></div><div class="stat-label">Counting-Streak</div></div>
+  <div class="stat-card"><div class="stat-value"><%= data.stats.team %></div><div class="stat-label">Teammitglieder</div></div>
 </div>
 <div class="bot-status">
-  <span class="status-dot <%= activeGuild.botInstalled ? 'online' : 'offline' %>"></span>
-  Bot <%= activeGuild.botInstalled ? 'ist auf diesem Server verbunden' : 'ist nicht auf diesem Server' %>
+  <span class="status-dot <%= data.botInstalled ? 'online' : 'offline' %>"></span>
+  Bot <%= data.botInstalled ? 'ist auf diesem Server installiert' : 'ist nicht auf diesem Server' %>
 </div>
