@@ -20,6 +20,16 @@ const TABLES = {
   embeds: 'eghr_embeds',
   interviews: 'eghr_interviews',
   interviewQuestions: 'eghr_interview_questions',
+  teamDepartments: 'eghr_team_departments',
+  teamRanks: 'eghr_team_ranks',
+  teamMembers: 'eghr_team_members',
+  teamAbsences: 'eghr_team_absences',
+  teamEvents: 'eghr_team_events',
+  teamTasks: 'eghr_team_tasks',
+  moderationCases: 'eghr_moderation_cases',
+  moderationWarnings: 'eghr_moderation_warnings',
+  welcomeMessages: 'eghr_welcome_messages',
+  verificationAttempts: 'eghr_verification_attempts',
 };
 
 function getClient() {
