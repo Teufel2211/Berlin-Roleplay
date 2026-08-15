@@ -13,7 +13,11 @@
   </header>
   <div class="server-body">
     <%- include('partials/feature_sidebar', { features, activeFeature, guildId }) %>
-    <div class="feature-content">
+    <div class="feature-content<%= data.sections && data.sections.length > 1 ? ' has-subnav' : '' %>">
+      <%- include('partials/_subnav', { sections: data.sections }) %>
+      <% if (data.discordOk === false && feature.id !== 'overview' && feature.id !== 'audit') { %>
+      <div class="alert warn">Der Bot ist auf diesem Server nicht erreichbar (evtl. nicht installiert oder offline). Kanal- und Rollenlisten können nicht geladen werden – du kannst die IDs manuell eingeben.</div>
+      <% } %>
       <% if (feature.id === 'overview') { %>
         <%- include('features/_overview', { data }) %>
       <% } else if (feature.id === 'verification') { %>
@@ -38,4 +42,21 @@
     </div>
   </div>
 </section>
+<script>
+(function () {
+  var nav = document.getElementById('subnav');
+  if (!nav) return;
+  var sections = Array.prototype.slice.call(document.querySelectorAll('.feature-section'));
+  function show(id) {
+    sections.forEach(function (s) { s.classList.toggle('active', s.id === id); });
+    Array.prototype.slice.call(nav.querySelectorAll('.subnav-btn')).forEach(function (b) { b.classList.toggle('active', b.dataset.target === id); });
+  }
+  nav.addEventListener('click', function (e) {
+    var btn = e.target.closest ? e.target.closest('.subnav-btn') : null;
+    if (btn) show(btn.dataset.target);
+  });
+  var first = nav.querySelector('.subnav-btn');
+  if (first) show(first.dataset.target);
+})();
+</script>
 <%- include('partials/foot') %>

@@ -11,7 +11,7 @@
         <% if (f.type === 'channel') { %>
         <label class="field">
           <span class="field-label"><%= f.label %></span>
-          <% if (!data.channelOptions) { %>
+          <% if (!data.channelOptions || !data.channelOptions.length) { %>
           <input type="text" name="settings[<%= f.key %>]" value="<%= f.value %>" placeholder="Kanal-ID oder Name">
           <% } else { %>
           <select name="settings[<%= f.key %>]">
@@ -25,7 +25,7 @@
         <% } else if (f.type === 'roles') { %>
         <label class="field">
           <span class="field-label"><%= f.label %></span>
-          <% if (!data.roleOptions) { %>
+          <% if (!data.roleOptions || !data.roleOptions.length) { %>
           <input type="text" name="settings[<%= f.key %>]" value="<%= f.value %>" placeholder="Rollen-IDs (JSON-Array)">
           <% } else { %>
           <% var sel = (function () { try { var arr = JSON.parse(f.value || '[]'); return Array.isArray(arr) ? arr.map(String) : []; } catch (e) { return f.value ? [String(f.value)] : []; } })(); %>

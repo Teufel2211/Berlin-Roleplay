@@ -1,22 +1,24 @@
 <h2 class="feature-title">Bewerbungen</h2>
 <p class="muted">Bewerbungen werden über das Discord-Panel eingereicht. Im Dashboard siehst du Status, Antworten und Verlauf.</p>
 <% if (data.dbError) { %><div class="alert error"><%= data.dbError %></div><% } %>
-<% if (data.records.length) { %>
-<h3 class="list-title">Bewerbungen</h3>
-<div class="table-wrap"><table class="data-table"><thead><tr><th>Nutzer</th><th>Typ</th><th>Status</th><th>Erstellt</th></tr></thead><tbody>
-<% data.records.forEach(function (a) { %>
-<tr>
-  <td><strong><%= a.discord_tag || a.applicant_name || a.discord_id %></strong><div class="muted"><%= a.discord_id || '' %></div></td>
-  <td><%= a.bewerbung_type || a.type || '—' %></td>
-  <td><span class="badge <%= a.status %>"><%= a.status %></span></td>
-  <td><%= a.created_at ? new Date(a.created_at).toLocaleString('de-DE') : '—' %></td>
-</tr>
-<tr class="details-row"><td colspan="4"><details><summary>Bewerbungsantworten anzeigen</summary><div class="application-answers">
-<% var answers = a.answers || {}; if (typeof answers === 'string') { try { answers = JSON.parse(answers); } catch (_) { answers = { Antwort: answers }; } } %>
-<% Object.keys(answers).forEach(function (key, index) { %><div class="answer-block"><strong>Frage <%= index + 1 %></strong><p><%= answers[key] %></p></div><% }) %>
-<% if (!Object.keys(answers).length) { %><p class="muted">Keine Antworten gespeichert.</p><% } %>
-</div></details></td></tr>
-<% }) %>
-</tbody></table></div>
-<% } else { %><div class="empty-state"><p>Keine Bewerbungen vorhanden.</p></div><% } %>
-<%- include('_settings_form', { data, featureId: 'bewerbung', guildId }) %>
+<div class="feature-section" id="sec-liste">
+  <% if (data.records.length) { %>
+  <h3 class="list-title">Bewerbungen</h3>
+  <div class="table-wrap"><table class="data-table"><thead><tr><th>Nutzer</th><th>Typ</th><th>Status</th><th>Erstellt</th></tr></thead><tbody>
+  <% data.records.forEach(function (a) { %>
+  <tr>
+    <td><strong><%= a.discord_tag || a.applicant_name || a.discord_id %></strong><div class="muted"><%= a.discord_id || '' %></div></td>
+    <td><%= a.bewerbung_type || a.type || '—' %></td>
+    <td><span class="badge <%= a.status %>"><%= a.status %></span></td>
+    <td><%= a.created_at ? new Date(a.created_at).toLocaleString('de-DE') : '—' %></td>
+  </tr>
+  <tr class="details-row"><td colspan="4"><details><summary>Bewerbungsantworten anzeigen</summary><div class="application-answers">
+  <% var answers = a.answers || {}; if (typeof answers === 'string') { try { answers = JSON.parse(answers); } catch (_) { answers = { Antwort: answers }; } } %>
+  <% Object.keys(answers).forEach(function (key, index) { %><div class="answer-block"><strong>Frage <%= index + 1 %></strong><p><%= answers[key] %></p></div><% }) %>
+  <% if (!Object.keys(answers).length) { %><p class="muted">Keine Antworten gespeichert.</p><% } %>
+  </div></details></td></tr>
+  <% }) %>
+  </tbody></table></div>
+  <% } else { %><div class="empty-state"><p>Keine Bewerbungen vorhanden.</p></div><% } %>
+</div>
+<%- include('../partials/_sec_settings', { sectionId: 'kanale', data, featureId: 'bewerbung', guildId }) %>

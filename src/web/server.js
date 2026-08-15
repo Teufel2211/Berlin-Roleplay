@@ -61,26 +61,76 @@ const FEATURES = [
 ];
 
 const SETTING_GROUPS = [
-  { feature: 'verification', subgroup: 'Kanäle', keys: ['verify_channel_id', 'verify_log_channel_id'] },
-  { feature: 'verification', subgroup: 'Rollen', keys: ['verified_roles'] },
-  { feature: 'verification', subgroup: 'Verhalten', keys: ['verify_dm', 'verify_min_account_age_days'] },
-  { feature: 'warteraum', subgroup: 'Rollen', keys: ['warteraum_roles'] },
-  { feature: 'warteraum', subgroup: 'Kanäle', keys: ['warteraum_voice_channel_id', 'warteraum_target_channel_id'] },
-  { feature: 'giveaway', subgroup: 'Kanäle', keys: ['giveaway_channel_id', 'giveaway_announce_channel_id'] },
-  { feature: 'giveaway', subgroup: 'Rollen', keys: ['giveaway_required_roles'] },
-  { feature: 'tickets', subgroup: 'Kanäle', keys: ['ticket_category_id', 'ticket_panel_channel_id', 'ticket_log_channel_id'] },
-  { feature: 'bewerbung', subgroup: 'Kanäle', keys: ['application_category_id'] },
-  { feature: 'interview', subgroup: 'Kanäle', keys: ['interview_channel_id'] },
-  { feature: 'interview', subgroup: 'Bewertung', keys: ['interview_max_per_section', 'interview_pass_threshold'] },
-  { feature: 'team', subgroup: 'Protokoll', keys: ['team_log_channel_id'] },
-  { feature: 'moderation', subgroup: 'Protokoll', keys: ['moderation_log_channel_id'] },
+  { feature: 'verification', id: 'kanale', subgroup: 'Kanäle', keys: ['verify_channel_id', 'verify_log_channel_id'] },
+  { feature: 'verification', id: 'rollen', subgroup: 'Rollen', keys: ['verified_roles'] },
+  { feature: 'verification', id: 'verhalten', subgroup: 'Verhalten', keys: ['verify_dm', 'verify_min_account_age_days'] },
+  { feature: 'warteraum', id: 'rollen', subgroup: 'Rollen', keys: ['warteraum_roles'] },
+  { feature: 'warteraum', id: 'kanale', subgroup: 'Kanäle', keys: ['warteraum_voice_channel_id', 'warteraum_target_channel_id'] },
+  { feature: 'giveaway', id: 'kanale', subgroup: 'Kanäle', keys: ['giveaway_channel_id', 'giveaway_announce_channel_id'] },
+  { feature: 'giveaway', id: 'rollen', subgroup: 'Rollen', keys: ['giveaway_required_roles'] },
+  { feature: 'tickets', id: 'kanale', subgroup: 'Kanäle', keys: ['ticket_category_id', 'ticket_panel_channel_id', 'ticket_log_channel_id'] },
+  { feature: 'bewerbung', id: 'kanale', subgroup: 'Kanäle', keys: ['application_category_id'] },
+  { feature: 'interview', id: 'kanale', subgroup: 'Kanäle', keys: ['interview_channel_id'] },
+  { feature: 'interview', id: 'bewertung', subgroup: 'Bewertung', keys: ['interview_max_per_section', 'interview_pass_threshold'] },
+  { feature: 'team', id: 'protokoll', subgroup: 'Protokoll', keys: ['team_log_channel_id'] },
+  { feature: 'moderation', id: 'protokoll', subgroup: 'Protokoll', keys: ['moderation_log_channel_id'] },
 ];
+
+const FEATURE_SECTIONS = {
+  overview: [{ id: 'uebersicht', label: 'Übersicht', kind: 'content' }],
+  verification: [
+    { id: 'kanale', label: 'Kanäle', kind: 'settings' },
+    { id: 'rollen', label: 'Rollen', kind: 'settings' },
+    { id: 'verhalten', label: 'Verhalten', kind: 'settings' },
+    { id: 'nutzer', label: 'Verifizierte Nutzer', kind: 'content' },
+  ],
+  warteraum: [
+    { id: 'rollen', label: 'Rollen', kind: 'settings' },
+    { id: 'kanale', label: 'Kanäle', kind: 'settings' },
+  ],
+  tickets: [
+    { id: 'liste', label: 'Offene Tickets', kind: 'content' },
+    { id: 'kanale', label: 'Kanäle', kind: 'settings' },
+  ],
+  bewerbung: [
+    { id: 'liste', label: 'Bewerbungen', kind: 'content' },
+    { id: 'kanale', label: 'Kanäle', kind: 'settings' },
+  ],
+  giveaway: [
+    { id: 'liste', label: 'Aktive Giveaways', kind: 'content' },
+    { id: 'kanale', label: 'Kanäle', kind: 'settings' },
+    { id: 'rollen', label: 'Rollen', kind: 'settings' },
+  ],
+  interview: [
+    { id: 'kanale', label: 'Kanäle', kind: 'settings' },
+    { id: 'bewertung', label: 'Bewertung', kind: 'settings' },
+    { id: 'fragen', label: 'Fragen', kind: 'content' },
+    { id: 'ergebnisse', label: 'Ergebnisse', kind: 'content' },
+  ],
+  team: [
+    { id: 'mitglieder', label: 'Mitglieder', kind: 'content' },
+    { id: 'abteilungen', label: 'Abteilungen', kind: 'content' },
+    { id: 'raenge', label: 'Ränge', kind: 'content' },
+    { id: 'abwesenheiten', label: 'Abwesenheiten', kind: 'content' },
+    { id: 'protokoll', label: 'Protokoll', kind: 'settings' },
+  ],
+  calendar: [{ id: 'termine', label: 'Termine', kind: 'content' }],
+  moderation: [
+    { id: 'faelle', label: 'Fälle', kind: 'content' },
+    { id: 'protokoll', label: 'Protokoll', kind: 'settings' },
+  ],
+  security: [{ id: 'uebersicht', label: 'Übersicht', kind: 'content' }],
+  welcome: [{ id: 'willkommen', label: 'Willkommen', kind: 'content' }],
+  embeds: [{ id: 'embeds', label: 'Embeds', kind: 'content' }],
+  audit: [{ id: 'eintraege', label: 'Einträge', kind: 'content' }],
+};
 
 function featureById(id) { return FEATURES.find((f) => f.id === id); }
 function guildFromSession(req, guildId) { return (req.session?.guilds || []).find((g) => g.id === guildId) || null; }
 function isBooleanValue(key, value) { return value === 'true' || value === 'false'; }
 function settingsGroupsFor(featureId, all) {
   return SETTING_GROUPS.filter((g) => g.feature === featureId).map((g) => ({
+    id: g.id,
     subgroup: g.subgroup,
     fields: g.keys.map((key) => ({ key, label: LABELS[key] || key, value: all[key] || '', boolean: isBooleanValue(key, all[key]), type: CHANNEL_KEYS.includes(key) ? 'channel' : ROLE_KEYS.includes(key) ? 'roles' : 'text' })),
   }));
@@ -114,7 +164,7 @@ function createApp() {
   app.get('/dashboard/servers/:guildId', (req, res) => res.redirect(`/dashboard/servers/${req.guildId}/feature/overview`));
   app.get('/dashboard/servers/:guildId/feature/interview/:resultId', async (req, res, next) => { const detail = await interviewService.getResultDetail(Number(req.params.resultId), req.guildId).catch(() => null); if (!detail) return next(); res.render('server', { title: `Interview-Detail — ${req.guild.name}`, user: req.session.user, csrf: auth.csrfToken(req), features: FEATURES, activeFeature: 'interview', feature: featureById('interview'), data: { detail } }); });
   app.get('/dashboard/servers/:guildId/feature/:feature', async (req, res, next) => {
-    const feature = featureById(req.params.feature); if (!feature) return next(); const gid = req.guildId; const all = await settingsService.getAll(gid).catch(() => ({})); const channelOptions = await discordApi.fetchChannels(gid).catch(() => []); const roleOptions = await discordApi.fetchRoles(gid).catch(() => []); const base = { title: `${feature.name} — ${req.guild.name}`, user: req.session.user, csrf: auth.csrfToken(req), features: FEATURES, activeFeature: feature.id, feature }; const sdata = { groups: settingsGroupsFor(feature.id, all), channelOptions, roleOptions, all, flash: String(req.query.msg || '') };
+    const feature = featureById(req.params.feature); if (!feature) return next(); const gid = req.guildId; const all = await settingsService.getAll(gid).catch(() => ({})); let discordOk = true; const channelOptions = await discordApi.fetchChannels(gid).catch(() => { discordOk = false; return []; }); const roleOptions = await discordApi.fetchRoles(gid).catch(() => { discordOk = false; return []; }); const base = { title: `${feature.name} — ${req.guild.name}`, user: req.session.user, csrf: auth.csrfToken(req), features: FEATURES, activeFeature: feature.id, feature }; const allGroups = settingsGroupsFor(feature.id, all); const sdata = { sections: (FEATURE_SECTIONS[feature.id] || []).map((s) => s.kind === 'settings' ? { ...s, groups: allGroups.filter((g) => g.id === s.id) } : s), channelOptions, roleOptions, all, discordOk, flash: String(req.query.msg || '') };
     if (feature.id === 'overview') { const [tickets, apps, giveaways, team] = await Promise.all([getClient().from(TABLES.tickets).select('id', { count: 'exact' }).eq('guild_id', gid).eq('status', 'offen'), getClient().from(TABLES.applications).select('id', { count: 'exact' }).eq('guild_id', gid).eq('status', 'offen'), getClient().from(TABLES.giveaways).select('id', { count: 'exact' }).eq('guild_id', gid).eq('ended', false), getClient().from(TABLES.teamMembers).select('id', { count: 'exact' }).eq('guild_id', gid)]); const bot = await discordAuth.fetchGuild(gid).catch(() => null); return res.render('server', { ...base, data: { ...sdata, stats: { tickets: tickets.count || 0, applications: apps.count || 0, giveaways: giveaways.count || 0, team: team.count || 0 }, botInstalled: Boolean(bot) } }); }
     if (feature.id === 'verification' || feature.id === 'tickets' || feature.id === 'bewerbung') { const table = feature.id === 'verification' ? TABLES.users : feature.id === 'tickets' ? TABLES.tickets : TABLES.applications; const { data: records } = await getClient().from(table).select('*').eq('guild_id', gid).order('created_at', { ascending: false }).limit(200); return res.render('server', { ...base, data: { ...sdata, records: records || [] } }); }
     if (feature.id === 'giveaway') { const { data: giveaways } = await getClient().from(TABLES.giveaways).select('*').eq('guild_id', gid).eq('ended', false).order('ends_at', { ascending: true }).limit(50); return res.render('server', { ...base, data: { ...sdata, giveaways: giveaways || [] } }); }

@@ -3,6 +3,7 @@
 <% if (data.flash) { %><div class="alert"><%= data.flash %></div><% } %>
 <% if (data.dbError) { %><div class="alert error"><%= data.dbError %></div><% } %>
 
+<div class="feature-section" id="sec-embeds">
 <% if (data.embeds.length) { %>
 <h3 class="list-title">Vorhandene Embeds</h3>
 <div class="table-wrap">
@@ -39,7 +40,7 @@
       <div class="settings-fields">
         <label class="field">
           <span class="field-label">Kanal</span>
-          <% if (data.channelOptions) { %>
+          <% if (data.channelOptions && data.channelOptions.length) { %>
           <select name="channel">
             <option value="">— Kanal wählen —</option>
             <% data.channelOptions.forEach(function (c) { %>
@@ -134,6 +135,7 @@
     </div>
   </div>
 </form>
+</div>
 
 <script>
 (function () {

@@ -1,16 +1,20 @@
 <h2 class="feature-title">Verifizierung</h2>
 <p class="muted">Nutzer verifizieren sich über das Panel. Konfiguriere Kanäle, Rollen und Verhalten.</p>
-<%- include('_settings_form', { data, featureId: 'verification', guildId }) %>
-<% if (data.records.length) { %>
-<h3 class="list-title">Verifizierte Nutzer</h3>
-<div class="table-wrap">
-  <table class="data-table">
-    <thead><tr><th>Nutzer</th><th>Verifiziert am</th></tr></thead>
-    <tbody>
-      <% data.records.forEach(function (u) { %>
-      <tr><td><%= u.discord_tag || u.discord_id %></td><td><%= u.verified_at ? new Date(u.verified_at).toLocaleString('de-DE') : '—' %></td></tr>
-      <% }) %>
-    </tbody>
-  </table>
+<%- include('../partials/_sec_settings', { sectionId: 'kanale', data, featureId: 'verification', guildId }) %>
+<%- include('../partials/_sec_settings', { sectionId: 'rollen', data, featureId: 'verification', guildId }) %>
+<%- include('../partials/_sec_settings', { sectionId: 'verhalten', data, featureId: 'verification', guildId }) %>
+<div class="feature-section" id="sec-nutzer">
+  <% if (data.records.length) { %>
+  <h3 class="list-title">Verifizierte Nutzer</h3>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Nutzer</th><th>Verifiziert am</th></tr></thead>
+      <tbody>
+        <% data.records.forEach(function (u) { %>
+        <tr><td><%= u.discord_tag || u.discord_id %></td><td><%= u.verified_at ? new Date(u.verified_at).toLocaleString('de-DE') : '—' %></td></tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <% } else { %><div class="empty-state"><p>Noch keine verifizierten Nutzer.</p></div><% } %>
 </div>
-<% } %>

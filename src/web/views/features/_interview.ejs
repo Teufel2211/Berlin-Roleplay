@@ -3,46 +3,53 @@
 <% if (data.dbError) { %><div class="alert error"><%= data.dbError %></div><% } %>
 <% if (data.flash) { %><div class="alert"><%= data.flash %></div><% } %>
 
-<h3 class="list-title">Bewertungsbogen einfügen</h3>
-<p class="muted">Du kannst deinen kompletten Bewertungsbogen einfach hier hineinkopieren. Format z. B. <code>1. Frage `1,5/2P`</code>.</p>
-<form method="post" action="/dashboard/servers/<%= guildId %>/feature/interview/questions" class="question-add-form" id="grading-import-form">
-  <input type="hidden" name="_csrf" value="<%= csrf %>">
-  <input type="hidden" name="action" value="import">
-  <select name="interview_id" required><option value="">Interview auswählen</option><% data.results.filter(function (r) { return r.status === 'offen'; }).forEach(function (r) { %><option value="<%= r.id %>"><%= r.applicant_name || r.applicant_id %> — <%= new Date(r.created_at).toLocaleString('de-DE') %></option><% }) %></select>
-  <textarea name="grading_sheet" id="grading-sheet" rows="18" placeholder="Abschnitt 1 - Einstellungsfragen\n\n1. Warum möchtest du bei uns Moderator werden? `1,5/2P`\n2. Warum sollten wir gerade dich ins Team aufnehmen? `2/2P`\n\nAbschnitt 2 - Regelwerkabfrage\n..." required></textarea>
-  <button type="submit" class="btn primary">Bewertungsbogen auswerten</button>
-</form>
+<%- include('../partials/_sec_settings', { sectionId: 'kanale', data, featureId: 'interview', guildId }) %>
 
-<h3 class="list-title">Fragen verwalten</h3>
-<form method="post" action="/dashboard/servers/<%= guildId %>/feature/interview/questions" class="question-add-form"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="action" value="add"><select name="section"><option value="1">Abschnitt 1</option><option value="2">Abschnitt 2</option><option value="3">Abschnitt 3</option></select><input type="text" name="frage" placeholder="Neue Frage" required><button type="submit" class="btn primary">Hinzufügen</button></form>
+<div class="feature-section" id="sec-bewertung">
+  <h3 class="list-title">Bewertungsbogen einfügen</h3>
+  <p class="muted">Du kannst deinen kompletten Bewertungsbogen einfach hier hineinkopieren. Format z. B. <code>1. Frage `1,5/2P`</code>.</p>
+  <form method="post" action="/dashboard/servers/<%= guildId %>/feature/interview/questions" class="question-add-form" id="grading-import-form">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <input type="hidden" name="action" value="import">
+    <select name="interview_id" required><option value="">Interview auswählen</option><% data.results.filter(function (r) { return r.status === 'offen'; }).forEach(function (r) { %><option value="<%= r.id %>"><%= r.applicant_name || r.applicant_id %> — <%= new Date(r.created_at).toLocaleString('de-DE') %></option><% }) %></select>
+    <textarea name="grading_sheet" id="grading-sheet" rows="18" placeholder="Abschnitt 1 - Einstellungsfragen\n\n1. Warum möchtest du bei uns Moderator werden? `1,5/2P`\n2. Warum sollten wir gerade dich ins Team aufnehmen? `2/2P`\n\nAbschnitt 2 - Regelwerkabfrage\n..." required></textarea>
+    <button type="submit" class="btn primary">Bewertungsbogen auswerten</button>
+  </form>
+  <%- include('../partials/_sec_settings', { sectionId: 'bewertung', data, featureId: 'interview', guildId, wrap: false }) %>
+</div>
 
-<% var sections = []; data.questions.forEach(function (q) { if (sections.indexOf(q.section) === -1) sections.push(q.section); }); sections.sort(function (a, b) { return a - b; }); %>
-<% sections.forEach(function (sec) { %>
-<h3 class="list-title">Abschnitt <%= sec %></h3><div class="question-rows">
-  <% data.questions.filter(function (q) { return q.section === sec; }).forEach(function (q) { %>
-  <div class="question-row">
-    <form method="post" action="/dashboard/servers/<%= guildId %>/feature/interview/questions" class="inline-form"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="id" value="<%= q.id %>"><input type="hidden" name="action" value="move"><input type="hidden" name="dir" value="up"><button type="submit" class="btn icon-btn">↑</button></form>
-    <form method="post" action="/dashboard/servers/<%= guildId %>/feature/interview/questions" class="inline-form"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="id" value="<%= q.id %>"><input type="hidden" name="action" value="move"><input type="hidden" name="dir" value="down"><button type="submit" class="btn icon-btn">↓</button></form>
-    <form method="post" action="/dashboard/servers/<%= guildId %>/feature/interview/questions" class="inline-form"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="id" value="<%= q.id %>"><input type="hidden" name="action" value="edit"><select name="section"><option value="1"<%= q.section === 1 ? ' selected' : '' %>>1</option><option value="2"<%= q.section === 2 ? ' selected' : '' %>>2</option><option value="3"<%= q.section === 3 ? ' selected' : '' %>>3</option></select><input type="text" name="frage" value="<%= q.frage %>" class="wide"><button type="submit" class="btn small">Speichern</button></form>
-    <form method="post" action="/dashboard/servers/<%= guildId %>/feature/interview/questions" class="inline-form"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="id" value="<%= q.id %>"><input type="hidden" name="action" value="delete"><button type="submit" class="btn small danger">Löschen</button></form>
+<div class="feature-section" id="sec-fragen">
+  <h3 class="list-title">Fragen verwalten</h3>
+  <form method="post" action="/dashboard/servers/<%= guildId %>/feature/interview/questions" class="question-add-form"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="action" value="add"><select name="section"><option value="1">Abschnitt 1</option><option value="2">Abschnitt 2</option><option value="3">Abschnitt 3</option></select><input type="text" name="frage" placeholder="Neue Frage" required><button type="submit" class="btn primary">Hinzufügen</button></form>
+
+  <% var sections = []; data.questions.forEach(function (q) { if (sections.indexOf(q.section) === -1) sections.push(q.section); }); sections.sort(function (a, b) { return a - b; }); %>
+  <% sections.forEach(function (sec) { %>
+  <h3 class="list-title">Abschnitt <%= sec %></h3><div class="question-rows">
+    <% data.questions.filter(function (q) { return q.section === sec; }).forEach(function (q) { %>
+    <div class="question-row">
+      <form method="post" action="/dashboard/servers/<%= guildId %>/feature/interview/questions" class="inline-form"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="id" value="<%= q.id %>"><input type="hidden" name="action" value="move"><input type="hidden" name="dir" value="up"><button type="submit" class="btn icon-btn">↑</button></form>
+      <form method="post" action="/dashboard/servers/<%= guildId %>/feature/interview/questions" class="inline-form"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="id" value="<%= q.id %>"><input type="hidden" name="action" value="move"><input type="hidden" name="dir" value="down"><button type="submit" class="btn icon-btn">↓</button></form>
+      <form method="post" action="/dashboard/servers/<%= guildId %>/feature/interview/questions" class="inline-form"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="id" value="<%= q.id %>"><input type="hidden" name="action" value="edit"><select name="section"><option value="1"<%= q.section === 1 ? ' selected' : '' %>>1</option><option value="2"<%= q.section === 2 ? ' selected' : '' %>>2</option><option value="3"<%= q.section === 3 ? ' selected' : '' %>>3</option></select><input type="text" name="frage" value="<%= q.frage %>" class="wide"><button type="submit" class="btn small">Speichern</button></form>
+      <form method="post" action="/dashboard/servers/<%= guildId %>/feature/interview/questions" class="inline-form"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="id" value="<%= q.id %>"><input type="hidden" name="action" value="delete"><button type="submit" class="btn small danger">Löschen</button></form>
+    </div>
+    <% }) %>
   </div>
   <% }) %>
 </div>
-<% }) %>
 
-<h3 class="list-title">Ergebnisse</h3>
-<% if (data.results.length) { %>
-<div class="table-wrap"><table class="data-table"><thead><tr><th>Bewerber</th><th>Punkte</th><th>Max</th><th>Bestanden</th><th>Status</th><th>Datum</th><th>Aktion</th></tr></thead><tbody>
-  <% var maxPoints = data.questions.reduce(function (sum, q) { return sum + Number(q.max_points == null ? 2 : q.max_points); }, 0); %>
-  <% data.results.forEach(function (r) { %>
-  <tr>
-    <td><strong><%= r.applicant_name || r.applicant_id %></strong></td><td><%= r.total != null ? Number(r.total).toLocaleString('de-DE') : '—' %></td><td><%= maxPoints.toLocaleString('de-DE') %></td>
-    <td><% if (r.passed === true) { %><span class="badge angenommen">Bestanden</span><% } else if (r.passed === false) { %><span class="badge abgelehnt">Nicht bestanden</span><% } else { %><span class="badge offen">—</span><% } %></td>
-    <td><span class="badge <%= r.status %>"><%= r.status %></span></td><td><%= new Date(r.created_at).toLocaleString('de-DE') %></td>
-    <td><a class="btn small" href="/dashboard/servers/<%= guildId %>/feature/interview/<%= r.id %>">Detail</a><% if (r.passed === true) { %><form method="post" action="/dashboard/servers/<%= guildId %>/feature/interview/action" class="inline-form"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="action" value="team_intake"><input type="hidden" name="interview_id" value="<%= r.id %>"><input type="hidden" name="discord_id" value="<%= r.applicant_id %>"><button class="btn small primary">Ins Team aufnehmen</button></form><% } %></td>
-  </tr>
-  <% }) %>
-</tbody></table></div>
-<% } else { %><div class="empty-state"><p>Noch keine Interviews durchgeführt.</p></div><% } %>
-
-<h3 class="list-title">Einstellungen</h3><%- include('_settings_form', { data, featureId: 'interview', guildId }) %>
+<div class="feature-section" id="sec-ergebnisse">
+  <h3 class="list-title">Ergebnisse</h3>
+  <% if (data.results.length) { %>
+  <div class="table-wrap"><table class="data-table"><thead><tr><th>Bewerber</th><th>Punkte</th><th>Max</th><th>Bestanden</th><th>Status</th><th>Datum</th><th>Aktion</th></tr></thead><tbody>
+    <% var maxPoints = data.questions.reduce(function (sum, q) { return sum + Number(q.max_points == null ? 2 : q.max_points); }, 0); %>
+    <% data.results.forEach(function (r) { %>
+    <tr>
+      <td><strong><%= r.applicant_name || r.applicant_id %></strong></td><td><%= r.total != null ? Number(r.total).toLocaleString('de-DE') : '—' %></td><td><%= maxPoints.toLocaleString('de-DE') %></td>
+      <td><% if (r.passed === true) { %><span class="badge angenommen">Bestanden</span><% } else if (r.passed === false) { %><span class="badge abgelehnt">Nicht bestanden</span><% } else { %><span class="badge offen">—</span><% } %></td>
+      <td><span class="badge <%= r.status %>"><%= r.status %></span></td><td><%= new Date(r.created_at).toLocaleString('de-DE') %></td>
+      <td><a class="btn small" href="/dashboard/servers/<%= guildId %>/feature/interview/<%= r.id %>">Detail</a><% if (r.passed === true) { %><form method="post" action="/dashboard/servers/<%= guildId %>/feature/interview/action" class="inline-form"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="action" value="team_intake"><input type="hidden" name="interview_id" value="<%= r.id %>"><input type="hidden" name="discord_id" value="<%= r.applicant_id %>"><button class="btn small primary">Ins Team aufnehmen</button></form><% } %></td>
+    </tr>
+    <% }) %>
+  </tbody></table></div>
+  <% } else { %><div class="empty-state"><p>Noch keine Interviews durchgeführt.</p></div><% } %>
+</div>

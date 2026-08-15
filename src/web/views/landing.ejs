@@ -3,7 +3,7 @@
   <div class="landing-hero">
     <span class="landing-eyebrow"><span class="dot"></span>Bot online · Dashboard aktiv</span>
     <h1>Emergency Hamburg Roleplay</h1>
-    <p class="muted">Der zentrale Bot für deinen Server: Verifizierung, Warteraum, Counting, Giveaways, Tickets, Bewerbungen, Interviews und mehr.</p>
+    <p class="muted">Der zentrale Bot für deinen Server: Verifizierung, Warteraum, Giveaways, Tickets, Bewerbungen, Interviews und mehr.</p>
     <% if (loggedIn) { %>
     <a href="/dashboard" class="discord-btn">Zum Dashboard</a>
     <% } else { %>
@@ -17,7 +17,6 @@
     <ul class="feature-list" id="featureList">
       <li data-feature="verification" class="active"><span class="feature-icon">✅</span><span class="feature-item-name">Verifizierung</span></li>
       <li data-feature="warteraum"><span class="feature-icon">🎧</span><span class="feature-item-name">Warteraum</span></li>
-      <li data-feature="counting"><span class="feature-icon">🔢</span><span class="feature-item-name">Counting</span></li>
       <li data-feature="giveaway"><span class="feature-icon">🎉</span><span class="feature-item-name">Giveaway</span></li>
       <li data-feature="tickets"><span class="feature-icon">🎫</span><span class="feature-item-name">Tickets</span></li>
       <li data-feature="bewerbung"><span class="feature-icon">📝</span><span class="feature-item-name">Bewerbung</span></li>
@@ -39,7 +38,6 @@
     var desc = {
       verification: 'Nutzer verifizieren sich per Button-Panel. Beim Verifizieren wird die konfigurierte Rolle vergeben und das Verhalten über Einstellungen gesteuert.',
       warteraum: 'Sobald ein Nutzer den Warteraum-Voice betritt, wird er automatisch in den Ziel-Kanal umgeleitet und bekommt die Warteraum-Rolle.',
-      counting: 'Zähl-Channel mit fortlaufender Zahl, optionalen Dezimalzahlen und Meilensteinen. Falsche Zahlen starten den Countdown neu.',
       giveaway: 'Gewinnspiele mit Button-Teilnahme, konfigurierbaren Gewinnern und optionalen Pflicht-Rollen.',
       tickets: 'Support-Tickets über ein Panel. Tickets können übernommen, geschlossen und als Transkript archiviert werden.',
       bewerbung: 'Bewerbungen werden über ein Modal eingereicht und von Staff/Admin entschieden (Angenommen/Abgelehnt).',

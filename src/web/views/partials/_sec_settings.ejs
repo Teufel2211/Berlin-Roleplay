@@ -1,0 +1,12 @@
+<%
+  var sec = null;
+  (data.sections || []).forEach(function (s) { if (s.id === sectionId) sec = s; });
+  var formData = { groups: (sec && sec.groups) || [], channelOptions: data.channelOptions, roleOptions: data.roleOptions };
+%>
+<% if (typeof wrap !== 'undefined' && wrap === false) { %>
+<%- include('../features/_settings_form', { data: formData, featureId, guildId }) %>
+<% } else { %>
+<div class="feature-section" id="sec-<%= sectionId %>">
+  <%- include('../features/_settings_form', { data: formData, featureId, guildId }) %>
+</div>
+<% } %>
