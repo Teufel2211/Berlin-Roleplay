@@ -36,10 +36,89 @@
   </div>
   <%- include('../partials/_sec_settings', { sectionId: 'protokoll', data, featureId: 'moderation', guildId }) %>
 <% } else if (feature.id === 'welcome') { %>
-  <p class="muted">Willkommensnachrichten, automatische Rollen und DM-Begrüßung.</p>
+  <p class="muted">Willkommens-Embed mit Live-Vorschau, automatischen Rollen und optionaler DM-Begrüßung.</p>
   <div class="feature-section" id="sec-willkommen">
-    <form method="post" action="/dashboard/servers/<%= guildId %>/feature/welcome/action" class="question-add-form" id="welcome-form"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="action" value="save"><input type="hidden" name="enabled" value="true"><select name="channel_id"><option value="">Kanal auswählen</option><% (data.channelOptions || []).forEach(function(c){ %><option value="<%= c.id %>" <%= data.config && data.config.channel_id===c.id ? 'selected' : '' %>><%= c.name %></option><% }) %></select><input name="title" placeholder="Titel" value="<%= data.config && data.config.embed_data ? (data.config.embed_data.title || 'Willkommen!') : 'Willkommen!' %>"><textarea name="description" placeholder="Beschreibung"><%= data.config && data.config.embed_data ? (data.config.embed_data.description || '') : '' %></textarea><input name="color" placeholder="#2B3A67" value="<%= data.config && data.config.embed_data ? (data.config.embed_data.color || '#2B3A67') : '#2B3A67' %>"><input name="image" placeholder="Bild-URL" value="<%= data.config && data.config.embed_data ? (data.config.embed_data.image || '') : '' %>"><input name="thumbnail" placeholder="Thumbnail-URL" value="<%= data.config && data.config.embed_data ? (data.config.embed_data.thumbnail || '') : '' %>"><h3 class="list-title">Embed-Felder</h3><div id="welcome-fields"><% ((data.config && data.config.embed_data && Array.isArray(data.config.embed_data.fields)) ? data.config.embed_data.fields : []).forEach(function(f){ %><div class="welcome-field"><input name="field_name[]" placeholder="Feldname" value="<%= f.name || '' %>"><input name="field_value[]" placeholder="Wert" value="<%= f.value || '' %>"><label><input type="checkbox" name="field_inline[]" value="true" <%= f.inline ? 'checked' : '' %>> Inline</label><button type="button" class="btn small danger" onclick="this.closest('.welcome-field').remove()">Entfernen</button></div><% }) %></div><button type="button" class="btn small" id="welcome-field-add">Feld hinzufügen</button><label><input type="checkbox" name="dm_enabled" value="true" <%= data.config && data.config.dm_enabled ? 'checked' : '' %>> DM senden</label><h3 class="list-title">Automatische Rollen</h3><div class="role-list"><% (data.roleOptions || []).forEach(function(r){ var selected=data.config && Array.isArray(data.config.auto_role_ids) && data.config.auto_role_ids.indexOf(r.id)!==-1; %><label><input type="checkbox" name="auto_role_ids" value="<%= r.id %>" <%= selected ? 'checked' : '' %>><%= r.name %></label><% }) %></div><button class="btn primary">Willkommenssystem speichern</button></form><script>(function(){var btn=document.getElementById('welcome-field-add');if(!btn)return;var wrap=document.getElementById('welcome-fields');btn.addEventListener('click',function(){var row=document.createElement('div');row.className='welcome-field';row.innerHTML='<input name="field_name[]" placeholder="Feldname" value=""><input name="field_value[]" placeholder="Wert" value=""><label><input type="checkbox" name="field_inline[]" value="true"> Inline</label><button type="button" class="btn small danger" onclick="this.closest(\'.welcome-field\').remove()">Entfernen</button>';wrap.appendChild(row);});})();</script>
+    <form method="post" action="/dashboard/servers/<%= guildId %>/feature/welcome/action" class="embed-form" id="welcome-form">
+      <input type="hidden" name="_csrf" value="<%= csrf %>">
+      <input type="hidden" name="action" value="save">
+      <input type="hidden" name="enabled" value="true">
+      <div class="embed-editor">
+        <div class="embed-fields-col">
+          <div class="settings-fields">
+            <label class="field"><span class="field-label">Willkommens-Kanal</span><select name="channel_id"><option value="">— Kanal wählen —</option><% (data.channelOptions || []).forEach(function(c){ %><option value="<%= c.id %>" <%= data.config && data.config.channel_id===c.id ? 'selected' : '' %>><%= c.name %></option><% }) %></select></label>
+            <label class="field"><span class="field-label">Titel</span><input name="title" value="<%= data.config && data.config.embed_data ? (data.config.embed_data.title || 'Willkommen!') : 'Willkommen!' %>" placeholder="Willkommen!"></label>
+            <label class="field"><span class="field-label">Beschreibung</span><textarea name="description" rows="5" placeholder="Willkommen auf {server}, {user}!"><%= data.config && data.config.embed_data ? (data.config.embed_data.description || '') : '' %></textarea></label>
+            <label class="field"><span class="field-label">Farbe</span><div class="color-row"><input type="color" id="welcome-color" value="<%= data.config && data.config.embed_data && /^#[0-9a-fA-F]{6}$/.test(data.config.embed_data.color || '') ? data.config.embed_data.color : '#2B3A67' %>"><input type="text" name="color" id="welcome-color-text" value="<%= data.config && data.config.embed_data ? (data.config.embed_data.color || '#2B3A67') : '#2B3A67' %>" placeholder="#2B3A67"></div></label>
+            <label class="field"><span class="field-label">Bild-URL</span><input name="image" value="<%= data.config && data.config.embed_data ? (data.config.embed_data.image || '') : '' %>" placeholder="https://…"></label>
+            <label class="field"><span class="field-label">Thumbnail-URL</span><input name="thumbnail" value="<%= data.config && data.config.embed_data ? (data.config.embed_data.thumbnail || '') : '' %>" placeholder="https://…"></label>
+            <label class="field"><span class="field-label">Variablen</span><span class="muted"><code>{user}</code> <code>{username}</code> <code>{server}</code> <code>{member_count}</code> <code>{join_date}</code> <code>{user_count}</code> <code>{bot_count}</code></span></label>
+          </div>
+
+          <h3 class="list-title">Embed-Felder</h3>
+          <div id="welcome-fields" class="dynamic-rows">
+            <% ((data.config && data.config.embed_data && Array.isArray(data.config.embed_data.fields)) ? data.config.embed_data.fields : []).forEach(function(f){ %>
+            <div class="dynamic-row welcome-field-row">
+              <input name="field_name[]" placeholder="Feldname" value="<%= f.name || '' %>">
+              <input name="field_value[]" placeholder="Wert" value="<%= f.value || '' %>">
+              <label class="inline-check"><input type="checkbox" name="field_inline[]" value="true" <%= f.inline ? 'checked' : '' %>>Inline</label>
+              <button type="button" class="btn small remove-row">✕</button>
+            </div>
+            <% }) %>
+          </div>
+          <button type="button" class="btn small" id="welcome-field-add">+ Feld</button>
+
+          <h3 class="list-title">Verhalten</h3>
+          <div class="settings-fields">
+            <label class="field checkbox-field"><input type="checkbox" name="dm_enabled" value="true" <%= data.config && data.config.dm_enabled ? 'checked' : '' %>><span>Willkommens-DM senden</span></label>
+            <label class="field checkbox-field"><input type="checkbox" name="enabled" value="true" checked><span>Willkommenssystem aktiv</span></label>
+          </div>
+
+          <h3 class="list-title">Automatische Rollen</h3>
+          <div class="role-list"><% (data.roleOptions || []).forEach(function(r){ var selected=data.config && Array.isArray(data.config.auto_role_ids) && data.config.auto_role_ids.indexOf(r.id)!==-1; %><label><input type="checkbox" name="auto_role_ids" value="<%= r.id %>" <%= selected ? 'checked' : '' %>><%= r.name %></label><% }) %></div>
+
+          <div class="embed-actions"><button type="submit" class="btn primary">Willkommenssystem speichern</button></div>
+        </div>
+
+        <div class="embed-preview-col">
+          <h3 class="list-title">Live-Vorschau</h3>
+          <div class="embed-preview" id="welcomePreview"></div>
+        </div>
+      </div>
+    </form>
   </div>
+  <script>
+  (function () {
+    var form = document.getElementById('welcome-form');
+    var preview = document.getElementById('welcomePreview');
+    var fieldWrap = document.getElementById('welcome-fields');
+    var addField = document.getElementById('welcome-field-add');
+    var color = document.getElementById('welcome-color');
+    var colorText = document.getElementById('welcome-color-text');
+    if (!form || !preview) return;
+    function esc(s) { var d=document.createElement('div'); d.textContent=s==null?'':String(s); return d.innerHTML; }
+    function val(name) { var el=form.querySelector('[name="'+name+'"]'); return el ? el.value : ''; }
+    function checked(name) { var el=form.querySelector('[name="'+name+'"]'); return Boolean(el && el.checked); }
+    function colorValue() { var v=(colorText.value||color.value||'#2B3A67').trim().replace(/^#/,''); return /^[0-9a-fA-F]{6}$/.test(v) ? '#'+v : '#2B3A67'; }
+    function fields() { return Array.prototype.slice.call(form.querySelectorAll('#welcome-fields .dynamic-row')).map(function(row){ return { name: row.querySelector('[name="field_name[]"]').value, value: row.querySelector('[name="field_value[]"]').value, inline: row.querySelector('[name="field_inline[]"]').checked }; }); }
+    function render() {
+      var c=colorValue(), title=val('title') || 'Willkommen!', desc=val('description') || 'Willkommen auf {server}, {user}!', fieldsData=fields().filter(function(f){return f.name||f.value;});
+      var html='<div class="ep-bar" style="background:'+c+'"></div><div class="ep-content"><div class="ep-author">Emergency Hamburg Roleplay</div>';
+      html+='<div class="ep-title">'+esc(title)+'</div><div class="ep-desc">'+esc(desc).replace(/\n/g,'<br>')+'</div>';
+      if(fieldsData.length){html+='<div class="ep-fields">';fieldsData.forEach(function(f){html+='<div class="ep-field'+(f.inline?' inline':'')+'"><div class="ep-field-name">'+esc(f.name||' ')+'</div><div class="ep-field-value">'+esc(f.value||' ').replace(/\n/g,'<br>')+'</div></div>';});html+='</div>';}
+      var image=val('image'), thumbnail=val('thumbnail');
+      if(image) html+='<div class="ep-image"><img src="'+esc(image)+'" alt="" onerror="this.style.display=\'none\'"></div>';
+      if(thumbnail) html+='<div class="ep-thumb"><img src="'+esc(thumbnail)+'" alt="" onerror="this.style.display=\'none\'"></div>';
+      html+='<div class="ep-footer">Heute um 20:40 Uhr</div></div>';
+      preview.innerHTML=html;
+    }
+    form.addEventListener('input', render); form.addEventListener('change', render);
+    if(color){color.addEventListener('input',function(){colorText.value=color.value;render();});}
+    if(colorText){colorText.addEventListener('input',function(){var v=colorText.value.replace(/^#/,'');if(/^[0-9a-fA-F]{6}$/.test(v)&&color)color.value='#'+v;render();});}
+    if(addField){addField.addEventListener('click',function(){var row=document.createElement('div');row.className='dynamic-row welcome-field-row';row.innerHTML='<input name="field_name[]" placeholder="Feldname"><input name="field_value[]" placeholder="Wert"><label class="inline-check"><input type="checkbox" name="field_inline[]" value="true">Inline</label><button type="button" class="btn small remove-row">✕</button>';fieldWrap.appendChild(row);render();});}
+    form.addEventListener('click',function(e){if(e.target.classList.contains('remove-row')){var row=e.target.closest('.dynamic-row');if(row)row.remove();render();}});
+    render();
+  })();
+  </script>
 <% } else if (feature.id === 'security') { %>
   <p class="muted">Sicherheitsübersicht und Moderationsaktivität.</p>
   <div class="feature-section" id="sec-uebersicht">
