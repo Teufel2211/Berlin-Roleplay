@@ -13,6 +13,7 @@ const TABLES = {
   countingState: 'eghr_counting_state',
   applications: 'eghr_applications',
   tickets: 'eghr_tickets',
+  ticketTypes: 'eghr_ticket_types',
   ticketTranscripts: 'eghr_ticket_transcripts',
   auditLog: 'eghr_audit_log',
   settings: 'eghr_settings',

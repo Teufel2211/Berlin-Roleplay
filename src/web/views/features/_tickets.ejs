@@ -23,4 +23,43 @@
   </div>
   <% } else { %><div class="empty-state"><p>Keine offenen Tickets.</p></div><% } %>
 </div>
+<div class="feature-section" id="sec-typen">
+  <h3 class="list-title">Ticket-Typ hinzufügen</h3>
+  <form method="post" action="/dashboard/servers/<%= guildId %>/feature/tickets/types" class="question-add-form">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <input type="hidden" name="action" value="add">
+    <input name="name" placeholder="Name (z.B. Support)" required>
+    <input name="emoji" placeholder="🎫" value="🎫">
+    <select name="category_id"><option value="">Kategorie auswählen</option><% data.channelOptions.forEach(function(c){ if (c.type === 4) { %><option value="<%= c.id %>"><%= c.name %></option><% } }) %></select>
+    <input name="max_open" type="number" min="1" value="1">
+    <select name="ping_role_id"><option value="">Keine Ping-Rolle</option><% data.roleOptions.forEach(function(r){ %><option value="<%= r.id %>"><%= r.name %></option><% }) %></select>
+    <button class="btn primary">Hinzufügen</button>
+  </form>
+  <% if (data.ticketTypes.length) { %>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Name</th><th>Kategorie</th><th>Limit</th><th>Ping-Rolle</th><th></th></tr></thead>
+      <tbody>
+        <% data.ticketTypes.forEach(function (t) {
+          var cat = data.channelOptions.find(function(c){ return c.id === t.category_id; });
+          var role = data.roleOptions.find(function(r){ return r.id === t.ping_role_id; });
+        %>
+        <tr>
+          <td><strong><%= t.emoji || '🎫' %> <%= t.name %></strong></td>
+          <td><%= cat ? cat.name : (t.category_id ? t.category_id : '—') %></td>
+          <td><%= t.max_open %></td>
+          <td><%= role ? role.name : (t.ping_role_id ? t.ping_role_id : '—') %></td>
+          <td>
+            <form method="post" action="/dashboard/servers/<%= guildId %>/feature/tickets/types" class="inline-form"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="action" value="move"><input type="hidden" name="id" value="<%= t.id %>"><input type="hidden" name="dir" value="up"><button type="submit" class="btn icon-btn">↑</button></form>
+            <form method="post" action="/dashboard/servers/<%= guildId %>/feature/tickets/types" class="inline-form"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="action" value="move"><input type="hidden" name="id" value="<%= t.id %>"><input type="hidden" name="dir" value="down"><button type="submit" class="btn icon-btn">↓</button></form>
+            <form method="post" action="/dashboard/servers/<%= guildId %>/feature/tickets/types" class="inline-form"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="action" value="edit"><input type="hidden" name="id" value="<%= t.id %>"><input name="name" value="<%= t.name %>" class="wide"><input name="emoji" value="<%= t.emoji || '🎫' %>"><select name="category_id"><option value="">Kategorie auswählen</option><% data.channelOptions.forEach(function(c){ if (c.type === 4) { %><option value="<%= c.id %>"<%= t.category_id === c.id ? ' selected' : '' %>><%= c.name %></option><% } }) %></select><input name="max_open" type="number" min="1" value="<%= t.max_open %>"><select name="ping_role_id"><option value="">Keine Ping-Rolle</option><% data.roleOptions.forEach(function(r){ %><option value="<%= r.id %>"<%= t.ping_role_id === r.id ? ' selected' : '' %>><%= r.name %></option><% }) %></select><button type="submit" class="btn small">Speichern</button></form>
+            <form method="post" action="/dashboard/servers/<%= guildId %>/feature/tickets/types" class="inline-form"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<%= t.id %>"><button type="submit" class="btn small danger">Löschen</button></form>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <% } else { %><div class="empty-state"><p>Keine Ticket-Typen konfiguriert. Ohne Typen gilt die Standard-Kategorie.</p></div><% } %>
+</div>
 <%- include('../partials/_sec_settings', { sectionId: 'kanale', data, featureId: 'tickets', guildId }) %>

@@ -470,9 +470,9 @@ create table if not exists public.settings (
 
 ### Verhalten (verbindlich)
 
-1. In `settings.ticket_panel_channel_id` postet der Bot (einmalig via `/ticket panel` *(Staff)*) ein Panel-Embed: „**Support-Ticket** — Klicke 🎫 um ein Ticket zu öffnen" + Button **🎫 Ticket öffnen**.
-2. Button-Klick → privater Kanal in `settings.ticket_category_id` (Name: `ticket-<user>`). Berechtigungen: Bot + Nutzer (view+send), Staff-Rollen (view+send), @everyone (nichts). Mehrere Tickets pro User: max. `settings.max_open_tickets` (Standard 1) gleichzeitig offen, sonst Hinweis-Embed.
-3. Ticket-Kanal-Inhalt: kurzes Willkommens-Embed + Button **🔒 Ticket schließen**. Ist das Ticket geclaimt, zeigt ein Feld den zuständigen Staff (`🧑‍✈️ Zuständig: @user`).
+1. In `settings.ticket_panel_channel_id` postet der Bot (einmalig via `/ticket panel` *(Staff)*) ein Panel-Embed: „**Support-Ticket** — Klicke 🎫 um ein Ticket zu öffnen". Sind **Ticket-Typen** konfiguriert (Dashboard → Tickets → Ticket-Typen), zeigt das Panel einen **Dropdown** (String-Select) „Ticket öffnen" mit allen Typen; ohne Typen bleibt der Button **🎫 Ticket öffnen** (Fallback).
+2. Ticket-Öffnung → privater Kanal in der **Kategorie des Typs** (`ticket_category_id` als Fallback ohne Typen). Name: `ticket-<user>` (Fallback) bzw. `ticket-<typ>-<user>`. Berechtigungen: Bot + Nutzer (view+send), Staff-Rollen (view+send), @everyone (nichts). Mehrere Tickets pro User: max. `settings.max_open_tickets` (Standard 1) gleichzeitig offen, **bei Typen das eigene `max_open` des Typs** (blockiert nur weitere Tickets desselben Typs), sonst Hinweis-Embed.
+3. Ticket-Kanal-Inhalt: kurzes Willkommens-Embed (nennt bei Typen den Typ, z. B. „🎫 Support") + Button **🔒 Ticket schließen**. Ist bei einem Typ eine **Ping-Rolle** gesetzt, pingt der Bot die Rolle einmalig im neuen Kanal. Ist das Ticket geclaimt, zeigt ein Feld den zuständigen Staff (`🧑‍✈️ Zuständig: @user`).
 4. **Claim:** `/ticket claim` *(Staff)* — übernimmt das Ticket (setzt `claimed_by`, Embed-Update, optional DM an den Owner „Dein Ticket wird von @user bearbeitet"). `/ticket unclaim` *(Staff)* — gibt das Ticket frei. Ein Ticket kann nur von **einem** Staff gleichzeitig geclaimt sein.
 5. „Ticket schließen" → Fragt per Modal nach Grund (optional). Danach:
    - Transkript als Textdatei in `data/transcripts/ticket-<id>-<timestamp>.txt` speichern.
@@ -488,11 +488,26 @@ create table if not exists public.settings (
 
 | Key | Default | Zweck |
 |---|---|---|
-| `ticket_category_id` | *(leer)* | Kategorie für Ticket-Kanäle |
+| `ticket_category_id` | *(leer)* | Fallback-Kategorie für Ticket-Kanäle (gilt nur ohne Ticket-Typen) |
 | `ticket_panel_channel_id` | *(leer)* | Kanal mit Ticket-Panel |
 | `ticket_log_channel_id` | *(leer)* | Kanal für Transkript-Log |
-| `max_open_tickets` | `1` | Max. offene Tickets pro User |
+| `max_open_tickets` | `1` | Max. offene Tickets pro User (Fallback ohne Ticket-Typen) |
 | `ticket_transcripts_enabled` | `true` | Transkript zusätzlich in der DB sichern |
+
+### Ticket-Typen
+
+Konfigurierbar im Dashboard (Tickets → Ticket-Typen), Tabelle `eghr_ticket_types`:
+
+| Feld | Zweck |
+|---|---|
+| `name` | Anzeigename, z. B. „Support" |
+| `emoji` | Emoji des Typs (Standard 🎫) |
+| `category_id` | Eigene Kategorie für Ticket-Kanäle dieses Typs |
+| `max_open` | Max. gleichzeitig offene Tickets pro User für diesen Typ |
+| `ping_role_id` | Optionale Rolle, die bei neuen Tickets des Typs gepinnt wird |
+| `sort` | Reihenfolge im Panel-Dropdown |
+
+Ein offenes Ticket speichert `type_id` (FK auf `eghr_ticket_types`, `on delete set null`). Ohne konfigurierte Typen gilt das Fallback-Verhalten aus `ticket_category_id`/`max_open_tickets` unverändert.
 
 ---
 

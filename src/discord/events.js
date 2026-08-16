@@ -73,6 +73,10 @@ function registerEvents(client) {
         if (id.startsWith('emb_')) return interaction.reply({ embeds: [embeds.info('Embed-Button', 'Für diesen Button ist keine Aktion konfiguriert.', interaction.guild)], flags: MessageFlags.Ephemeral });
         return;
       }
+      if (interaction.isStringSelectMenu()) {
+        if (interaction.customId === 'ticket_type_select') return await ticketService.handleTypeSelect(interaction);
+        return;
+      }
       if (interaction.isModalSubmit()) {
         const id = interaction.customId;
         if (id.startsWith('ticket_close_modal')) return await ticketService.handleCloseModal(interaction);

@@ -1,9 +1,10 @@
 const fs = require('fs').promises;
 const path = require('path');
-const { ChannelType, PermissionFlagsBits, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
+const { ChannelType, PermissionFlagsBits, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
 const { getClient, TABLES, withRetry } = require('../supabase');
 const settingsService = require('./settingsService');
 const auditService = require('./auditService');
+const ticketTypeService = require('./ticketTypeService');
 const embeds = require('../discord/embeds');
 const helpers = require('../discord/helpers');
 const logger = require('../logger');
@@ -12,6 +13,12 @@ const { config } = require('../config');
 function channelNameFor(user) {
   const safe = user.username.replace(/[^a-z0-9_-]/gi, '').slice(0, 16) || 'nutzer';
   return `ticket-${safe}-${Date.now().toString(36)}`;
+}
+
+function channelNameForType(type, user) {
+  const safeName = String(type.name || 'ticket').replace(/[^a-z0-9_-]/gi, '').slice(0, 10).toLowerCase() || 'ticket';
+  const safeUser = user.username.replace(/[^a-z0-9_-]/gi, '').slice(0, 16) || 'nutzer';
+  return `ticket-${safeName}-${safeUser}`;
 }
 
 async function openOverwrites(guild, member) {
@@ -44,33 +51,66 @@ async function postPanel(interaction) {
     return interaction.reply({ embeds: [embeds.error('Kanal nicht gefunden', 'Der konfigurierte Panel-Kanal existiert nicht mehr.', guild)], ephemeral: true });
   }
   const panel = embeds.info('🎫 Support-Ticket', 'Klicke auf **Ticket öffnen**, um ein Support-Ticket zu erstellen.', guild);
-  const row = helpers.row(helpers.primaryButton('ticket_panel', 'Ticket öffnen', '🎫'));
-  const msg = await channel.send({ embeds: [panel], components: [row] });
+  const types = await ticketTypeService.list(gid);
+  const components = [];
+  if (types.length) {
+    const select = new StringSelectMenuBuilder()
+      .setCustomId('ticket_type_select')
+      .setPlaceholder('Ticket öffnen')
+      .addOptions(types.map((t) => ({
+        label: t.name,
+        value: String(t.id),
+        description: `Max. ${t.max_open} offen`,
+        emoji: t.emoji || '🎫',
+      })));
+    components.push(helpers.row(select));
+  } else {
+    components.push(helpers.row(helpers.primaryButton('ticket_panel', 'Ticket öffnen', '🎫')));
+  }
+  const msg = await channel.send({ embeds: [panel], components });
   await settingsService.setMany(gid, { ticket_panel_message_id: msg.id });
-  await auditService.log(gid, interaction.user.tag, 'ticket.panel', { channel: channel.id });
+  await auditService.log(gid, interaction.user.tag, 'ticket.panel', { channel: channel.id, types: types.length });
   return interaction.reply({ embeds: [embeds.success('Panel gepostet', `Das Ticket-Panel steht in <#${channel.id}>.`, guild)], ephemeral: true });
 }
 
 async function handleOpen(interaction) {
+  return openTicket(interaction, null);
+}
+
+async function handleTypeSelect(interaction) {
+  const typeId = interaction.values && interaction.values[0];
+  const type = typeId ? await ticketTypeService.get(interaction.guild.id, typeId) : null;
+  if (!type) {
+    return interaction.reply({
+      embeds: [embeds.error('Nicht gefunden', 'Dieser Ticket-Typ existiert nicht mehr.', interaction.guild)],
+      ephemeral: true,
+    });
+  }
+  return openTicket(interaction, type);
+}
+
+async function openTicket(interaction, type) {
   const guild = interaction.guild;
   const gid = guild.id;
   const settings = await settingsService.getAll(gid);
   const member = interaction.member;
 
-  if (!settings.ticket_category_id) {
+  const categoryId = type ? type.category_id : settings.ticket_category_id;
+  const maxOpen = type ? parseInt(type.max_open, 10) : parseInt(settings.max_open_tickets || '1', 10);
+
+  if (!categoryId) {
     return interaction.reply({ embeds: [embeds.error('Nicht konfiguriert', 'Die Ticket-Kategorie ist noch nicht festgelegt.', guild)], ephemeral: true });
   }
 
-  const maxOpen = parseInt(settings.max_open_tickets || '1', 10);
   if (maxOpen > 0) {
-    const { data: existing } = await withRetry(() =>
-      getClient().from(TABLES.tickets).select('channel_id').eq('guild_id', gid).eq('owner_id', member.id).eq('status', 'offen').limit(1)
-    );
+    let query = getClient().from(TABLES.tickets).select('channel_id').eq('guild_id', gid).eq('owner_id', member.id).eq('status', 'offen');
+    if (type) query = query.eq('type_id', type.id);
+    const { data: existing } = await withRetry(() => query.limit(1));
     if (existing && existing.length) {
       const ch = guild.channels.cache.get(existing[0].channel_id);
       if (ch) {
         return interaction.reply({
-          embeds: [embeds.error('Ticket bereits offen', `Du hast bereits ein offenes Ticket: <#${ch.id}>`, guild)],
+          embeds: [embeds.error('Ticket bereits offen', type ? `Du hast bereits ein offenes **${type.name}**-Ticket: <#${ch.id}>` : `Du hast bereits ein offenes Ticket: <#${ch.id}>`, guild)],
           ephemeral: true,
         });
       }
@@ -78,16 +118,16 @@ async function handleOpen(interaction) {
   }
 
   const channel = await guild.channels.create({
-    name: channelNameFor(member.user),
+    name: type ? channelNameForType(type, member.user) : channelNameFor(member.user),
     type: ChannelType.GuildText,
-    parent: settings.ticket_category_id,
+    parent: categoryId,
     permissionOverwrites: await openOverwrites(guild, member),
   });
 
   const { data: row, error } = await withRetry(() =>
     getClient()
       .from(TABLES.tickets)
-      .insert({ guild_id: gid, channel_id: channel.id, owner_id: member.id, topic: 'Support-Ticket', status: 'offen' })
+      .insert({ guild_id: gid, channel_id: channel.id, owner_id: member.id, topic: type ? type.name : 'Support-Ticket', status: 'offen', type_id: type ? type.id : null })
       .select('*')
       .single()
   );
@@ -97,12 +137,22 @@ async function handleOpen(interaction) {
     return interaction.reply({ embeds: [embeds.error('Fehler', 'Das Ticket konnte nicht erstellt werden.', guild)], ephemeral: true });
   }
 
+  const title = type ? `${type.emoji || '🎫'} ${type.name}` : '🎫 Ticket erstellt';
+  const description = type
+    ? `**Nutzer:** <@${member.id}>\nDu hast ein **${type.name}**-Ticket eröffnet. Beschreibe hier dein Anliegen. Unser Team hilft dir gleich weiter.`
+    : `**Nutzer:** <@${member.id}>\nBeschreibe hier dein Anliegen. Unser Team hilft dir gleich weiter.`;
   await channel.send({
-    embeds: [embeds.info('🎫 Ticket erstellt', `**Nutzer:** <@${member.id}>\nBeschreibe hier dein Anliegen. Unser Team hilft dir gleich weiter.`, guild)],
+    embeds: [embeds.info(title, description, guild)],
     components: [helpers.row(helpers.dangerButton(`ticket_close_${row.id}`, 'Ticket schließen', '🔒'))],
   });
 
-  await auditService.log(gid, interaction.user.tag, 'ticket.open', { id: row.id });
+  if (type && type.ping_role_id && guild.roles.cache.has(type.ping_role_id)) {
+    try {
+      await channel.send({ content: `<@&${type.ping_role_id}>` });
+    } catch (err) { logger.warn(`Ticket-Ping fehlgeschlagen: ${err.message}`); }
+  }
+
+  await auditService.log(gid, interaction.user.tag, 'ticket.open', { id: row.id, type_id: type ? type.id : null });
   return interaction.reply({ embeds: [embeds.success('Ticket erstellt', `Dein Ticket wurde geöffnet: <#${channel.id}>`, guild)], ephemeral: true });
 }
 
@@ -283,4 +333,4 @@ async function addUser(interaction, user) {
   return interaction.reply({ embeds: [embeds.success('Benutzer hinzugefügt', `<@${member.id}> kann jetzt im Ticket schreiben.`, guild)], ephemeral: true });
 }
 
-module.exports = { postPanel, handleOpen, claim, unclaim, showCloseModal, handleCloseModal, closeCommand, addUser };
+module.exports = { postPanel, handleOpen, handleTypeSelect, claim, unclaim, showCloseModal, handleCloseModal, closeCommand, addUser };
