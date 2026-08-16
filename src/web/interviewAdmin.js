@@ -46,31 +46,35 @@ async function importGradingSheet(req, res, guildId, body) {
   const { data: thresholdRow } = await withRetry(() =>
     getClient().from(TABLES.settings).select('value').eq('guild_id', guildId).eq('key', 'interview_pass_threshold').maybeSingle()
   );
-  const threshold = Number(thresholdRow?.value || 45);
+  const threshold = Number(thresholdRow?.value || 75);
   const complete = scoredCount >= questions.length;
-  const passed = complete ? total >= threshold : null;
+  const { pct, thresholdPoints } = interviewService.buildResultData(total, maxTotal, threshold);
+  const passed = complete ? pct >= threshold : null;
   const status = complete ? 'fertig' : 'offen';
 
   await withRetry(() =>
     getClient().from(TABLES.interviews).update({ scores, total, passed, status }).eq('id', interviewId).eq('guild_id', guildId)
   );
 
-  if (complete && client && client.isReady() && interview.channel_id) {
+  if (complete) {
     try {
-      const channel = await client.channels.fetch(interview.channel_id);
-      if (channel && channel.isTextBased()) {
-        await channel.send({
-          embeds: [{
-            color: passed ? 0x2ecc71 : 0xe74c3c,
-            title: passed ? '🎉 Interview bestanden' : '❌ Interview nicht bestanden',
-            description: `**${interview.applicant_name || interview.applicant_id}** hat **${total.toLocaleString('de-DE')}** von **${maxTotal.toLocaleString('de-DE')}** Punkten erreicht.\nBestanden ab **${threshold.toLocaleString('de-DE')}** Punkten.`,
-            footer: { text: 'Emergency Hamburg Roleplay • Bewertungsbogen importiert' },
-          }],
-        });
+      if (client && client.isReady() && interview.channel_id) {
+        const channel = await client.channels.fetch(interview.channel_id);
+        if (channel && channel.isTextBased()) {
+          await channel.send({
+            embeds: [{
+              color: passed ? 0x2ecc71 : 0xe74c3c,
+              title: passed ? '🎉 Interview bestanden' : '❌ Interview nicht bestanden',
+              description: `**${interview.applicant_name || interview.applicant_id}** hat **${total.toLocaleString('de-DE')}** von **${maxTotal.toLocaleString('de-DE')}** Punkten erreicht (**${pct.toLocaleString('de-DE')} %**).\nBestanden ab **${threshold.toLocaleString('de-DE')} %** (${thresholdPoints.toLocaleString('de-DE')} Punkte).`,
+              footer: { text: 'Emergency Hamburg Roleplay • Bewertungsbogen importiert' },
+            }],
+          });
+        }
       }
     } catch (err) {
       logger.warn(`Import-Ergebnis konnte nicht gesendet werden: ${err.message}`);
     }
+    await interviewService.sendResultDm(interview.applicant_id, interview.applicant_name || interview.applicant_id, total, maxTotal, pct, threshold, thresholdPoints, passed);
   }
 
   await auditService.log(guildId, req.session.user.tag, 'interview.grading_sheet.import', {

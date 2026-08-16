@@ -42,7 +42,7 @@ const LABELS = {
   application_category_id: 'Bewerbungs-Kategorie', giveaway_channel_id: 'Giveaway-Kanal', giveaway_announce_channel_id: 'Gewinner-Kanal',
   warteraum_voice_channel_id: 'Warteraum-Voice', warteraum_target_channel_id: 'Ziel-Voice', interview_channel_id: 'Interview-Kanal',
   welcome_channel_id: 'Willkommens-Kanal', moderation_log_channel_id: 'Moderations-Log', team_log_channel_id: 'Team-Log',
-  interview_max_per_section: 'Max. Fragen pro Abschnitt', interview_pass_threshold: 'Bestanden ab Punktzahl', verify_dm: 'DM nach Verifizierung',
+  interview_pass_threshold: 'Bestanden ab (Prozent)', verify_dm: 'DM nach Verifizierung',
   verify_min_account_age_days: 'Mindestalter des Discord-Accounts (Tage)',
   giveaway_default_winners: 'Standard-Gewinneranzahl', giveaway_max_tickets: 'Max. Lose pro User',
 };
@@ -92,7 +92,7 @@ const SETTING_GROUPS = [
   { feature: 'bewerbung', id: 'rollen', subgroup: 'Rollen', keys: ['application_role_id'] },
   { feature: 'bewerbung', id: 'verhalten', subgroup: 'Verhalten', keys: ['application_cooldown_days', 'application_staff_ping', 'application_questions'] },
   { feature: 'interview', id: 'kanale', subgroup: 'Kanäle', keys: ['interview_channel_id'] },
-  { feature: 'interview', id: 'bewertung', subgroup: 'Bewertung', keys: ['interview_max_per_section', 'interview_pass_threshold'] },
+  { feature: 'interview', id: 'bewertung', subgroup: 'Bewertung', keys: ['interview_pass_threshold'] },
   { feature: 'team', id: 'protokoll', subgroup: 'Protokoll', keys: ['team_log_channel_id'] },
   { feature: 'moderation', id: 'protokoll', subgroup: 'Protokoll', keys: ['moderation_log_channel_id'] },
 ];

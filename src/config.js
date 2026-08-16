@@ -34,8 +34,7 @@ const DEFAULT_SETTINGS = {
   warteraum_voice_channel_id: '',
   warteraum_target_channel_id: '',
   interview_channel_id: '',
-  interview_max_per_section: '20',
-  interview_pass_threshold: '45',
+  interview_pass_threshold: '75',
 };
 
 const config = {

@@ -288,7 +288,7 @@ create table if not exists public.settings (
 
 ### Ablauf (verbindlich)
 
-1. Der Admin postet das Panel mit `/verify panel` im Kanal `settings.verify_channel_id`. Alternativ wird das Panel beim Setup einmalig automatisch gepostet (Einrichtung, Kapitel 13).
+1. Der Admin postet das Panel mit `/verify panel` im Kanal `settings.verify_channel_id`. Alternativ wird das Panel beim Setup einmalig automatisch gepostet (Einrichtung, Kapitel 14).
 2. Das Panel ist ein Embed mit Titel „**Verifizierung**", kurzer Beschreibung („Klicke auf ✅, um dich als Mitglied zu verifizieren") und einem Button **✅ Verifizieren**.
 3. Klickt ein nicht verifiziertes Mitglied auf den Button:
    - **Stufe 1 (Regeln):** Ist `settings.verify_rules_channel_id` gesetzt und hat der Kanal mindestens eine Nachricht, zeigt der Bot die neueste Nachricht des Kanals (Inhalt oder Embed-Beschreibungen) als ephemerales Embed mit Button **✅ Regeln akzeptieren**. Der Button ist nur 60 Sekunden gültig und nur für den startenden Nutzer ausführbar. Fehlt der Kanal oder ist er leer, wird diese Stufe übersprungen (mit Log-Warnung bei unlesbarem Kanal).
@@ -459,7 +459,7 @@ create table if not exists public.settings (
 6. Ist `settings.application_staff_ping = true`, pingt der Bot zusätzlich die Staff-Rolle (`settings.staff_role`) als neue-Bewerbung-Benachrichtigung (einmalig, nur im Kanal).
 7. Button „Annehmen" → Embed wird grün/„Angenommen", Status in DB, **`settings.application_role_id` wird dem Bewerber vergeben** (falls konfiguriert), Bewerber-DM mit Glückwunsch, Kanal bleibt als Archiv. Danach zeigt das Embed nur noch den Button „🎤 Interview starten".
 8. Button „Ablehnen" → Embed rot/„Abgelehnt", Bewerber-DM (sachlich), Kanal archiviert, alle Buttons entfernt.
-9. Button „🎤 Interview starten" *(nur Staff, nur bei Status `angenommen`)* → startet ein **Interview** für den Bewerber (siehe Kapitel 8, `eghr_interviews`), verknüpft über `eghr_interviews.application_id` mit der Bewerbung. Das Interview wird im konfigurierten Interview-Kanal (`interview_channel_id`) bzw. im aktuellen Kanal gestartet. Nach bestandenem Interview kann Staff den Bewerber im Dashboard über „Ins Team aufnehmen" als Teammitglied übernehmen; dabei werden `application_id` und `interview_id` im Teammitglied gespeichert (Kette Bewerbung → Interview → Team).
+9. Button „🎤 Interview starten" *(nur Staff, nur bei Status `angenommen`)* → startet ein **Interview** für den Bewerber (siehe Kapitel 10, `eghr_interviews`), verknüpft über `eghr_interviews.application_id` mit der Bewerbung. Das Interview wird im konfigurierten Interview-Kanal (`interview_channel_id`) bzw. im aktuellen Kanal gestartet. Nach bestandenem Interview kann Staff den Bewerber im Dashboard über „Ins Team aufnehmen" als Teammitglied übernehmen; dabei werden `application_id` und `interview_id` im Teammitglied gespeichert (Kette Bewerbung → Interview → Team).
 10. `/bewerbung schließen <channel-id>` *(Staff)* — schließt/archiviert manuell (schreibt `audit_log`).
 11. `/bewerbung liste` — Übersicht offener Bewerbungen.
 
@@ -475,7 +475,37 @@ create table if not exists public.settings (
 
 ---
 
-## 10. Modul: Ticket-Support
+## 10. Modul: Interview
+
+### Ablauf (verbindlich)
+
+1. **Start:** Staff startet mit `/interview starten <@user> [kanal]` (oder aus einer Bewerbung mit Status `angenommen` via Button „Interview starten") ein Interview für einen Bewerber. Standardkanal: `settings.interview_channel_id`, sonst der aktuelle Kanal. Fragen stammen aus `eghr_interview_questions`; fehlen welche, werden die Default-Fragen angelegt (30 Fragen, `max_points: 2`, Abschnitte 1–3).
+2. **Bewertung:** Der Bot postet die Fragen in Blöcken à 5 (eine Nachricht je Block) mit Score-Buttons (`0 / 0,5 / 1 / 1,5 / 2`, begrenzt auf `max_points` der Frage). Staff bewertet per Klick; die Embed-Nachrichten werden live aktualisiert. Bewertungen sind jederzeit änderbar.
+3. **Abschluss:** Sobald alle Fragen bewertet sind, ist das Interview `fertig`. Bestehens-Entscheidung: `pct = total / maxTotal * 100`, **bestanden** wenn `pct >= settings.interview_pass_threshold` (Prozent, Default `75`). `passed` wird erst bei vollständiger Bewertung gesetzt (nicht bei Teilbewertung).
+4. **Ergebnis-Embed:** In den Interview-Kanal postet der Bot ein Ergebnis-Embed: 🎉 bestanden (grün) / ❌ nicht bestanden (rot) mit erreichten Punkten, Prozent und „Bestanden ab **X %** (Y Punkte)".
+5. **Ergebnis-DM:** Der Bewerber erhält parallel eine DM mit demselben Ergebnis (Punkte, Prozent, Bestehensgrenze). DM geschlossen → nur Log-Warnung, kein Crash.
+6. **Bewertungsbogen-Import:** Alternativ kann Staff einen Bewertungsbogen im Dashboard (Interview → „Bewertungsbogen einfügen", Format `1. Frage \`1,5/2P\``) importieren. Der Import übernimmt Punkte je Frage, berechnet Gesamtpunktzahl, Bestehens-Entscheidung (identische Prozentlogik) und versendet bei `complete` ebenfalls Ergebnis-Embed + DM.
+7. **Team-Aufnahme:** Nach bestandenem Interview kann Staff den Bewerber im Dashboard über „Ins Team aufnehmen" als Teammitglied übernehmen; dabei werden `application_id` und `interview_id` im Teammitglied gespeichert (Kette Bewerbung → Interview → Team).
+
+### Settings
+
+| Key | Default | Zweck |
+|---|---|---|
+| `interview_channel_id` | *(leer)* | Standard-Kanal für Interviews |
+| `interview_pass_threshold` | `75` | Bestehens-Schwelle in **Prozent** der Maximalpunktzahl |
+
+### Fehlerfälle
+
+| Fall | Verhalten |
+|---|---|
+| Keine Fragen hinterlegt | Fehler-Embed, kein Interview-Start |
+| `interview_pass_threshold` fehlt/ungültig | Fallback `75` |
+| DM an Bewerber geschlossen | Log-Warnung, Interview-Ergebnis bleibt im Kanal sichtbar |
+| Ergebnis-Embed nicht sendbar (Kanal gelöscht) | Log-Warnung, DM wird trotzdem versucht |
+
+---
+
+## 11. Modul: Ticket-Support
 
 ### Verhalten (verbindlich)
 
@@ -520,7 +550,7 @@ Ein offenes Ticket speichert `type_id` (FK auf `eghr_ticket_types`, `on delete s
 
 ---
 
-## 11. Website-Dashboard
+## 12. Website-Dashboard
 
 ### 11.1 Allgemein
 
@@ -557,7 +587,7 @@ Ein offenes Ticket speichert `type_id` (FK auf `eghr_ticket_types`, `on delete s
 
 ---
 
-## 12. Embed-Design (einheitlich, alle Module nutzen es)
+## 13. Embed-Design (einheitlich, alle Module nutzen es)
 
 **Zentrale Builder in `embeds.js`, alle Module nutzen sie.**
 
@@ -614,7 +644,7 @@ Host: <@host>
 
 ---
 
-## 13. Einrichtung, Fehlerbehandlung, Sicherheit
+## 14. Einrichtung, Fehlerbehandlung, Sicherheit
 
 ### 13.1 Einrichtung (Schritt für Schritt)
 
@@ -656,7 +686,7 @@ Host: <@host>
 
 ---
 
-## 14. Modul: Willkommen (Willkommensnachricht)
+## 15. Modul: Willkommen (Willkommensnachricht)
 
 ### Ablauf (verbindlich)
 
@@ -696,7 +726,7 @@ Host: <@host>
 
 ---
 
-## 15. Abnahmekriterien (Definition of Done)
+## 16. Abnahmekriterien (Definition of Done)
 
 Der Bot gilt als fertig, wenn alle Punkte erfüllt sind:
 
@@ -715,7 +745,7 @@ Der Bot gilt als fertig, wenn alle Punkte erfüllt sind:
 
 ---
 
-## 16. Hinweise an die ausführende KI
+## 17. Hinweise an die ausführende KI
 
 1. **Vollständigkeit:** Alle Module in Kapitel 5–11 umsetzen. Kein Modul weglassen.
 2. **Dateistruktur:** Genau der Struktur in Kapitel 2 folgen. Jede Datei klar benennen.
@@ -723,7 +753,7 @@ Der Bot gilt als fertig, wenn alle Punkte erfüllt sind:
 4. **Code-Stil:** Modernes, sauberes JavaScript (ES2022, CommonJS), `async/await`, try/catch um alle I/O-Operationen.
 5. **Konfiguration:** Nur die Secrets aus Kapitel 3.2 müssen in `.env` stehen; **alle** Rollen/Kanäle/Moduleinstellungen liest der Code über `settingsService` aus der Supabase-`settings`-Tabelle (Kapitel 3.3). Der Code darf ohne gesetzte Pflichtsecrets nicht crashen (Warnung + Weiterlauf), Ausnahme: `DISCORD_TOKEN`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` → sauberer Abbruch mit Anleitung.
 6. **Testbarkeit:** Befehle sollen ohne echte Events testbar sein (`scripts/setup.js`).
-7. **Sicherheit zuerst:** Security-Vorgaben aus Kapitel 13.3 sind verbindlich (bcrypt, Rate-Limit, CSRF, parametrisierte Queries, EJS-Escaping, Audit-Log). Fehlende Vorgaben nicht „einfach so" weglassen.
+7. **Sicherheit zuerst:** Security-Vorgaben aus Kapitel 14.3 sind verbindlich (bcrypt, Rate-Limit, CSRF, parametrisierte Queries, EJS-Escaping, Audit-Log). Fehlende Vorgaben nicht „einfach so" weglassen.
 8. **Diese Datei ist die einzige Referenz.** Bei scheinbarem Widerspruch: diese Datei gewinnt.
 
 ---

@@ -1,5 +1,6 @@
 const { ActionRowBuilder, ButtonBuilder, MessageFlags } = require('discord.js');
 const { getClient, TABLES, withRetry } = require('../supabase');
+const { client } = require('../discord/client');
 const { config } = require('../config');
 const settingsService = require('./settingsService');
 const auditService = require('./auditService');
@@ -28,6 +29,44 @@ function questionMaxPoints(question) {
 
 function getMaxPoints(questions) {
   return questions.reduce((sum, q) => sum + questionMaxPoints(q), 0);
+}
+
+function round1(value) {
+  return Math.round(value * 10) / 10;
+}
+
+function buildResultData(sum, maxTotal, threshold) {
+  const pct = maxTotal > 0 ? (sum / maxTotal) * 100 : 0;
+  return {
+    pct: round1(pct),
+    thresholdPoints: maxTotal > 0 ? Math.round((threshold / 100) * maxTotal) : 0,
+  };
+}
+
+function buildResultEmbed(name, sum, maxTotal, pct, threshold, thresholdPoints, passed, footerText) {
+  return {
+    color: passed ? 0x2ecc71 : 0xe74c3c,
+    title: passed ? '🎉 Interview bestanden' : '❌ Interview nicht bestanden',
+    description: `**${name}** hat **${sum.toLocaleString('de-DE')}** von **${maxTotal.toLocaleString('de-DE')}** Punkten erreicht (**${pct.toLocaleString('de-DE')} %**).\nBestanden ab **${threshold.toLocaleString('de-DE')} %** (${thresholdPoints.toLocaleString('de-DE')} Punkte).`,
+    footer: { text: footerText },
+  };
+}
+
+async function sendResultDm(applicantId, applicantName, total, maxTotal, pct, threshold, thresholdPoints, passed) {
+  if (!client || !client.isReady()) return;
+  try {
+    const user = await client.users.fetch(applicantId);
+    await user.send({
+      embeds: [{
+        color: passed ? 0x2ecc71 : 0xe74c3c,
+        title: passed ? '🎉 Interview bestanden' : '❌ Interview nicht bestanden',
+        description: `Hallo **${applicantName}**, dein Interview ist abgeschlossen.\n\nErreicht: **${total.toLocaleString('de-DE')} / ${maxTotal.toLocaleString('de-DE')} Punkte** (**${pct.toLocaleString('de-DE')} %**)\nBestanden ab **${threshold.toLocaleString('de-DE')} %** (${thresholdPoints.toLocaleString('de-DE')} Punkte).`,
+        footer: { text: 'Emergency Hamburg Roleplay • Interview' },
+      }],
+    });
+  } catch (err) {
+    logger.warn(`Interview-DM an ${applicantName} fehlgeschlagen: ${err.message}`);
+  }
 }
 
 async function ensureQuestions(guildId) {
@@ -153,9 +192,11 @@ async function handleScore(interaction) {
   const maxTotal = getMaxPoints(questions);
   const scoredCount = Object.keys(scores).length;
   const sum = Object.values(scores).reduce((a, b) => a + Number(b || 0), 0);
-  const threshold = Number(settings.interview_pass_threshold || 45);
-  const passed = sum >= threshold;
-  const status = scoredCount >= totalQuestions ? 'fertig' : 'offen';
+  const threshold = Number(settings.interview_pass_threshold || 75);
+  const complete = scoredCount >= totalQuestions;
+  const { pct, thresholdPoints } = buildResultData(sum, maxTotal, threshold);
+  const passed = complete ? pct >= threshold : row.passed;
+  const status = complete ? 'fertig' : 'offen';
 
   await withRetry(() => getClient().from(TABLES.interviews).update({ scores, total: sum, passed, status }).eq('id', interviewId).eq('guild_id', gid));
 
@@ -191,13 +232,9 @@ async function handleScore(interaction) {
     entry.resultPosted = true;
     try {
       const channel = await interaction.client.channels.fetch(entry.channelId);
-      const result = {
-        color: passed ? 0x2ecc71 : 0xe74c3c,
-        title: passed ? '🎉 Interview bestanden' : '❌ Interview nicht bestanden',
-        description: `**${interview.applicant_name || interview.applicant_id}** hat **${sum.toLocaleString('de-DE')}** von **${maxTotal.toLocaleString('de-DE')}** Punkten erreicht.\nBestanden ab **${threshold}** Punkten.`,
-        footer: { text: 'Emergency Hamburg Roleplay • Bewertung abgeschlossen' },
-      };
+      const result = buildResultEmbed(interview.applicant_name || interview.applicant_id, sum, maxTotal, pct, threshold, thresholdPoints, passed, 'Emergency Hamburg Roleplay • Bewertung abgeschlossen');
       await channel.send({ embeds: [result] });
+      await sendResultDm(interview.applicant_id, interview.applicant_name || interview.applicant_id, sum, maxTotal, pct, threshold, thresholdPoints, passed);
       await auditService.log(gid, interaction.user.tag, 'interview.complete', { applicant: interview.applicant_name || interview.applicant_id, total: sum, maxTotal, passed });
     } catch (err) {
       logger.warn(`Interview-Ergebnis nicht gesendet: ${err.message}`);
@@ -217,4 +254,4 @@ async function getResultDetail(interviewId, guildId) {
   return { row, questions };
 }
 
-module.exports = { startInterview, handleScore, getQuestions, ensureQuestions, getResults, getResultDetail, getMaxPoints };
+module.exports = { startInterview, handleScore, getQuestions, ensureQuestions, getResults, getResultDetail, getMaxPoints, buildResultData, sendResultDm };
