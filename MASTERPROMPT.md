@@ -157,7 +157,8 @@ Diese werden beim `npm run setup` als Defaults eingefügt und sind **im Dashboar
 | `application_category_id` | *(leer)* | Kategorie für Bewerbungs-Kanäle |
 | `giveaway_channel_id` | *(leer)* | Kanal für Giveaway-Embeds |
 | `giveaway_default_winners` | `1` | Standard-Gewinneranzahl |
-| `giveaway_required_role` | *(leer)* | Pflicht-Rolle zur Teilnahme (Name); leer = jeder |
+| `giveaway_max_tickets` | `5` | Max. Lose pro Teilnehmer (Bonus-Lose) |
+| `giveaway_required_roles` | *(leer)* | Pflicht-Rollen zur Teilnahme (JSON-Array von Rollen-IDs); leer = jeder |
 | `giveaway_announce_channel_id` | *(leer)* | Kanal für Gewinner-Announcement (optional) |
 | `warteraum_voice_channel_id` | *(leer)* | Voice-Kanal des Warteraums |
 | `warteraum_target_channel_id` | *(leer)* | Voice-Kanal, in den versetzt wird |
@@ -192,11 +193,15 @@ create table if not exists public.users (
 
 create table if not exists public.giveaways (
   id bigint generated always as identity primary key,
+  guild_id text not null,
   message_id text,
   channel_id text,
   prize text not null,
   winners_count integer default 1,
   participant_count integer default 0,
+  ticket_count integer default 0,
+  marker text default '',            -- letzte Countdown-Markierung ('' | '2h' | '1h' | '15m' | '5m')
+  warned boolean default false,      -- 5-Minuten-Warnung bereits gesendet
   ends_at timestamptz not null,
   ended boolean default false,
   host_id text,
@@ -207,6 +212,7 @@ create table if not exists public.giveaway_participants (
   giveaway_id bigint not null references public.giveaways(id) on delete cascade,
   discord_id text not null,
   username text,
+  tickets integer default 1,
   joined_at timestamptz default now(),
   primary key (giveaway_id, discord_id)
 );
@@ -340,27 +346,29 @@ create table if not exists public.settings (
 ### Verhalten (verbindlich)
 
 1. `/giveaway starten <preis> <dauer> [gewinner]` *(Staff)* — `dauer` z.B. `1h`, `2d`, `30m`; `gewinner` optional (Standard `settings.giveaway_default_winners`). Bot postet Embed in `settings.giveaway_channel_id` (oder im aktuellen Kanal, falls nicht konfiguriert):
-   - Titel: „🎉 **GIVEAWAY**"
-   - Felder: Preis, Gewinneranzahl, Teilnehmeranzahl, Endzeit, Host
-   - Footer: „Reagiere mit 🎉 um teilzunehmen"
-   - Bot fügt 🎉-Reaktion hinzu.
-   - Speicherung in `giveaways` (inkl. `participant_count = 0`). Liegt `ends_at` bereits in der Vergangenheit, startet das Giveaway mit +30 Minuten und gibt einen Hinweis.
-2. **Teilnahme & Zähler:** Mitglieder klicken auf 🎉. Es gilt pro User **max. ein Los** (weitere Reaktionen zählen nicht doppelt). Host und Bot werden nie als Teilnehmer gezählt.
-   - Ist `settings.giveaway_required_role` gesetzt, müssen Teilnehmer diese Rolle besitzen: Die Reaktion von nicht berechtigten Usern wird sofort entfernt (mit kurzer DM-Nachricht), kein Zähler-Eintrag. Wird die Rolle nicht gefunden: Log-Warnung, Teilnahme ohne Rollen-Check zulassen.
-   - Entfernt ein Teilnehmer seine Reaktion, werden Zähler und Teilnehmerliste aktualisiert.
-   - Der Bot pflegt parallel die Teilnehmerliste in `giveaway_participants` (robust, Neustart-sicher).
+   - Titel: „🎉 **GIVEAWAY**", Farbe je nach Restzeit (siehe Countdown-Markierungen)
+   - Felder: Preis, Gewinneranzahl, Lose (Gesamt), Teilnehmeranzahl, Endzeit + Restzeit, Host
+   - Footer: „Klicke auf den Button, um teilzunehmen"
+   - Bot hängt einen **Teilnahme-Button** (`giveaway_join_<id>`) an.
+   - Speicherung in `giveaways` (inkl. `participant_count = 0`, `ticket_count = 0`, `marker = ''`, `warned = false`). Liegt `ends_at` bereits in der Vergangenheit, startet das Giveaway mit +30 Minuten und gibt einen Hinweis.
+2. **Teilnahme & Lose:** Mitglieder klicken auf den Teilnahme-Button. Jeder Klick erhöht das Los des Users um 1, **max. `settings.giveaway_max_tickets` (Default 5)** Lose pro User. Host und Bot werden nie als Teilnehmer gezählt.
+   - Ist `settings.giveaway_required_roles` (JSON-Array von Rollen-IDs) gesetzt, müssen Teilnehmer eine dieser Rollen besitzen: Button-Klick von nicht berechtigten Usern wird abgelehnt (ephemer Fehler + DM-Hinweis), kein Zähler-Eintrag. Werden keine Rollen gefunden: Log-Warnung, Teilnahme ohne Rollen-Check zulassen.
+   - Bei jedem Klick werden Zähler/Teilnehmerliste aktualisiert und das Embed aktualisiert (`participant_count` = distinct User, `ticket_count` = Summe der Lose).
+   - Die Teilnehmerliste liegt in `giveaway_participants` mit Spalte `tickets` (Neustart-sicher).
 3. **Auswertung:** Ein `setInterval` (alle 30 Sekunden) prüft Giveaways mit `ends_at <= jetzt` und `ended = false`. Zusätzlich prüft der Bot **beim Start** einmalig alle noch nicht abgeschlossenen Giveaways (Neustart-sicher).
-   - Gewinner werden aus den 🎉-Reaktionen gezogen (`Math.random`), **Host und Bot ausgeschlossen**; bei mehreren Gewinnern werden **unterschiedliche** Teilnehmer gezogen (Ziehen ohne Zurücklegen). Schlägt die Reaktionsabfrage fehl (alte Nachricht, fehlende Rechte), greift der Fallback auf die gespeicherte Liste in `giveaway_participants`.
-   - Embed wird zu „🏆 **GIVEAWAY BEENDET**" umgebaut (Preis, Gewinner als `@`-Erwähnung, Teilnehmeranzahl, Host).
+   - Gewinner werden aus der gespeicherten Teilnehmerliste in `giveaway_participants` gezogen (gewichtete Ziehung: jedes Los = ein Eintrag im Pool, `Math.random`, **Host und Bot ausgeschlossen**; bei mehreren Gewinnern werden **unterschiedliche** Lose gezogen, Ziehen ohne Zurücklegen).
+   - Embed wird zu „🏆 **GIVEAWAY BEENDET**" umgebaut (Preis, Gewinner als `@`-Erwähnung, Teilnehmeranzahl, Host); Button wird entfernt.
    - Gewinner erhalten **zusätzlich eine DM** („🎉 Herzlichen Glückwunsch! Du hast `<Preis>` gewonnen."), sofern deren DM-Einstellungen es erlauben (fehlgeschlagene DMs nur loggen, kein Fehler).
    - Optionales Announcement-Embed mit den Gewinnern in `settings.giveaway_announce_channel_id` (falls gesetzt).
-4. **Keine Teilnehmer** → Embed „Keine Teilnehmer, Preis verfällt."
-5. `/giveaway enden <giveaway-id>` *(Staff)* — beendet vorzeitig (gleiche Auswertung wie bei Zeitablauf).
-6. `/giveaway verlängern <giveaway-id> <dauer>` *(Staff)* — verlängert `ends_at` und aktualisiert das Embed (neue Endzeit + Restzeit). Laufzeit-Check bleibt unberührt.
-7. `/giveaway neu <giveaway-id>` *(Staff)* — zieht neu (falls Manipulation vermutet). Nur für **bereits beendete** Giveaways möglich; gleiche Ausschluss-Regeln, DM-Benachrichtigung an neue Gewinner.
-8. `/giveaway teilnehmer <giveaway-id>` *(Staff)* — Embed mit Teilnehmeranzahl und Liste (bis zu 20 Namen, danach „und X weitere"); funktioniert auch nach Ablauf.
-9. `/giveaway abbrechen <giveaway-id>` *(Staff)* — bricht das Giveaway ab: Embed-Nachricht wird gelöscht (falls noch vorhanden), `ended = true`, kein Gewinner, Log-Eintrag.
-10. `/giveaway liste` *(Staff)* — zeigt laufende Giveaways (ID, Preis, Endzeit, Teilnehmeranzahl).
+4. **Countdown-Markierungen:** Das Lauf-Embed zeigt ab **2 h** Restzeit eine Markerzeile („⏰ Noch **2 Stunden**!", ab 1 h / 15 m entsprechend). Farbe: > 1 h violett, 15 m–1 h gelb, < 15 m rot. Bei Erreichen der **5-Minuten**-Grenze sendet der Bot zusätzlich eine Warnung im Giveaway-Kanal (einmalig, gesteuert über `marker`/`warned`).
+5. **Keine Teilnehmer** → Embed „Keine Teilnehmer, Preis verfällt."
+6. `/giveaway enden <giveaway-id>` *(Staff)* — beendet vorzeitig (gleiche Auswertung wie bei Zeitablauf).
+7. `/giveaway verlängern <giveaway-id> <dauer>` *(Staff)* — verlängert `ends_at` und aktualisiert das Embed (neue Endzeit + Restzeit). Laufzeit-Check bleibt unberührt.
+8. `/giveaway neu <giveaway-id>` *(Staff)* — zieht neu (falls Manipulation vermutet). Nur für **bereits beendete** Giveaways möglich; gleiche Ausschluss-Regeln, DM-Benachrichtigung an neue Gewinner.
+9. `/giveaway teilnehmer <giveaway-id>` *(Staff)* — Embed mit Teilnehmeranzahl und Liste (bis zu 20 Namen mit Loszahl, danach „und X weitere"); funktioniert auch nach Ablauf.
+10. `/giveaway abbrechen <giveaway-id>` *(Staff)* — bricht das Giveaway ab: Embed-Nachricht wird gelöscht (falls noch vorhanden), `ended = true`, kein Gewinner, Log-Eintrag.
+11. `/giveaway liste` *(Staff)* — zeigt laufende Giveaways (ID, Preis, Endzeit, Lose, Teilnehmeranzahl).
+12. **Sprache:** Alle Bot-Nachrichten (Embeds, Buttons, DMs) folgen der Server-Sprache (`settings.language`), Fallback Deutsch.
 
 ### Befehle (Übersicht)
 
@@ -378,9 +386,9 @@ create table if not exists public.settings (
 
 | Fall | Verhalten |
 |---|---|
-| `giveaway_channel_id` nicht gesetzt | `/giveaway starten` postet ins aktuelle Kanal (kein Fehler) |
-| `giveaway_required_role` nicht gefunden | Log-Warnung; Teilnahme ohne Rollen-Check zulassen |
-| Reaktionsabfrage fehlgeschlagen | Fallback auf `giveaway_participants` |
+| `giveaway_channel_id` nicht gesetzt | `/giveaway starten` postet ins aktuellen Kanal (kein Fehler) |
+| `giveaway_required_roles` nicht gefunden | Log-Warnung; Teilnahme ohne Rollen-Check zulassen |
+| Teilnehmer erreicht `giveaway_max_tickets` | Ephemer Fehler „Maximale Lose erreicht", kein weiterer Eintrag |
 | Giveaway-ID nicht gefunden | Fehler-Embed mit Hinweis + Verweis auf `/giveaway liste` |
 | Gewinner-DM nicht möglich | Nur loggen, Embed-Erwähnung bleibt |
 | Bot-Neustart während laufendem Giveaway | Ablauf-Check beim Start fängt abgelaufene Giveaways (siehe 3) |
@@ -391,7 +399,8 @@ create table if not exists public.settings (
 |---|---|---|
 | `giveaway_channel_id` | *(leer)* | Kanal für Giveaway-Embeds |
 | `giveaway_default_winners` | `1` | Standard-Gewinneranzahl |
-| `giveaway_required_role` | *(leer)* | Pflicht-Rolle zur Teilnahme (Name); leer = jeder |
+| `giveaway_max_tickets` | `5` | Max. Lose pro Teilnehmer (Bonus-Lose) |
+| `giveaway_required_roles` | *(leer)* | Pflicht-Rollen zur Teilnahme (JSON-Array von Rollen-IDs); leer = jeder |
 | `giveaway_announce_channel_id` | *(leer)* | Kanal für Gewinner-Announcement (optional) |
 
 ---
@@ -432,16 +441,17 @@ create table if not exists public.settings (
 
 ### Verhalten (verbindlich)
 
-1. `/bewerbung <art>` — `art` z.B. `Mod`, `Supporter`, `Eventteam`. Öffnet ein **Discord-Modal** mit passenden Fragen (je Art 4–6 Fragen, z.B. „Wie alt bist du?", „Warum willst du Moderator werden?", „Wie viel Zeit hast du täglich?").
+1. `/bewerbung <art>` — `art` z.B. `Mod`, `Supporter`, `Eventteam`. Startet einen **DM-Fragenflow**: Der Bot schickt dem User eine Privatnachricht und stellt die Fragen **nacheinander** (je Art 4–6 Fragen, z.B. „Wie alt bist du?", „Warum willst du Moderator werden?", „Wie viel Zeit hast du täglich?").
    - **Eigene Fragen:** Liegt in `settings.application_questions` ein JSON-Objekt vor (z.B. `{ "Mod": ["Frage 1", "Frage 2", …] }`), werden die Standardfragen für diese Art durch die dortigen Fragen ersetzt.
-2. **Cooldown:** Ein User kann sich pro Art nur einmal innerhalb von `settings.application_cooldown_days` (Standard 30) erneut bewerben. Bei Verstoß: Hinweis-Embed mit Restzeit, kein Kanal wird erstellt.
-3. Nach Absenden wird in `settings.application_category_id` ein privater Kanal pro Bewerbung erstellt (Name: `bewerbung-<art>-<kurzid>`), nur der Bewerber + Staff sehen ihn.
-4. Der Bot postet ein Embed mit allen Antworten + zwei Buttons: **👍 Annehmen** und **👎 Ablehnen** *(nur Staff)*.
-5. Ist `settings.application_staff_ping = true`, pingt der Bot zusätzlich die Staff-Rolle (`settings.staff_role`) als neue-Bewerbung-Benachrichtigung (einmalig, nur im Kanal).
-6. Button „Annehmen" → Embed wird grün/„Angenommen", Status in DB, Bewerber-DM mit Glückwunsch, Kanal bleibt als Archiv.
-7. Button „Ablehnen" → Embed rot/„Abgelehnt", Bewerber-DM (sachlich, kein Grund nötig, optional Grund per Modal), Kanal archiviert.
-8. `/bewerbung schließen <channel-id>` *(Staff)* — schließt/archiviert manuell (schreibt `audit_log`).
-9. `/bewerbung liste` — Übersicht offener Bewerbungen.
+2. **DM-Ablauf:** Der User antwortet per DM auf jede Frage. Nach jeder Antwort sendet der Bot die nächste Frage. Das Wort `abbrechen` bricht den Flow ab. Nach der letzten Antwort wird die Bewerbung gespeichert.
+3. **Cooldown:** Ein User kann sich pro Art nur einmal innerhalb von `settings.application_cooldown_days` (Standard 30) erneut bewerben. Bei Verstoß: Hinweis-Embed mit Restzeit, kein DM-Flow wird gestartet.
+4. Nach Abschluss des DM-Flows wird in `settings.application_category_id` ein privater Kanal pro Bewerbung erstellt (Name: `bewerbung-<art>-<kurzid>`), nur der Bewerber + Staff sehen ihn.
+5. Der Bot postet ein **Review-Embed** mit allen Antworten (eine Zeile/Feld je Frage) + zwei Buttons: **👍 Annehmen** und **👎 Ablehnen** *(nur Staff)*. Embed-Farbe: offen = Info-Blau, angenommen = Grün, abgelehnt = Rot; Footer mit Server-Name + Timestamp.
+6. Ist `settings.application_staff_ping = true`, pingt der Bot zusätzlich die Staff-Rolle (`settings.staff_role`) als neue-Bewerbung-Benachrichtigung (einmalig, nur im Kanal).
+7. Button „Annehmen" → Embed wird grün/„Angenommen", Status in DB, **`settings.application_role_id` wird dem Bewerber vergeben** (falls konfiguriert), Bewerber-DM mit Glückwunsch, Kanal bleibt als Archiv.
+8. Button „Ablehnen" → Embed rot/„Abgelehnt", Bewerber-DM (sachlich), Kanal archiviert.
+9. `/bewerbung schließen <channel-id>` *(Staff)* — schließt/archiviert manuell (schreibt `audit_log`).
+10. `/bewerbung liste` — Übersicht offener Bewerbungen.
 
 ### Settings
 
@@ -451,6 +461,7 @@ create table if not exists public.settings (
 | `application_cooldown_days` | `30` | Sperrfrist vor erneuter Bewerbung derselben Art (0 = aus) |
 | `application_staff_ping` | `true` | Ping der Staff-Rolle bei neuer Bewerbung |
 | `application_questions` | *(leer)* | Optionales JSON mit eigenen Fragen je Art (Key = Art) |
+| `application_role_id` | *(leer)* | Rolle, die der Bewerber bei Annahme erhält |
 
 ---
 
@@ -548,21 +559,24 @@ create table if not exists public.settings (
 **Giveaway (läuft):**
 ```
 🎉 GIVEAWAY
-Gewinne: <Preis>
-👥 Gewinner: 1
-👥 Teilnehmer: 12
-⏰ Endet: <Zeit> (<Restzeit>)
-🏆 Host: <@host>
-Reagiere mit 🎉 um teilzunehmen
+Preis: <Preis>
+Gewinner: 1
+Lose: 5
+Teilnehmer: 12
+Endet: <Zeit> (<Restzeit>)
+Host: <@host>
+
+🚨 Noch **5 Minuten**!
 ```
+[🎉 Teilnehmen]
 
 **Giveaway (beendet):**
 ```
 🏆 GIVEAWAY BEENDET
-Gewinne: <Preis>
-👥 Gewinner: @Gewinner1, @Gewinner2
-👥 Teilnehmer: 12
-🏆 Host: <@host>
+Preis: <Preis>
+Gewinner: @Gewinner1, @Gewinner2
+Teilnehmer: 12
+Host: <@host>
 ```
 
 **Warteraum-Liste:**

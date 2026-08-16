@@ -37,6 +37,20 @@
           <span class="field-help">Mehrere Rollen mit Strg/Cmd auswählen.</span>
           <% } %>
         </label>
+        <% } else if (f.type === 'role') { %>
+        <label class="field">
+          <span class="field-label"><%= f.label %></span>
+          <% if (!data.roleOptions || !data.roleOptions.length) { %>
+          <input type="text" name="settings[<%= f.key %>]" value="<%= f.value %>" placeholder="Rollen-ID">
+          <% } else { %>
+          <select name="settings[<%= f.key %>]">
+            <option value="">— Keine —</option>
+            <% data.roleOptions.forEach(function (r) { %>
+            <option value="<%= r.id %>"<%= String(f.value) === String(r.id) ? ' selected' : '' %>><%= r.name %></option>
+            <% }) %>
+          </select>
+          <% } %>
+        </label>
         <% } else if (f.boolean) { %>
         <label class="field">
           <span class="field-label"><%= f.label %></span>

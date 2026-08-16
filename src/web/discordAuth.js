@@ -100,7 +100,7 @@ async function fetchGuildMember(userId, guildId) {
 }
 
 function discordAuthStart(req, res) {
-  if (!config.discordClientSecret) return res.status(500).render('error', { title: 'Fehler', user: null, csrf: req.session?.csrf || '', message: 'Discord-OAuth2 ist nicht konfiguriert.' });
+  if (!config.discordClientSecret) return res.status(500).render('error', { title: res.locals.t('error.title'), user: null, csrf: req.session?.csrf || '', message: res.locals.t('error.oauthNotConfigured') });
   const state = crypto.randomBytes(24).toString('hex');
   res.cookie(STATE_COOKIE, state, cookieOptions());
   res.redirect(authorizeUrl(state));

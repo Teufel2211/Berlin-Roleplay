@@ -33,12 +33,12 @@ function warning(title, description, guild) {
   return decorate(new EmbedBuilder().setColor(COLORS.warning).setTitle(title).setDescription(description), guild);
 }
 
-function giveaway(title, description, guild) {
-  return decorate(new EmbedBuilder().setColor(COLORS.giveaway).setTitle(title).setDescription(description), guild);
+function giveaway(title, description, guild, color) {
+  return decorate(new EmbedBuilder().setColor(color || COLORS.giveaway).setTitle(title).setDescription(description), guild);
 }
 
 function warteraum(title, description, guild) {
   return decorate(new EmbedBuilder().setColor(COLORS.warteraum).setTitle(title).setDescription(description), guild);
 }
 
-module.exports = { COLORS, info, success, error, warning, giveaway, warteraum };
+module.exports = { COLORS, decorate, info, success, error, warning, giveaway, warteraum };

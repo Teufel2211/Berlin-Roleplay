@@ -1,24 +1,26 @@
-<h2 class="feature-title">Giveaway</h2>
-<p class="muted">Gewinnspiele mit Button-Teilnahme und konfigurierbaren Gewinnern.</p>
+<h2 class="feature-title"><%= t('feat.giveaway.name') %></h2>
+<p class="muted"><%= t('feat.giveaway.desc') %></p>
 <% if (data.dbError) { %><div class="alert error"><%= data.dbError %></div><% } %>
 <div class="feature-section" id="sec-liste">
   <% if (data.giveaways.length) { %>
-  <h3 class="list-title">Aktive Giveaways</h3>
+  <h3 class="list-title"><%= t('sec.giveaway.liste') %></h3>
   <div class="table-wrap">
     <table class="data-table">
-      <thead><tr><th>Preis</th><th>Gewinner</th><th>Endet am</th></tr></thead>
+      <thead><tr><th><%= t('giveaway.prize') %></th><th><%= t('giveaway.winners') %></th><th><%= t('giveaway.lose') %></th><th><%= t('giveaway.ends') %></th></tr></thead>
       <tbody>
         <% data.giveaways.forEach(function (g) { %>
         <tr>
           <td><%= g.prize %></td>
-          <td><%= g.winner_count %></td>
+          <td><%= g.winners_count %></td>
+          <td><%= g.ticket_count %></td>
           <td><%= g.ends_at ? new Date(g.ends_at).toLocaleString('de-DE') : '—' %></td>
         </tr>
         <% }) %>
       </tbody>
     </table>
   </div>
-  <% } else { %><div class="empty-state"><p>Keine aktiven Giveaways.</p></div><% } %>
+  <% } else { %><div class="empty-state"><p><%= t('giveaway.none') %></p></div><% } %>
 </div>
 <%- include('../partials/_sec_settings', { sectionId: 'kanale', data, featureId: 'giveaway', guildId }) %>
 <%- include('../partials/_sec_settings', { sectionId: 'rollen', data, featureId: 'giveaway', guildId }) %>
+<%- include('../partials/_sec_settings', { sectionId: 'verhalten', data, featureId: 'giveaway', guildId }) %>

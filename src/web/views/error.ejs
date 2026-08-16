@@ -1,4 +1,4 @@
-<%- include('partials/head', { title, user, csrf }) %>
+<%- include('partials/head', { title, user, csrf, lang, t }) %>
 <h1><%= message %></h1>
-<p><a href="/dashboard">Zurück zum Dashboard</a></p>
+<p><a href="/dashboard"><%= t('error.backToDashboard') %></a></p>
 <%- include('partials/foot') %>

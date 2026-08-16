@@ -4,6 +4,9 @@ require('dotenv').config();
 const REQUIRED_SECRETS = ['DISCORD_TOKEN', 'CLIENT_ID', 'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'];
 
 const DEFAULT_SETTINGS = {
+  language: 'de',
+  theme: 'dark',
+  enabled_modules: '',
   staff_roles: '',
   admin_roles: '',
   warteraum_roles: '',
@@ -22,8 +25,10 @@ const DEFAULT_SETTINGS = {
   application_cooldown_days: '30',
   application_staff_ping: 'true',
   application_questions: '',
+  application_role_id: '',
   giveaway_channel_id: '',
   giveaway_default_winners: '1',
+  giveaway_max_tickets: '5',
   giveaway_announce_channel_id: '',
   warteraum_voice_channel_id: '',
   warteraum_target_channel_id: '',

@@ -12,6 +12,6 @@ module.exports = {
     ),
   async execute(interaction) {
     const art = interaction.options.getString('art');
-    return applicationService.open(interaction, art);
+    return applicationService.startDmFlow(interaction, art);
   },
 };

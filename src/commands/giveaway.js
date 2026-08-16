@@ -26,8 +26,9 @@ module.exports = {
     const sub = interaction.options.getSubcommand();
     const settings = await settingsService.getAll(interaction.guild.id);
     const guild = interaction.guild;
+    const t = await require('../i18n').getT(guild.id);
     if (!helpers.isGuildModerator(interaction.member, settings)) {
-      return interaction.reply({ embeds: [embeds.error('Keine Berechtigung', 'Nur Staff kann Giveaways verwalten.', guild)], ephemeral: true });
+      return interaction.reply({ embeds: [embeds.error(t('giveaway.noPermission.title'), t('giveaway.noPermission.msg'), guild)], ephemeral: true });
     }
 
     if (sub === 'starten') {

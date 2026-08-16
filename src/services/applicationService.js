@@ -1,4 +1,4 @@
-const { ChannelType, PermissionFlagsBits, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
+const { ChannelType, PermissionFlagsBits, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
 const { getClient, TABLES, withRetry } = require('../supabase');
 const settingsService = require('./settingsService');
 const auditService = require('./auditService');
@@ -14,6 +14,8 @@ const DEFAULT_QUESTIONS = {
 
 const APPLICATION_TYPES = Object.keys(DEFAULT_QUESTIONS);
 
+const sessions = new Map();
+
 async function getQuestions(guildId, type) {
   const raw = await settingsService.get(guildId, 'application_questions');
   if (raw) {
@@ -27,7 +29,21 @@ async function getQuestions(guildId, type) {
   return (DEFAULT_QUESTIONS[type] || ['Beschreibe dich kurz.', 'Warum möchtest du dich bewerben?']).slice(0, 5);
 }
 
-async function open(interaction, type) {
+function buildReviewEmbed(guild, type, user, questions, answers, status) {
+  const color = status === 'angenommen' ? embeds.COLORS.success : status === 'abgelehnt' ? embeds.COLORS.error : embeds.COLORS.info;
+  const embed = new EmbedBuilder()
+    .setColor(color)
+    .setTitle(`📝 Bewerbung: ${type}`)
+    .setDescription(`**Bewerber:** <@${user.id}>\n**Status:** ${status === 'offen' ? '⏳ Offen' : status === 'angenommen' ? '✅ Angenommen' : '❌ Abgelehnt'}`)
+    .setFooter({ text: `Emergency Hamburg Roleplay • ${guild.name}` })
+    .setTimestamp(new Date());
+  questions.forEach((q, i) => {
+    embed.addFields({ name: `**${i + 1}. ${q.slice(0, 200)}**`, value: (answers[i] || '—').slice(0, 1024) });
+  });
+  return embed;
+}
+
+async function startDmFlow(interaction, type) {
   const guild = interaction.guild;
   const gid = guild.id;
   const cooldownDays = parseInt(await settingsService.get(gid, 'application_cooldown_days', '30'), 10);
@@ -56,57 +72,65 @@ async function open(interaction, type) {
   }
 
   const questions = await getQuestions(gid, type);
-  const modal = new ModalBuilder().setCustomId(`app_form_${type}`).setTitle(`Bewerbung: ${type}`);
-  for (let i = 0; i < questions.length; i++) {
-    const input = new TextInputBuilder()
-      .setCustomId(`q${i}`)
-      .setLabel(questions[i].slice(0, 45))
-      .setStyle(TextInputStyle.Paragraph)
-      .setRequired(true)
-      .setMaxLength(1000);
-    modal.addComponents(new ActionRowBuilder().addComponents(input));
-  }
-  await interaction.showModal(modal);
+  const dm = await interaction.user.send({ embeds: [embeds.info('📝 Bewerbung gestartet', `Deine Bewerbung als **${type}** beginnt jetzt. Ich stelle dir **${questions.length} Fragen** per Privatnachricht.\n\n**Frage 1/${questions.length}:**\n${questions[0]}`, guild)] });
+  sessions.set(interaction.user.id, { guildId: gid, type, questions, answers: [], step: 0, dm });
+
+  return interaction.reply({ embeds: [embeds.success('Bewerbung gestartet', `Deine Bewerbung als **${type}** wurde gestartet. Beantworte die Fragen in deinen **Privatnachrichten**. Du kannst jederzeit **\`abbrechen\`** schreiben.`, guild)], ephemeral: true });
 }
 
-async function handleModalSubmit(interaction) {
-  const guild = interaction.guild;
-  const gid = guild.id;
-  const type = interaction.customId.replace('app_form_', '');
-  const answers = {};
-  for (const actionRow of interaction.components) {
-    for (const field of actionRow.components) {
-      answers[field.customId] = field.value;
-    }
+async function handleDmMessage(message) {
+  if (message.channel.type !== ChannelType.DM) return false;
+  const session = sessions.get(message.author.id);
+  if (!session) return false;
+  const guild = message.client.guilds.cache.get(session.guildId);
+  if (!guild) { sessions.delete(message.author.id); return false; }
+
+  const content = (message.content || '').trim();
+  if (/^abbrechen$/i.test(content)) {
+    sessions.delete(message.author.id);
+    await message.author.send({ embeds: [embeds.warning('Bewerbung abgebrochen', 'Deine Bewerbung wurde abgebrochen.', guild)] });
+    return true;
   }
-  const answersText = Object.values(answers).map((a, i) => `**${i + 1}. Frage**\n${a}`).join('\n\n');
+
+  session.answers.push(content.slice(0, 1000));
+  session.step += 1;
+
+  if (session.step < session.questions.length) {
+    await message.author.send({ embeds: [embeds.info(`📝 Bewerbung: ${session.type}`, `**Frage ${session.step + 1}/${session.questions.length}:**\n${session.questions[session.step]}`, guild)] });
+    return true;
+  }
+
+  sessions.delete(message.author.id);
+  await finalize(session, message.author, guild);
+  return true;
+}
+
+async function finalize(session, user, guild) {
+  const gid = session.guildId;
 
   const { data: row, error } = await withRetry(() =>
     getClient()
       .from(TABLES.applications)
-      .insert({ guild_id: gid, discord_id: interaction.user.id, type, answers, status: 'offen' })
+      .insert({ guild_id: gid, discord_id: user.id, type: session.type, answers: session.answers, questions: session.questions, status: 'offen' })
       .select('*')
       .single()
   );
   if (error || !row) {
     logger.error(`Bewerbung nicht gespeichert: ${error ? error.message : 'keine Daten'}`);
-    return interaction.reply({ embeds: [embeds.error('Fehler', 'Deine Bewerbung konnte nicht gespeichert werden.', guild)], ephemeral: true });
+    return user.send({ embeds: [embeds.error('Fehler', 'Deine Bewerbung konnte nicht gespeichert werden.', guild)] });
   }
 
   const categoryId = await settingsService.get(gid, 'application_category_id');
   if (!categoryId) {
-    return interaction.reply({
-      embeds: [embeds.error('Nicht konfiguriert', 'Die Bewerbungs-Kategorie ist noch nicht eingerichtet.', guild)],
-      ephemeral: true,
-    });
+    return user.send({ embeds: [embeds.error('Nicht konfiguriert', 'Die Bewerbungs-Kategorie ist noch nicht eingerichtet.', guild)] });
   }
 
   const staffRoleNames = await settingsService.get(gid, 'staff_roles');
   const adminRoleNames = await settingsService.get(gid, 'admin_roles');
   const overwrites = [
     { id: guild.id, deny: [PermissionFlagsBits.ViewChannel] },
-    { id: interaction.client.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] },
-    { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] },
+    { id: user.client.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] },
+    { id: user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] },
   ];
   const viewAllow = { allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] };
   const staffRoles = helpers.resolveRoles(guild, staffRoleNames);
@@ -119,23 +143,19 @@ async function handleModalSubmit(interaction) {
   let channel;
   try {
     channel = await guild.channels.create({
-      name: `bewerbung-${type.toLowerCase()}-${row.id}`,
+      name: `bewerbung-${session.type.toLowerCase()}-${row.id}`,
       type: ChannelType.GuildText,
       parent: categoryId,
       permissionOverwrites: overwrites,
     });
   } catch (err) {
     logger.error(`Bewerbungs-Kanal nicht erstellt: ${err.message}`);
-    return interaction.reply({ embeds: [embeds.error('Fehler', 'Der Bewerbungs-Kanal konnte nicht erstellt werden.', guild)], ephemeral: true });
+    return user.send({ embeds: [embeds.error('Fehler', 'Der Bewerbungs-Kanal konnte nicht erstellt werden.', guild)] });
   }
 
   await withRetry(() => getClient().from(TABLES.applications).update({ channel_id: channel.id }).eq('id', row.id));
 
-  const embed = embeds.info(
-    `📝 Bewerbung: ${type}`,
-    `**Bewerber:** <@${interaction.user.id}>\n\n${answersText}`,
-    guild
-  );
+  const embed = buildReviewEmbed(guild, session.type, user, session.questions, session.answers, 'offen');
   const buttons = helpers.row(
     helpers.successButton(`app_accept_${row.id}`, 'Annehmen', '👍'),
     helpers.dangerButton(`app_reject_${row.id}`, 'Ablehnen', '👎')
@@ -149,7 +169,7 @@ async function handleModalSubmit(interaction) {
     } catch (err) { /* ignorieren */ }
   }
 
-  return interaction.reply({ embeds: [embeds.success('Bewerbung eingereicht', `Deine Bewerbung als **${type}** wurde eingereicht. Kanal: <#${channel.id}>`, guild)], ephemeral: true });
+  return user.send({ embeds: [embeds.success('Bewerbung eingereicht', `Deine Bewerbung als **${session.type}** wurde eingereicht. Kanal: <#${channel.id}>`, guild)] });
 }
 
 async function handleDecisionButton(interaction) {
@@ -178,26 +198,38 @@ async function handleDecisionButton(interaction) {
 
   const accepted = verdict === 'accept';
   const newStatus = accepted ? 'angenommen' : 'abgelehnt';
+
+  if (accepted) {
+    const roleId = await settingsService.get(gid, 'application_role_id');
+    if (roleId) {
+      const member = await guild.members.fetch(row.discord_id).catch(() => null);
+      if (member && !member.roles.cache.has(roleId)) {
+        await member.roles.add(roleId).catch((err) => logger.warn(`Bewerbungs-Rolle nicht vergeben: ${err.message}`));
+      }
+    }
+  }
+
   await withRetry(() => getClient().from(TABLES.applications).update({ status: newStatus }).eq('id', id));
+
+  const questions = row.questions && Array.isArray(row.questions) ? row.questions : await getQuestions(gid, row.type);
+  const answers = Array.isArray(row.answers) ? row.answers : Object.values(row.answers || {}).map((v) => String(v));
+  const user = { id: row.discord_id };
 
   const channel = guild.channels.cache.get(row.channel_id);
   if (channel && row.message_id) {
     try {
       const msg = await channel.messages.fetch(row.message_id);
-      const oldEmbed = msg.embeds[0];
-      const updated = accepted
-        ? embeds.success(`📝 Bewerbung: ${row.type}`, `${oldEmbed ? oldEmbed.description : ''}\n\n**Status: Angenommen**`, guild)
-        : embeds.error(`📝 Bewerbung: ${row.type}`, `${oldEmbed ? oldEmbed.description : ''}\n\n**Status: Abgelehnt**`, guild);
-      await msg.edit({ embeds: [updated], components: [] });
+      const embed = buildReviewEmbed(guild, row.type, user, questions, answers, newStatus);
+      await msg.edit({ embeds: [embed], components: [] });
     } catch (err) { logger.warn(`Bewerbungs-Embed nicht aktualisiert: ${err.message}`); }
   }
 
   try {
-    const user = await interaction.client.users.fetch(row.discord_id);
+    const member = await guild.members.fetch(row.discord_id);
     if (accepted) {
-      await user.send(`🎉 Glückwunsch! Deine Bewerbung als **${row.type}** wurde angenommen.`);
+      await member.send(`🎉 Glückwunsch! Deine Bewerbung als **${row.type}** wurde angenommen.`);
     } else {
-      await user.send(`Deine Bewerbung als **${row.type}** wurde leider abgelehnt.`);
+      await member.send(`Deine Bewerbung als **${row.type}** wurde leider abgelehnt.`);
     }
   } catch (err) { logger.warn(`DM an Bewerber fehlgeschlagen: ${err.message}`); }
 
@@ -237,4 +269,4 @@ async function list(interaction) {
   return interaction.reply({ embeds: [embeds.info('📝 Offene Bewerbungen', lines.join('\n'), guild)], ephemeral: true });
 }
 
-module.exports = { APPLICATION_TYPES, open, handleModalSubmit, handleDecisionButton, close, list };
+module.exports = { APPLICATION_TYPES, startDmFlow, handleDmMessage, handleDecisionButton, close, list, getQuestions, buildReviewEmbed };

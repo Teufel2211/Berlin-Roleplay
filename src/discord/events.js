@@ -10,6 +10,29 @@ const applicationService = require('../services/applicationService');
 const warteraumService = require('../services/warteraumService');
 const interviewService = require('../services/interviewService');
 const welcomeService = require('../services/welcomeService');
+const settingsService = require('../services/settingsService');
+
+const COMMAND_MODULES = {
+  verify: 'verification',
+  warteraum: 'warteraum',
+  giveaway: 'giveaway',
+  bewerbung: 'bewerbung',
+  'bewerbung-verwalten': 'bewerbung',
+  ticket: 'tickets',
+  interview: 'interview',
+  team: 'team',
+  moderation: 'moderation',
+};
+
+async function parseModuleList(raw) {
+  if (raw === undefined || raw === null || raw === '') return null;
+  try { const arr = JSON.parse(raw); return Array.isArray(arr) ? arr.map(String).filter(Boolean) : null; } catch (e) { return null; }
+}
+async function isModuleEnabled(guildId, moduleId) {
+  const all = await settingsService.getAll(guildId).catch(() => ({}));
+  const list = await parseModuleList(all.enabled_modules);
+  return list === null || list.includes(moduleId);
+}
 
 async function replyError(interaction, err) {
   logger.error(`Interaktion fehlgeschlagen: ${err.stack || err.message}`);
@@ -31,8 +54,12 @@ function registerEvents(client) {
     try {
       if (interaction.isChatInputCommand()) {
         const cmd = commands.find((c) => c.data.name === interaction.commandName);
-        if (cmd) return await cmd.execute(interaction);
-        return;
+        if (!cmd) return;
+        const module = COMMAND_MODULES[interaction.commandName];
+        if (module && !(await isModuleEnabled(interaction.guildId, module))) {
+          return interaction.reply({ embeds: [embeds.error('Modul deaktiviert', `Das Modul »${module}« ist auf diesem Server deaktiviert.`, interaction.guild)], flags: MessageFlags.Ephemeral });
+        }
+        return await cmd.execute(interaction);
       }
       if (interaction.isButton()) {
         const id = interaction.customId;
@@ -41,12 +68,12 @@ function registerEvents(client) {
         if (id.startsWith('ticket_close_')) return await ticketService.showCloseModal(interaction);
         if (id.startsWith('app_accept_') || id.startsWith('app_reject_')) return await applicationService.handleDecisionButton(interaction);
         if (id.startsWith('interview_')) return await interviewService.handleScore(interaction);
+        if (id.startsWith('giveaway_join_')) return await giveawayService.handleJoinButton(interaction);
         if (id.startsWith('emb_')) return interaction.reply({ embeds: [embeds.info('Embed-Button', 'Für diesen Button ist keine Aktion konfiguriert.', interaction.guild)], flags: MessageFlags.Ephemeral });
         return;
       }
       if (interaction.isModalSubmit()) {
         const id = interaction.customId;
-        if (id.startsWith('app_form_')) return await applicationService.handleModalSubmit(interaction);
         if (id.startsWith('ticket_close_modal')) return await ticketService.handleCloseModal(interaction);
         return;
       }
@@ -55,16 +82,12 @@ function registerEvents(client) {
     }
   });
 
+  client.on(Events.MessageCreate, (message) => {
+    applicationService.handleDmMessage(message).catch((err) => logger.error(`Bewerbungs-DM fehlgeschlagen: ${err.message}`));
+  });
+
   client.on(Events.GuildMemberAdd, (member) => {
     welcomeService.handleMemberJoin(member).catch((err) => logger.error(`Welcome fehlgeschlagen: ${err.message}`));
-  });
-
-  client.on(Events.MessageReactionAdd, (reaction, user) => {
-    giveawayService.handleReaction(reaction, user).catch((err) => logger.error(`Giveaway-Reaktion fehlgeschlagen: ${err.message}`));
-  });
-
-  client.on(Events.MessageReactionRemove, (reaction, user) => {
-    giveawayService.handleReactionRemove(reaction, user).catch((err) => logger.error(`Giveaway-Reaktion entfernt fehlgeschlagen: ${err.message}`));
   });
 
   client.on(Events.GuildMemberRemove, async (member) => {

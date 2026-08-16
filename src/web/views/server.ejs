@@ -1,4 +1,4 @@
-<%- include('partials/head', { title, user, csrf, guildId }) %>
+<%- include('partials/head', { title, user, csrf, guildId, lang, t, theme }) %>
 <section class="server-page">
   <header class="server-head">
     <div class="server-head-main">
@@ -9,17 +9,17 @@
       </div>
       <div class="server-head-text"><h1 class="server-name"><%= activeGuild.name %></h1><span class="server-id">Server-ID: <%= activeGuild.id %></span></div>
     </div>
-    <a href="/dashboard" class="btn subtle">Server wechseln</a>
+    <a href="/dashboard" class="btn subtle"><%= t('topbar.switchServer') %></a>
   </header>
   <div class="server-body">
-    <%- include('partials/feature_sidebar', { features, activeFeature, guildId }) %>
+    <%- include('partials/feature_sidebar', { features, activeFeature, guildId, t }) %>
     <div class="feature-content<%= data.sections && data.sections.length > 1 ? ' has-subnav' : '' %>">
-      <%- include('partials/_subnav', { sections: data.sections }) %>
+      <%- include('partials/_subnav', { sections: data.sections, t }) %>
       <% if (data.discordOk === false && feature.id !== 'overview' && feature.id !== 'audit') { %>
-      <div class="alert warn">Der Bot ist auf diesem Server nicht erreichbar (evtl. nicht installiert oder offline). Kanal- und Rollenlisten können nicht geladen werden – du kannst die IDs manuell eingeben.</div>
+      <div class="alert warn"><%= t('common.botOffline') %></div>
       <% } %>
       <% if (feature.id === 'overview') { %>
-        <%- include('features/_overview', { data }) %>
+        <%- include('features/_overview', { data, guildId, csrf, t }) %>
       <% } else if (feature.id === 'verification') { %>
         <%- include('features/_verification', { data }) %>
       <% } else if (feature.id === 'warteraum') { %>

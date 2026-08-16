@@ -38,7 +38,7 @@ function csrfCheck(req, res, next) {
   const fail = csrfFailReason(req);
   if (fail) {
     logger.warn(`CSRF-Ablehnung von ${req.ip}: ${fail}`);
-    return res.status(403).render('error', { title: 'Fehler', user: null, csrf: csrfToken(req), message: 'Ungültige Anfrage (CSRF-Schutz)' });
+    return res.status(403).render('error', { title: res.locals.t('error.title'), user: null, csrf: csrfToken(req), message: res.locals.t('error.csrf') });
   }
   return next();
 }
@@ -107,7 +107,7 @@ function requireAuthApi(req, res, next) {
 async function loginPage(req, res) {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
   res.render('login', {
-    title: 'Login',
+    title: res.locals.t('login.title'),
     user: null,
     error: LOGIN_ERRORS[req.query.error] || null,
     csrf: csrfToken(req),

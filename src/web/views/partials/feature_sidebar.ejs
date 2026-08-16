@@ -1,11 +1,11 @@
 <%
   var groupDefs = [
-    { label: 'Übersicht', ids: ['overview'] },
-    { label: 'Community', ids: ['verification', 'warteraum', 'welcome'] },
-    { label: 'Engagement', ids: ['giveaway', 'embeds'] },
-    { label: 'Support', ids: ['tickets', 'bewerbung', 'interview'] },
-    { label: 'Verwaltung', ids: ['team', 'calendar', 'moderation', 'security'] },
-    { label: 'System', ids: ['audit'] }
+    { key: 'overview', ids: ['overview'] },
+    { key: 'community', ids: ['verification', 'warteraum', 'welcome'] },
+    { key: 'engagement', ids: ['giveaway', 'embeds'] },
+    { key: 'support', ids: ['tickets', 'bewerbung', 'interview'] },
+    { key: 'admin', ids: ['team', 'calendar', 'moderation', 'security'] },
+    { key: 'system', ids: ['audit'] }
   ];
   var used = {};
   var groups = groupDefs.map(function (g) {
@@ -14,19 +14,19 @@
       used[f.id] = true;
       return true;
     });
-    return { label: g.label, items: items };
+    return { key: g.key, items: items };
   }).filter(function (g) { return g.items.length; });
   var rest = features.filter(function (f) { return !used[f.id]; });
-  if (rest.length) groups.push({ label: 'Weitere', items: rest });
+  if (rest.length) groups.push({ key: 'other', items: rest });
 %>
 <aside class="feature-sidebar">
   <% groups.forEach(function (g) { %>
   <div class="feature-nav-group">
-    <div class="feature-nav-label"><%= g.label %></div>
+    <div class="feature-nav-label"><%= t('group.' + g.key, g.key) %></div>
     <nav class="feature-nav">
       <% g.items.forEach(function (f) { %>
       <a href="/dashboard/servers/<%= guildId %>/feature/<%= f.id %>" class="feature-link<%= f.id === activeFeature ? ' active' : '' %>">
-        <span class="feature-icon"><%= f.icon %></span><span><%= f.name %></span>
+        <span class="feature-icon"><%= f.icon %></span><span><%= t('feat.' + f.id + '.name', f.name) %></span>
       </a>
       <% }) %>
     </nav>

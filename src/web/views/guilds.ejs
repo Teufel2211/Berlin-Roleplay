@@ -1,30 +1,30 @@
-<%- include('partials/head', { title, user, csrf }) %>
+<%- include('partials/head', { title, user, csrf, lang, t }) %>
 
 <% if (user && user.isOwner) { %>
 <section class="page owner-shell">
   <div class="owner-hero">
-    <div class="owner-kicker">Global Bot Owner</div>
-    <h1>Owner Dashboard</h1>
-    <p>Vollzugriff auf alle Discord-Server, auf denen der Bot installiert ist.</p>
+    <div class="owner-kicker"><%= t('guilds.ownerKicker') %></div>
+    <h1><%= t('guilds.ownerTitle') %></h1>
+    <p><%= t('guilds.ownerDesc') %></p>
     <div class="owner-stats">
       <div class="owner-stat">
         <strong id="owner-server-count"><%= guilds.length %></strong>
-        <span>Bot-Server</span>
+        <span><%= t('guilds.botServers') %></span>
       </div>
       <div class="owner-stat">
-        <strong>Vollzugriff</strong>
-        <span>Servereinstellungen</span>
+        <strong><%= t('guilds.fullAccess') %></strong>
+        <span><%= t('guilds.serverSettings') %></span>
       </div>
       <div class="owner-stat">
-        <strong>Live</strong>
-        <span>Serverliste synchronisiert</span>
+        <strong><%= t('guilds.live') %></strong>
+        <span><%= t('guilds.listSynced') %></span>
       </div>
     </div>
   </div>
 
   <div class="owner-toolbar">
-    <input id="owner-server-search" class="owner-search" type="search" placeholder="Server suchen…" autocomplete="off">
-    <span class="muted" id="owner-refresh-status">Wird automatisch aktualisiert.</span>
+    <input id="owner-server-search" class="owner-search" type="search" placeholder="<%= t('guilds.search') %>" autocomplete="off">
+    <span class="muted" id="owner-refresh-status"><%= t('guilds.autoRefresh') %></span>
   </div>
 
   <div class="guild-grid owner-grid" id="owner-guild-grid">
@@ -37,8 +37,8 @@
           <% } else { %><span class="guild-fallback"><%= g.name.charAt(0) %></span><% } %>
         </div>
         <div class="guild-name"><%= g.name %></div>
-        <div class="guild-meta">Bot installiert · Owner-Zugriff</div>
-        <div class="owner-badge">⚙️ Einstellungen verwalten</div>
+        <div class="guild-meta"><%= t('guilds.installed') %></div>
+        <div class="owner-badge"><%= t('guilds.manageSettings') %></div>
       </a>
     </div>
     <% }) %>
@@ -46,7 +46,7 @@
 
   <% if (!guilds.length) { %>
   <div class="empty-state">
-    <p>Der Bot ist aktuell auf keinem Server installiert.</p>
+    <p><%= t('guilds.noBots') %></p>
   </div>
   <% } %>
 </section>
@@ -73,7 +73,7 @@
 
   async function refresh() {
     try {
-      status.textContent = 'Serverliste wird aktualisiert…';
+      status.textContent = '<%= t('guilds.refreshing') %>';
       const response = await fetch('/dashboard', { headers: { 'X-Owner-Refresh': '1' }, cache: 'no-store' });
       if (!response.ok) throw new Error('refresh failed');
       const html = await response.text();
@@ -84,10 +84,10 @@
       const currentGrid = document.getElementById('owner-guild-grid');
       if (nextGrid && currentGrid) currentGrid.innerHTML = nextGrid.innerHTML;
       if (nextCount && count) count.textContent = nextCount.textContent;
-      status.textContent = 'Zuletzt aktualisiert: ' + new Date().toLocaleTimeString('de-DE');
+      status.textContent = '<%= t('guilds.lastUpdated') %>' + new Date().toLocaleTimeString('de-DE');
       filter();
     } catch {
-      status.textContent = 'Aktualisierung fehlgeschlagen.';
+      status.textContent = '<%= t('guilds.refreshFailed') %>';
     }
   }
 
@@ -102,14 +102,14 @@
 <section class="page">
   <div class="page-head">
     <div>
-      <h1>Server wählen</h1>
-      <p class="muted" id="guild-sync-status">Serverliste wird automatisch mit Discord synchronisiert.</p>
+      <h1><%= t('guilds.title') %></h1>
+      <p class="muted" id="guild-sync-status"><%= t('guilds.syncStatus') %></p>
     </div>
   </div>
   <% if (!guilds.length) { %>
   <div class="empty-state">
-    <p>Du verwaltest aktuell keinen Server. Lade den Bot in deinen Server ein und verwalte ihn dann hier.</p>
-    <a href="<%= inviteUrl %>" class="discord-btn" target="_blank" rel="noopener">Bot einladen</a>
+    <p><%= t('guilds.empty') %></p>
+    <a href="<%= inviteUrl %>" class="discord-btn" target="_blank" rel="noopener"><%= t('guilds.invite') %></a>
   </div>
   <% } else { %>
   <div class="guild-grid">
@@ -122,10 +122,10 @@
         <% } else { %><span class="guild-fallback"><%= g.name.charAt(0) %></span><% } %>
       </div>
       <div class="guild-name"><%= g.name %></div>
-      <div class="guild-meta"><%= g.botIn ? (g.botOnline ? 'Bot online' : 'Bot offline') : 'Bot nicht eingeladen' %></div>
+      <div class="guild-meta"><%= g.botIn ? (g.botOnline ? t('guilds.botOnline') : t('guilds.botOffline')) : t('guilds.botNotInvited') %></div>
       <% if (g.botIn) { %></a><% } %>
       <% if (!g.botIn) { %>
-      <a href="<%= inviteUrl %>" class="btn invite-btn" target="_blank" rel="noopener">Bot hinzufügen</a>
+      <a href="<%= inviteUrl %>" class="btn invite-btn" target="_blank" rel="noopener"><%= t('guilds.add') %></a>
       <% } %>
     </div>
     <% }) %>
@@ -139,7 +139,7 @@
     const refresh = () => {
       if (reloading || document.visibilityState !== 'visible') return;
       reloading = true;
-      if (status) status.textContent = 'Serverliste wird aktualisiert …';
+      if (status) status.textContent = '<%= t('guilds.syncing') %>';
       window.location.reload();
     };
     setInterval(refresh, 30000);

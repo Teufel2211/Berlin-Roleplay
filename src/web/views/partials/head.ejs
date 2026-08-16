@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="<%= typeof lang !== 'undefined' ? lang : 'de' %>" data-theme="<%= typeof theme !== 'undefined' ? theme : 'dark' %>">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><%= title %> — Emergency Hamburg Roleplay Dashboard</title>
+  <title><%= title %> — Emergency Hamburg Roleplay</title>
   <link rel="icon" href="/img/logo.png" type="image/png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -14,22 +14,37 @@
 <header class="topbar">
   <a href="/" class="brand"><img src="/img/logo.png" alt="Emergency Hamburg Roleplay" class="brand-logo">Emergency Hamburg Roleplay</a>
   <div class="topbar-right">
-    <% if (locals.user) { %>
-    <nav>
-      <a href="/dashboard">Server wählen</a>
-      <form method="post" action="/dashboard/logout" class="inline">
-        <input type="hidden" name="_csrf" value="<%= locals.csrf %>">
-        <button class="link-btn">Logout</button>
-      </form>
+    <nav class="topnav">
+      <a href="/" class="topnav-link<%= typeof pathName !== 'undefined' && pathName === '/' ? ' active' : '' %>"><%= t('topbar.home') %></a>
+      <a href="/#systeme" class="topnav-link"><%= t('topbar.systems') %></a>
+      <a href="/dashboard" class="topnav-link"><%= t('topbar.dashboard') %></a>
     </nav>
+    <span class="lang-switch">
+      <% if (locals.guildId) { %>
+      <form method="post" action="/dashboard/servers/<%= guildId %>/feature/<%= locals.activeFeature || 'overview' %>" class="inline">
+        <input type="hidden" name="_csrf" value="<%= locals.csrf %>">
+        <button class="lang-btn<%= lang === 'de' ? ' active' : '' %>" name="settings[language]" value="de">DE</button>
+        <span class="lang-sep">·</span>
+        <button class="lang-btn<%= lang === 'en' ? ' active' : '' %>" name="settings[language]" value="en">EN</button>
+      </form>
+      <% } else { %>
+      <a href="?lang=de" class="lang-btn<%= lang === 'de' ? ' active' : '' %>">DE</a>
+      <span class="lang-sep">·</span>
+      <a href="?lang=en" class="lang-btn<%= lang === 'en' ? ' active' : '' %>">EN</a>
+      <% } %>
+    </span>
+    <% if (locals.user) { %>
     <span class="user-chip">
       <% if (user.avatar) { %><img src="https://cdn.discordapp.com/avatars/<%= user.id %>/<%= user.avatar %>.png?size=64" alt="" class="user-avatar"><% } %>
       <span class="user-name"><%= user.global_name || user.username %></span>
     </span>
+    <form method="post" action="/dashboard/logout" class="inline">
+      <input type="hidden" name="_csrf" value="<%= locals.csrf %>">
+      <button class="link-btn"><%= t('topbar.logout') %></button>
+    </form>
     <% } else { %>
-    <a href="/dashboard/login" class="discord-btn small">Login</a>
+    <a href="/dashboard/login" class="discord-btn small"><%= t('topbar.login') %></a>
     <% } %>
   </div>
 </header>
 <main>
-

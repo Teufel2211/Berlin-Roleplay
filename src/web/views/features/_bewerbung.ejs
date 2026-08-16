@@ -13,8 +13,12 @@
     <td><%= a.created_at ? new Date(a.created_at).toLocaleString('de-DE') : '—' %></td>
   </tr>
   <tr class="details-row"><td colspan="4"><details><summary>Bewerbungsantworten anzeigen</summary><div class="application-answers">
-  <% var answers = a.answers || {}; if (typeof answers === 'string') { try { answers = JSON.parse(answers); } catch (_) { answers = { Antwort: answers }; } } %>
-  <% Object.keys(answers).forEach(function (key, index) { %><div class="answer-block"><strong>Frage <%= index + 1 %></strong><p><%= answers[key] %></p></div><% }) %>
+  <% var answers = a.answers || []; if (typeof answers === 'string') { try { answers = JSON.parse(answers); } catch (_) { answers = [answers]; } } %>
+  <% if (Array.isArray(answers)) { %>
+    <% answers.forEach(function (answer, index) { %><div class="answer-block"><strong>Frage <%= index + 1 %></strong><p><%= answer %></p></div><% }) %>
+  <% } else { %>
+    <% Object.keys(answers).forEach(function (key, index) { %><div class="answer-block"><strong>Frage <%= index + 1 %></strong><p><%= answers[key] %></p></div><% }) %>
+  <% } %>
   <% if (!Object.keys(answers).length) { %><p class="muted">Keine Antworten gespeichert.</p><% } %>
   </div></details></td></tr>
   <% }) %>

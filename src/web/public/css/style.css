@@ -218,6 +218,35 @@ footer a:hover { color: var(--text); }
 .discord-btn:active { transform: translateY(0); }
 .discord-btn.small { padding: 8px 15px; font-size: 13px; box-shadow: none; }
 
+/* ---------- Topbar nav + language switch ---------- */
+.topnav-link {
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+}
+.topnav-link:hover { color: var(--text); text-decoration: none; }
+.topnav-link.active { color: var(--text); }
+
+.lang-switch { display: flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 600; }
+.lang-switch .inline { display: inline-flex; align-items: center; gap: 5px; }
+.lang-btn {
+  background: none;
+  border: none;
+  padding: 3px 7px;
+  border-radius: 6px;
+  color: var(--text-faint);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.lang-btn:hover { color: var(--text); background: var(--surface-2); text-decoration: none; }
+.lang-btn.active { color: var(--text); background: var(--surface-3); }
+.lang-sep { color: var(--text-faint); }
+
 /* ---------- Landing ---------- */
 .landing-hero {
   text-align: center;
@@ -246,42 +275,36 @@ footer a:hover { color: var(--text); }
 .landing-hero h1 { font-size: 42px; letter-spacing: -0.02em; margin-bottom: 14px; }
 .landing-hero .muted { max-width: 540px; font-size: 16px; margin: 0 auto 30px; }
 
+.landing-section-head { text-align: center; margin-bottom: 30px; }
+.landing-section-head h2 { font-size: 26px; margin-bottom: 6px; }
+.landing-section-head .muted { max-width: 560px; margin: 0 auto; font-size: 14.5px; }
+
 .landing-features {
-  display: grid;
-  grid-template-columns: 300px 1fr;
-  gap: 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  background: var(--surface);
-  box-shadow: var(--shadow-md);
-  min-height: 420px;
-  max-width: 980px;
+  max-width: 1060px;
   margin: 0 auto;
+  padding: 28px 0 20px;
 }
-.feature-list {
-  list-style: none;
-  margin: 0;
-  padding: 10px;
-  border-right: 1px solid var(--border);
-  max-height: 560px;
-  overflow-y: auto;
-  background: var(--bg-shell);
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
 }
-.feature-list li {
+.feature-card {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 11px 13px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  color: var(--text-muted);
-  font-size: 14px;
-  font-weight: 500;
-  transition: background 0.15s ease, color 0.15s ease;
+  flex-direction: column;
+  gap: 8px;
+  padding: 22px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  transition: border-color 0.15s ease, transform 0.15s ease, background 0.15s ease;
 }
-.feature-list li:hover { background: var(--surface-2); color: var(--text); }
-.feature-list li.active { background: var(--accent); color: #fff; font-weight: 600; }
+.feature-card:hover { border-color: var(--border-strong); background: var(--surface-2); transform: translateY(-2px); }
+.feature-card-icon { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 10px; background: var(--surface-3); margin-bottom: 4px; }
+.feature-card-icon .feature-icon { width: 40px; height: 40px; border-radius: 10px; background: var(--surface-3); font-size: 18px; }
+.feature-card-name { font-size: 15px; font-weight: 700; color: var(--text); }
+.feature-card-desc { margin: 0; font-size: 13px; line-height: 1.5; color: var(--text-muted); }
+
 .feature-icon {
   flex: 0 0 auto;
   width: 28px; height: 28px;
@@ -291,11 +314,6 @@ footer a:hover { color: var(--text); }
   background: var(--surface-2);
   border-radius: 8px;
 }
-.feature-list li.active .feature-icon { background: rgba(255, 255, 255, 0.18); }
-.feature-item-name { min-width: 0; }
-.feature-detail { padding: 36px; }
-.feature-detail h2 { font-size: 22px; }
-.feature-detail p { color: var(--text-muted); max-width: 480px; font-size: 15px; }
 
 /* ---------- Guild selection ---------- */
 .page { max-width: 1140px; }
@@ -803,3 +821,62 @@ footer a:hover { color: var(--text); }
 .question-row select { padding: 7px 8px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 13px; }
 .question-row input[type="text"] { flex: 1; padding: 8px 10px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 13px; }
 .inline-form { display: inline-flex; }
+
+/* ---------- Module toggles ---------- */
+.module-toggle-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 560px;
+  margin-top: 8px;
+}
+.module-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+  font-size: 14px;
+  font-weight: 500;
+}
+.module-toggle:hover { border-color: var(--border-strong); background: var(--surface-3); }
+.module-toggle input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+.module-toggle input[type="checkbox"]:not(:checked) + span { color: var(--text-muted); }
+
+/* ---------- Light theme ---------- */
+html[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f2f3f7;
+  --bg-shell: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f4f5f9;
+  --surface-3: #eceef3;
+  --border: #dfe2ea;
+  --border-strong: #c6cbd8;
+  --text: #1a1d24;
+  --text-muted: #5b6270;
+  --text-faint: #8b91a0;
+  --accent: #d63b36;
+  --accent-hover: #c1332e;
+  --accent-soft: rgba(214, 59, 54, 0.12);
+  --accent-border: rgba(214, 59, 54, 0.35);
+  --discord: #5865f2;
+  --discord-hover: #4a56dd;
+  --success: #1e9e5e;
+  --success-soft: rgba(30, 158, 94, 0.12);
+  --warning: #b8860b;
+  --warning-soft: rgba(184, 134, 11, 0.12);
+  --gold: #a67c00;
+  --shadow-sm: 0 1px 2px rgba(20, 24, 35, 0.08);
+  --shadow-md: 0 8px 24px rgba(20, 24, 35, 0.12);
+  --shadow-lg: 0 20px 60px rgba(20, 24, 35, 0.16);
+}
+html[data-theme="light"] body {
+  background-image:
+    radial-gradient(760px 420px at 12% -8%, rgba(214, 59, 54, 0.08), transparent 60%),
+    radial-gradient(600px 360px at 100% 0%, rgba(88, 101, 242, 0.06), transparent 55%);
+}

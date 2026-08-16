@@ -1,14 +1,56 @@
-<h2 class="feature-title">Übersicht</h2>
+<h2 class="feature-title"><%= t('feat.overview.name', 'Übersicht') %></h2>
 <% if (data.dbError) { %><div class="alert error"><%= data.dbError %></div><% } %>
 <div class="feature-section" id="sec-uebersicht">
   <div class="stat-grid">
-    <div class="stat-card"><div class="stat-value"><%= data.stats.tickets %></div><div class="stat-label">Offene Tickets</div></div>
-    <div class="stat-card"><div class="stat-value"><%= data.stats.applications %></div><div class="stat-label">Offene Bewerbungen</div></div>
-    <div class="stat-card"><div class="stat-value"><%= data.stats.giveaways %></div><div class="stat-label">Aktive Giveaways</div></div>
-    <div class="stat-card"><div class="stat-value"><%= data.stats.team %></div><div class="stat-label">Teammitglieder</div></div>
+    <div class="stat-card"><div class="stat-value"><%= data.stats.tickets %></div><div class="stat-label"><%= t('overview.statTickets') %></div></div>
+    <div class="stat-card"><div class="stat-value"><%= data.stats.applications %></div><div class="stat-label"><%= t('overview.statApplications') %></div></div>
+    <div class="stat-card"><div class="stat-value"><%= data.stats.giveaways %></div><div class="stat-label"><%= t('overview.statGiveaways') %></div></div>
+    <div class="stat-card"><div class="stat-value"><%= data.stats.team %></div><div class="stat-label"><%= t('overview.statTeam') %></div></div>
   </div>
   <div class="bot-status">
     <span class="status-dot <%= data.botInstalled ? 'online' : 'offline' %>"></span>
-    Bot <%= data.botInstalled ? 'ist auf diesem Server installiert' : 'ist nicht auf diesem Server' %>
+    <%= data.botInstalled ? t('overview.botInstalled') : t('overview.botNotInstalled') %>
   </div>
+</div>
+<div class="feature-section" id="sec-home">
+  <form method="post" action="/dashboard/servers/<%= guildId %>/feature/overview" class="settings-form">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <% var homeGroup = data.sections.filter(function (s) { return s.id === 'home'; })[0]; %>
+    <% if (homeGroup && homeGroup.groups && homeGroup.groups.length) { %>
+      <% homeGroup.groups.forEach(function (group) { %>
+      <div class="settings-group">
+        <h3 class="settings-subgroup"><%= group.subgroup %></h3>
+        <div class="settings-fields">
+          <% group.fields.forEach(function (f) { %>
+            <% if (f.type === 'select') { %>
+            <label class="field">
+              <span class="field-label"><%= f.label %></span>
+              <select name="settings[<%= f.key %>]">
+                <% f.options.forEach(function (o) { %>
+                <option value="<%= o.value %>"<%= f.value === o.value ? ' selected' : '' %>><%= o.label %></option>
+                <% }) %>
+              </select>
+            </label>
+            <% } else if (f.type === 'modules') { %>
+            <div class="field">
+              <span class="field-label"><%= f.label %></span>
+              <div class="module-toggle-list">
+                <input type="hidden" name="settings[enabled_modules][]" value="">
+                <% f.options.forEach(function (o) { %>
+                <label class="module-toggle">
+                  <input type="checkbox" name="settings[enabled_modules][]" value="<%= o.value %>"<%= f.selected.indexOf(o.value) !== -1 ? ' checked' : '' %>>
+                  <span><%= o.label %></span>
+                </label>
+                <% }) %>
+              </div>
+              <span class="field-help"><%= t('overview.moduleHelp') %></span>
+            </div>
+            <% } %>
+          <% }) %>
+        </div>
+      </div>
+      <% }) %>
+    <% } %>
+    <button type="submit" class="btn primary"><%= t('common.save') %></button>
+  </form>
 </div>
