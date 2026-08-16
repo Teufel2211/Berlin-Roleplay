@@ -9,8 +9,6 @@ const TABLES = {
   users: 'eghr_users',
   giveaways: 'eghr_giveaways',
   giveawayParticipants: 'eghr_giveaway_participants',
-  countingStats: 'eghr_counting_stats',
-  countingState: 'eghr_counting_state',
   applications: 'eghr_applications',
   tickets: 'eghr_tickets',
   ticketTypes: 'eghr_ticket_types',

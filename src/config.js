@@ -35,6 +35,8 @@ const DEFAULT_SETTINGS = {
   warteraum_target_channel_id: '',
   interview_channel_id: '',
   interview_pass_threshold: '75',
+  moderation_log_channel_id: '',
+  team_log_channel_id: '',
 };
 
 const config = {

@@ -31,9 +31,9 @@ const settingsLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 100 });
 const CHANNEL_KEYS = [
   'verify_channel_id', 'verify_rules_channel_id', 'verify_log_channel_id', 'ticket_category_id', 'ticket_panel_channel_id', 'ticket_log_channel_id',
   'application_category_id', 'giveaway_channel_id', 'giveaway_announce_channel_id', 'warteraum_voice_channel_id',
-  'warteraum_target_channel_id', 'interview_channel_id', 'welcome_channel_id', 'moderation_log_channel_id', 'team_log_channel_id',
+  'warteraum_target_channel_id', 'interview_channel_id', 'moderation_log_channel_id', 'team_log_channel_id',
 ];
-const ROLE_KEYS = ['staff_roles', 'admin_roles', 'verified_roles', 'warteraum_roles', 'giveaway_required_roles', 'welcome_auto_roles'];
+const ROLE_KEYS = ['staff_roles', 'admin_roles', 'verified_roles', 'warteraum_roles', 'giveaway_required_roles'];
 
 const LABELS = {
   staff_roles: 'Staff-Rollen', admin_roles: 'Admin-Rollen', verified_roles: 'Verifizierte Rollen', warteraum_roles: 'Warteraum-Rollen',
@@ -41,10 +41,11 @@ const LABELS = {
   ticket_category_id: 'Ticket-Kategorie', ticket_panel_channel_id: 'Ticket-Panel', ticket_log_channel_id: 'Ticket-Log',
   application_category_id: 'Bewerbungs-Kategorie', giveaway_channel_id: 'Giveaway-Kanal', giveaway_announce_channel_id: 'Gewinner-Kanal',
   warteraum_voice_channel_id: 'Warteraum-Voice', warteraum_target_channel_id: 'Ziel-Voice', interview_channel_id: 'Interview-Kanal',
-  welcome_channel_id: 'Willkommens-Kanal', moderation_log_channel_id: 'Moderations-Log', team_log_channel_id: 'Team-Log',
+  moderation_log_channel_id: 'Moderations-Log', team_log_channel_id: 'Team-Log',
   interview_pass_threshold: 'Bestanden ab (Prozent)', verify_dm: 'DM nach Verifizierung',
   verify_min_account_age_days: 'Mindestalter des Discord-Accounts (Tage)',
   giveaway_default_winners: 'Standard-Gewinneranzahl', giveaway_max_tickets: 'Max. Lose pro User',
+  max_open_tickets: 'Max. gleichzeitig offene Tickets', ticket_transcripts_enabled: 'Ticket-Transkripte aktivieren',
 };
 
 const FEATURES = [
@@ -88,6 +89,7 @@ const SETTING_GROUPS = [
   { feature: 'giveaway', id: 'rollen', subgroup: 'Rollen', keys: ['giveaway_required_roles'] },
   { feature: 'giveaway', id: 'verhalten', subgroup: 'Verhalten', keys: ['giveaway_default_winners', 'giveaway_max_tickets'] },
   { feature: 'tickets', id: 'kanale', subgroup: 'Kanäle', keys: ['ticket_category_id', 'ticket_panel_channel_id', 'ticket_log_channel_id'] },
+  { feature: 'tickets', id: 'verhalten', subgroup: 'Verhalten', keys: ['max_open_tickets', 'ticket_transcripts_enabled'] },
   { feature: 'bewerbung', id: 'kanale', subgroup: 'Kanäle', keys: ['application_category_id'] },
   { feature: 'bewerbung', id: 'rollen', subgroup: 'Rollen', keys: ['application_role_id'] },
   { feature: 'bewerbung', id: 'verhalten', subgroup: 'Verhalten', keys: ['application_cooldown_days', 'application_staff_ping', 'application_questions'] },
@@ -116,6 +118,7 @@ const FEATURE_SECTIONS = {
     { id: 'liste', label: 'Offene Tickets', kind: 'content' },
     { id: 'typen', label: 'Ticket-Typen', kind: 'content' },
     { id: 'kanale', label: 'Kanäle', kind: 'settings' },
+    { id: 'verhalten', label: 'Verhalten', kind: 'settings' },
   ],
   bewerbung: [
     { id: 'liste', label: 'Bewerbungen', kind: 'content' },

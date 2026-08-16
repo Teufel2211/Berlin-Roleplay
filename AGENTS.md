@@ -20,8 +20,8 @@ One Node.js process (`discord.js` v14, CommonJS) runs both the Discord bot and a
 │   ├── logger.js             # Winston logger -> logs/app.log
 │   ├── supabase.js           # Supabase client, TABLES map (eghr_ prefix), withRetry
 │   ├── discord/              # client, deploy, embeds, helpers, events
-│   ├── commands/             # verify, warteraum, giveaway, counting, application, ticket, admin
-│   ├── services/             # per-feature DB/domain logic (verify, warteraum, counting, giveaway, application, ticket, settings, audit)
+│   ├── commands/             # verify, warteraum, giveaway, application, ticket, admin
+│   ├── services/             # per-feature DB/domain logic (verify, warteraum, giveaway, application, ticket, settings, audit)
 │   └── web/                  # server, auth, settings/audit routes, views (EJS), public/css
 ├── scripts/                  # migrate.js, setup.js, deploy.js, lint.js
 ├── supabase/migrations/      # 001_init.sql (schema + default settings)
@@ -46,7 +46,7 @@ npm start         # Starts bot + dashboard (reads .env)
 # Conventions
 
 - All embeds and bot messages are **German**; footer: `Emergency Hamburg Roleplay • <Server-Name>`.
-- Slash commands: `/verify`, `/warteraum`, `/giveaway`, `/counting`, `/bewerbung`, `/bewerbung-verwalten`, `/ticket`, `/admin`.
+- Slash commands: `/verify`, `/warteraum`, `/giveaway`, `/bewerbung`, `/bewerbung-verwalten`, `/ticket`, `/admin`.
 - Roles are configurable via settings keys (`staff_role`, `admin_role`, `warteraum_role`, ...); Staff = moderator, Admin = admin.
 - All tables/queries use the `eghr_` prefix (defined once in `src/supabase.js`).
 - `MASTERPROMPT.md` is the behavioral source of truth. If spec and code diverge, ask before changing either.

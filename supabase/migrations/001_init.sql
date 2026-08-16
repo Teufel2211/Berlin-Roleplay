@@ -52,22 +52,6 @@ create table if not exists public.eghr_giveaway_participants (
   primary key (giveaway_id, discord_id)
 );
 
-create table if not exists public.eghr_counting_stats (
-  guild_id text not null,
-  discord_id text not null,
-  count bigint default 0,
-  wrong_counts bigint default 0,
-  primary key (guild_id, discord_id)
-);
-
-create table if not exists public.eghr_counting_state (
-  guild_id text primary key,
-  current_number bigint default 0,
-  last_user_id text,
-  streak integer default 0,
-  best_streak integer default 0
-);
-
 create table if not exists public.eghr_applications (
   id bigint generated always as identity primary key,
   guild_id text not null,
@@ -163,8 +147,6 @@ alter table public.eghr_warteraum enable row level security;
 alter table public.eghr_users enable row level security;
 alter table public.eghr_giveaways enable row level security;
 alter table public.eghr_giveaway_participants enable row level security;
-alter table public.eghr_counting_stats enable row level security;
-alter table public.eghr_counting_state enable row level security;
 alter table public.eghr_applications enable row level security;
 alter table public.eghr_tickets enable row level security;
 alter table public.eghr_ticket_transcripts enable row level security;

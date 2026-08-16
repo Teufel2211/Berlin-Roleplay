@@ -12,7 +12,7 @@
 
 Ein einziger **Node.js-Prozess**, der drei Aufgaben erfüllt:
 
-1. **Discord-Bot** (discord.js v14) mit den Modulen: Verifizierung (Button), Warteraum (Voice-Queue), Giveaway, Counting, Bewerbung, Ticket-Support.
+1. **Discord-Bot** (discord.js v14) mit den Modulen: Verifizierung (Button), Warteraum (Voice-Queue), Giveaway, Bewerbung, Ticket-Support.
 2. **Website-Dashboard** (Express, serverseitig gerenderte Seiten): Statistiken, offene Tickets/Bewerbungen, Verifizierungs-Status **und zentrale Einstellungsverwaltung**.
 
 Bot und Website laufen im **selben Prozess** auf demselben Port und teilen sich eine **Supabase-Datenbank (PostgreSQL)**.
@@ -28,13 +28,13 @@ Bot und Website laufen im **selben Prozess** auf demselben Port und teilen sich 
 | Migrationen | SQL-Dateien in `supabase/migrations/`, angewendet per `npm run migrate` |
 | Slash-Kommandos | Discord-Interactions, registriert per `REST` bei Start und per Deploy-Skript |
 | Temporäre Dateien | `data/` (nur Ticket-Transkripte), `logs/` (Logs) |
-| Konfiguration | **Secrets in `.env`**, alle übrigen Einstellungen in der Supabase-`settings`-Tabelle, verwaltet im Dashboard (Kapitel 3, 12) |
+| Konfiguration | **Secrets in `.env`**, alle übrigen Einstellungen in der Supabase-`settings`-Tabelle, verwaltet im Dashboard (Kapitel 3, 11) |
 
 **Pakete (package.json, verbindlich):** `discord.js`, `express`, `@supabase/supabase-js`, `dotenv`, `node-fetch@2` (oder globales `fetch` in Node 20+), `winston` (Logging), `ejs` (Templates), `cookie-parser`/`express-session` (Session), `helmet` (Security-Header), `express-rate-limit` (Rate-Limiting, auch für Login), `bcryptjs` (Passwort-Hashing). Keine weiteren Abhängigkeiten ohne Notwendigkeit.
 
 ### 1.3 Rollen im Discord-Server
 
-Konfigurierbar **über das Dashboard** (Supabase-`settings`-Tabelle, Kapitel 3.1 + 12). Beispielnamen:
+Konfigurierbar **über das Dashboard** (Supabase-`settings`-Tabelle, Kapitel 3.1 + 11). Beispielnamen:
 
 | Einstellungs-Key | Zweck |
 |---|---|
@@ -65,14 +65,13 @@ projekt-root/
 │   ├── discord/
 │   │   ├── client.js     # Discord-Client-Setup, Login, Ready-Logik
 │   │   ├── deploy.js     # Registriert alle Slash-Kommandos (REST)
-│   │   ├── embeds.js     # Zentrale Embed-Builder (Design, siehe Kapitel 13)
+│   │   ├── embeds.js     # Zentrale Embed-Builder (Design, siehe Kapitel 12)
 │   │   ├── helpers.js    # Rollen-Suche, Kanal-Suche, Berechtigungs-Check
-│   │   └── events.js     # ready, messageCreate (Counting), guildMemberAdd/Remove
+│   │   └── events.js     # ready, messageCreate, guildMemberAdd/Remove
 │   ├── commands/
 │   │   ├── verify.js         # /verify panel, /verify status, /verify entfernen
 │   │   ├── warteraum.js      # /warteraum hinzufügen, /warteraum liste, /warteraum raus
 │   │   ├── giveaway.js       # /giveaway starten, enden, verlängern, neu, teilnehmer, abbrechen, liste
-│   │   ├── counting.js       # /counting leaderboard, stats, set, ziel, reset
 │   │   ├── application.js    # /bewerbung, /bewerbung schließen, /bewerbung liste
 │   │   ├── ticket.js         # /ticket panel, claim, unclaim, schließen, hinzufügen
 │   │   └── admin.js          # /setup, /rollen, /dashboard url
@@ -81,7 +80,6 @@ projekt-root/
 │   │   ├── settingsService.js   # Cache-gepufferter Zugriff auf die settings-Tabelle (Kapitel 3.1)
 │   │   ├── warteraumService.js  # Queue-Logik (Reihenfolge, Voice-Verschiebung)
 │   │   ├── giveawayService.js   # Gewinner-Ziehung, Ablauf-Check, Teilnehmer-Verwaltung
-│   │   ├── countingService.js   # Zähl-Logik, Meilensteine, Streak, Leaderboard
 │   │   ├── applicationService.js# Bewerbungs-Formular, Cooldown, Abstimmung
 │   │   ├── ticketService.js     # Ticket-Erstellung, Claim, Transkripte
 │   │   └── auditService.js      # Schreibt audit_log-Einträge (einheitlich)
@@ -115,8 +113,8 @@ projekt-root/
 ### 3.1 Grundprinzip (verbindlich)
 
 - **`.env` enthält NUR Secrets und Basiswerte** (Discord-Token, Supabase-Zugang, Admin-Login).
-- **Alle Rollen, Kanal-IDs und Modul-Optionen** werden in der Supabase-Tabelle **`settings`** (Key-Value) gespeichert und **über das Dashboard unter „Einstellungen"** verwaltet (`/dashboard/settings`). Der Code liest sie ausschließlich über `settingsService` (Kapitel 12).
-- In den Kapiteln 5–10 genannte Namen (`COUNTING_CHANNEL_ID`, …) sind **Einstellungs-Keys** der `settings`-Tabelle, NICHT `.env`-Variablen.
+- **Alle Rollen, Kanal-IDs und Modul-Optionen** werden in der Supabase-Tabelle **`settings`** (Key-Value) gespeichert und **über das Dashboard unter „Einstellungen"** verwaltet (`/dashboard/settings`). Der Code liest sie ausschließlich über `settingsService` (Kapitel 11).
+- In den Kapiteln 5–10 genannte Namen (`VERIFY_CHANNEL_ID`, …) sind **Einstellungs-Keys** der `settings`-Tabelle, NICHT `.env`-Variablen.
 
 ### 3.2 `.env` (nur Secrets)
 
@@ -148,8 +146,6 @@ Diese werden beim `npm run setup` als Defaults eingefügt und sind **im Dashboar
 | `staff_role` | `Staff` | Staff-Rolle (Name) |
 | `admin_role` | `Admin` | Admin-Rolle (Name) |
 | `warteraum_role` | `Warteraum` | Label-Rolle im Warteraum |
-| `counting_channel_id` | *(leer)* | Zähl-Kanal |
-| `counting_decimal` | `false` | Erlaubt Dezimalzahlen (`.`/`,`) |
 | `ticket_category_id` | *(leer)* | Kategorie für Ticket-Kanäle |
 | `ticket_panel_channel_id` | *(leer)* | Kanal mit Ticket-Panel |
 | `ticket_log_channel_id` | *(leer)* | Kanal für Transkript-Log |
@@ -163,9 +159,6 @@ Diese werden beim `npm run setup` als Defaults eingefügt und sind **im Dashboar
 | `warteraum_voice_channel_id` | *(leer)* | Voice-Kanal des Warteraums |
 | `warteraum_target_channel_id` | *(leer)* | Voice-Kanal, in den versetzt wird |
 | `verify_log_channel_id` | *(leer)* | Log-Kanal für Verifizierungen (optional) |
-| `counting_target` | *(leer)* | Zielzahl; bei Erreichen automatischer Reset (leer = unendlich) |
-| `counting_milestones_enabled` | `true` | Meilenstein-Embeds bei 100/500/1000/2500/5000/10.000 an |
-| `counting_milestone_channel_id` | *(leer)* | Kanal für Meilenstein-Embeds (leer = Zähl-Kanal) |
 | `application_cooldown_days` | `30` | Sperrfrist vor erneuter Bewerbung derselben Art (0 = aus) |
 | `application_staff_ping` | `true` | Ping der Staff-Rolle bei neuer Bewerbung |
 | `application_questions` | *(leer)* | Optionales JSON mit eigenen Fragen je Art (Key = Art) |
@@ -217,20 +210,6 @@ create table if not exists public.giveaway_participants (
   primary key (giveaway_id, discord_id)
 );
 
-create table if not exists public.counting_stats (
-  discord_id text primary key,
-  count bigint default 0,
-  wrong_counts bigint default 0
-);
-
-create table if not exists public.counting_state (
-  id boolean primary key default true,
-  current_number bigint default 0,
-  last_user_id text,
-  streak integer default 0,        -- aktuelle korrekte Serie
-  best_streak integer default 0   -- Rekord-Serie
-);
-
 create table if not exists public.applications (
   id bigint generated always as identity primary key,
   discord_id text not null,
@@ -263,7 +242,7 @@ create table if not exists public.ticket_transcripts (
 create table if not exists public.audit_log (
   id bigint generated always as identity primary key,
   actor text,                       -- Discord-Name oder Dashboard-User
-  action text not null,             -- z.B. settings.update, giveaway.abort, counting.reset, login.fail
+  action text not null,             -- z.B. settings.update, giveaway.abort, login.fail
   detail jsonb,                     -- Kontext (geänderte Keys, Werte, IP)
   created_at timestamptz default now()
 );
@@ -280,7 +259,7 @@ create table if not exists public.settings (
 - `answers`/`detail` als `jsonb` (nicht als Text).
 - `settings`-Defaults siehe Kapitel 3.3 (`INSERT ... ON CONFLICT DO NOTHING` in der Migration).
 - **Sicherer Datenzugriff (verbindlich):** Alle DB-Zugriffe ausschließlich über den `@supabase/supabase-js`-Query-Builder (parametrisiert). **Niemals** SQL-Strings durch String-Interpolation mit Nutzer- oder Formular-Eingaben bauen.
-- **Audit-Pflicht:** `audit_log` wird bei allen sicherheitsrelevanten Aktionen beschrieben: Settings-Änderungen (welche Keys, vorher/nachher), Login-Erfolg/-Fehler, `counting reset`, `giveaway abbrechen/enden`, Ticket schließen, `/verify entfernen`.
+- **Audit-Pflicht:** `audit_log` wird bei allen sicherheitsrelevanten Aktionen beschrieben: Settings-Änderungen (welche Keys, vorher/nachher), Login-Erfolg/-Fehler, `giveaway abbrechen/enden`, Ticket schließen, `/verify entfernen`.
 
 ---
 
@@ -288,7 +267,7 @@ create table if not exists public.settings (
 
 ### Ablauf (verbindlich)
 
-1. Der Admin postet das Panel mit `/verify panel` im Kanal `settings.verify_channel_id`. Alternativ wird das Panel beim Setup einmalig automatisch gepostet (Einrichtung, Kapitel 14).
+1. Der Admin postet das Panel mit `/verify panel` im Kanal `settings.verify_channel_id`. Alternativ wird das Panel beim Setup einmalig automatisch gepostet (Einrichtung, Kapitel 13).
 2. Das Panel ist ein Embed mit Titel „**Verifizierung**", kurzer Beschreibung („Klicke auf ✅, um dich als Mitglied zu verifizieren") und einem Button **✅ Verifizieren**.
 3. Klickt ein nicht verifiziertes Mitglied auf den Button:
    - **Stufe 1 (Regeln):** Ist `settings.verify_rules_channel_id` gesetzt und hat der Kanal mindestens eine Nachricht, zeigt der Bot die neueste Nachricht des Kanals (Inhalt oder Embed-Beschreibungen) als ephemerales Embed mit Button **✅ Regeln akzeptieren**. Der Button ist nur 60 Sekunden gültig und nur für den startenden Nutzer ausführbar. Fehlt der Kanal oder ist er leer, wird diese Stufe übersprungen (mit Log-Warnung bei unlesbarem Kanal).
@@ -414,39 +393,7 @@ create table if not exists public.settings (
 
 ---
 
-## 8. Modul: Counting (Zähl-Kanal)
-
-### Verhalten (verbindlich)
-
-1. Im Kanal `settings.counting_channel_id` zählen Mitglieder **nur Zahlen** in aufsteigender Reihenfolge (1, 2, 3, …).
-2. Regeln:
-   - Nur ein Kanal, nur Zahlen (eine Zahl pro Nachricht). Dezimalzahlen nur, wenn `settings.counting_decimal = true` (Standard: nur Ganzzahlen).
-   - Ein Benutzer darf **nicht zweimal hintereinander** zählen.
-   - Falsche Zahl, doppeltes Zählen oder Nicht-Zahl → **Countdown-Reset auf 0**, `streak` wird zurückgesetzt, `wrong_counts` des Benutzers wird erhöht; Bot postet: „❌ `{User}` hat `{Wert}` gesagt — der Zähler ist zurück auf 0."
-   - Richtige Zahl → kein Bot-Spam; optional reagiert der Bot mit ✔ (React).
-3. Der aktuelle Zählerstand wird in `counting_state` persistiert (Neustart-sicher), inkl. `streak` und `best_streak` (Rekord-Serie). Bei jedem korrekten Beitrag: `streak` +1 und bei Überschreitung `best_streak` aktualisieren.
-4. **Zielzahl:** Ist `settings.counting_target` gesetzt (z.B. `1000`) und die Zahl erreicht, postet der Bot ein Erfolgs-Embed („🎉 Ziel `X` erreicht!") und setzt den Zähler zurück auf 0 (Neustart des Counts). Bei einem Fehler wird zusätzlich gepostet, wie weit es bis zum Ziel war.
-5. **Meilensteine:** Wenn `settings.counting_milestones_enabled = true`, postet der Bot bei den Schwellen 100, 500, 1000, 2500, 5000 und 10.000 (sowie jedem weiteren Vielfachen von 10.000) ein Meilenstein-Embed („🎯 `X` erreicht!") in `settings.counting_milestone_channel_id` (leer = Zähl-Kanal). Pro Schwelle nur einmal.
-6. `/counting leaderboard` — Top 10 nach `counting_stats.count`.
-7. `/counting stats [@user]` — eigener oder gewählter User: korrekte Beiträge, falsche Beiträge, aktuelle Serie, Rekord-Serie.
-8. `/counting set <zahl>` *(Admin)* — setzt den Zählerstand manuell (z.B. nach Fehlbedienung); schreibt `audit_log`.
-9. `/counting ziel set <zahl>` / `/counting ziel aus` *(Admin)* — setzt/entfernt die Zielzahl (`counting_target`), schreibt `audit_log`.
-10. `/counting reset` *(Admin)* — setzt Zähler zurück, schreibt `audit_log`.
-11. Jeder korrekte Beitrag erhöht `counting_stats` des Benutzers.
-
-### Settings
-
-| Key | Default | Zweck |
-|---|---|---|
-| `counting_channel_id` | *(leer)* | Zähl-Kanal |
-| `counting_decimal` | `false` | Erlaubt Dezimalzahlen (`.`/`,`) |
-| `counting_target` | *(leer)* | Zielzahl; bei Erreichen automatischer Reset (leer = unendlich) |
-| `counting_milestones_enabled` | `true` | Meilenstein-Embeds an |
-| `counting_milestone_channel_id` | *(leer)* | Kanal für Meilensteine (leer = Zähl-Kanal) |
-
----
-
-## 9. Modul: Bewerbung (Application)
+## 8. Modul: Bewerbung (Application)
 
 ### Verhalten (verbindlich)
 
@@ -459,7 +406,7 @@ create table if not exists public.settings (
 6. Ist `settings.application_staff_ping = true`, pingt der Bot zusätzlich die Staff-Rolle (`settings.staff_role`) als neue-Bewerbung-Benachrichtigung (einmalig, nur im Kanal).
 7. Button „Annehmen" → Embed wird grün/„Angenommen", Status in DB, **`settings.application_role_id` wird dem Bewerber vergeben** (falls konfiguriert), Bewerber-DM mit Glückwunsch, Kanal bleibt als Archiv. Danach zeigt das Embed nur noch den Button „🎤 Interview starten".
 8. Button „Ablehnen" → Embed rot/„Abgelehnt", Bewerber-DM (sachlich), Kanal archiviert, alle Buttons entfernt.
-9. Button „🎤 Interview starten" *(nur Staff, nur bei Status `angenommen`)* → startet ein **Interview** für den Bewerber (siehe Kapitel 10, `eghr_interviews`), verknüpft über `eghr_interviews.application_id` mit der Bewerbung. Das Interview wird im konfigurierten Interview-Kanal (`interview_channel_id`) bzw. im aktuellen Kanal gestartet. Nach bestandenem Interview kann Staff den Bewerber im Dashboard über „Ins Team aufnehmen" als Teammitglied übernehmen; dabei werden `application_id` und `interview_id` im Teammitglied gespeichert (Kette Bewerbung → Interview → Team).
+9. Button „🎤 Interview starten" *(nur Staff, nur bei Status `angenommen`)* → startet ein **Interview** für den Bewerber (siehe Kapitel 9, `eghr_interviews`), verknüpft über `eghr_interviews.application_id` mit der Bewerbung. Das Interview wird im konfigurierten Interview-Kanal (`interview_channel_id`) bzw. im aktuellen Kanal gestartet. Nach bestandenem Interview kann Staff den Bewerber im Dashboard über „Ins Team aufnehmen" als Teammitglied übernehmen; dabei werden `application_id` und `interview_id` im Teammitglied gespeichert (Kette Bewerbung → Interview → Team).
 10. `/bewerbung schließen <channel-id>` *(Staff)* — schließt/archiviert manuell (schreibt `audit_log`).
 11. `/bewerbung liste` — Übersicht offener Bewerbungen.
 
@@ -475,7 +422,7 @@ create table if not exists public.settings (
 
 ---
 
-## 10. Modul: Interview
+## 9. Modul: Interview
 
 ### Ablauf (verbindlich)
 
@@ -505,7 +452,7 @@ create table if not exists public.settings (
 
 ---
 
-## 11. Modul: Ticket-Support
+## 10. Modul: Ticket-Support
 
 ### Verhalten (verbindlich)
 
@@ -550,7 +497,7 @@ Ein offenes Ticket speichert `type_id` (FK auf `eghr_ticket_types`, `on delete s
 
 ---
 
-## 12. Website-Dashboard
+## 11. Website-Dashboard
 
 ### 11.1 Allgemein
 
@@ -571,7 +518,7 @@ Ein offenes Ticket speichert `type_id` (FK auf `eghr_ticket_types`, `on delete s
 | `/` | Weiterleitung → `/dashboard` |
 | `/dashboard/login` | Login-Formular (mit Lockout-/Fehlermeldung) |
 | `/dashboard` | Kachel-Übersicht: offene Tickets, offene Bewerbungen, laufende Giveaways, Zählerstand, Link zu allen Unterseiten |
-| `/dashboard/settings` | **Einstellungen** — Formular gruppiert nach Modul: Rollen, Kanäle, Warteraum, Counting, Giveaway, Tickets, Bewerbung. Speichern per POST → sofort wirksam + Audit-Eintrag. |
+| `/dashboard/settings` | **Einstellungen** — Formular gruppiert nach Modul: Rollen, Kanäle, Warteraum, Giveaway, Tickets, Bewerbung. Speichern per POST → sofort wirksam + Audit-Eintrag. |
 | `/dashboard/audit` | **Audit-Log** — letzte 200 Einträge (Zeit, Akteur, Aktion, Details), filterbar nach Aktion |
 | `/dashboard/tickets` | Offene + geschlossene Tickets (Status, Owner, Claimed-by, Grund, Kanal-Link, Zeit) |
 | `/dashboard/tickets/<id>` | **Transkript-Ansicht** eines geschlossenen Tickets (nur wenn `ticket_transcripts_enabled`) |
@@ -587,7 +534,7 @@ Ein offenes Ticket speichert `type_id` (FK auf `eghr_ticket_types`, `on delete s
 
 ---
 
-## 13. Embed-Design (einheitlich, alle Module nutzen es)
+## 12. Embed-Design (einheitlich, alle Module nutzen es)
 
 **Zentrale Builder in `embeds.js`, alle Module nutzen sie.**
 
@@ -644,7 +591,7 @@ Host: <@host>
 
 ---
 
-## 14. Einrichtung, Fehlerbehandlung, Sicherheit
+## 13. Einrichtung, Fehlerbehandlung, Sicherheit
 
 ### 13.1 Einrichtung (Schritt für Schritt)
 
@@ -686,7 +633,7 @@ Host: <@host>
 
 ---
 
-## 15. Modul: Willkommen (Willkommensnachricht)
+## 14. Modul: Willkommen (Willkommensnachricht)
 
 ### Ablauf (verbindlich)
 
@@ -726,7 +673,7 @@ Host: <@host>
 
 ---
 
-## 16. Abnahmekriterien (Definition of Done)
+## 15. Abnahmekriterien (Definition of Done)
 
 Der Bot gilt als fertig, wenn alle Punkte erfüllt sind:
 
@@ -735,25 +682,24 @@ Der Bot gilt als fertig, wenn alle Punkte erfüllt sind:
 - [ ] Dashboard: Login funktioniert (mit bcrypt-Hash + Lockout); unter **Einstellungen** sind Rollen und Kanal-IDs änderbar und werden **sofort** wirksam (kein `.env`-Edit nötig); jede Änderung erscheint im Audit-Log.
 - [ ] Warteraum-Queue: Hinzufügen, Liste, Weiter, Raus funktionieren; Voice-Verschiebung funktioniert.
 - [ ] Giveaway: Start, Teilnahme (optional mit Rollen-Pflicht), Zeitablauf, Gewinner-Ziehung (Host/Bot ausgeschlossen, ohne Zurücklegen), Gewinner-DM, Verlängern, Teilnehmerliste, Neu-Ziehung, Abbrechen; Neustart-sicher.
-- [ ] Counting: korrektes Zählen, Reset bei Fehler (mit `wrong_counts` + `streak`), Meilensteine, Zielzahl, `set`, Leaderboard, Neustart-sicher.
 - [ ] Bewerbung: Modal öffnet (ggf. eigene Fragen), Cooldown greift, Kanal wird erstellt, Staff-Ping, Annehmen/Ablehnen funktioniert.
 - [ ] Ticket: Panel-Button öffnet Kanal, Claim/Unclaim, Transkript (Datei + DB), Schließen löscht Kanal.
 - [ ] Alle Seiten + `/api/settings` + `/api/audit` laden; Daten kommen aus Supabase.
-- [ ] Alle Embeds folgen dem Design in Kapitel 13 (Farben, Footer, Deutsch).
+- [ ] Alle Embeds folgen dem Design in Kapitel 12 (Farben, Footer, Deutsch).
 - [ ] Keine Token/Geheimnisse in Logs oder Repo; Service-Role-Key nie im Client; Dashboard-Passwort nur als Hash.
 - [ ] Audit-Log wird bei Settings-Änderungen, Login und Resets geschrieben.
 
 ---
 
-## 17. Hinweise an die ausführende KI
+## 16. Hinweise an die ausführende KI
 
-1. **Vollständigkeit:** Alle Module in Kapitel 5–11 umsetzen. Kein Modul weglassen.
+1. **Vollständigkeit:** Alle Module in Kapitel 5–10 umsetzen. Kein Modul weglassen.
 2. **Dateistruktur:** Genau der Struktur in Kapitel 2 folgen. Jede Datei klar benennen.
 3. **Kommentare:** Kurze, deutsche Kommentare nur wo nicht offensichtlich.
 4. **Code-Stil:** Modernes, sauberes JavaScript (ES2022, CommonJS), `async/await`, try/catch um alle I/O-Operationen.
 5. **Konfiguration:** Nur die Secrets aus Kapitel 3.2 müssen in `.env` stehen; **alle** Rollen/Kanäle/Moduleinstellungen liest der Code über `settingsService` aus der Supabase-`settings`-Tabelle (Kapitel 3.3). Der Code darf ohne gesetzte Pflichtsecrets nicht crashen (Warnung + Weiterlauf), Ausnahme: `DISCORD_TOKEN`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` → sauberer Abbruch mit Anleitung.
 6. **Testbarkeit:** Befehle sollen ohne echte Events testbar sein (`scripts/setup.js`).
-7. **Sicherheit zuerst:** Security-Vorgaben aus Kapitel 14.3 sind verbindlich (bcrypt, Rate-Limit, CSRF, parametrisierte Queries, EJS-Escaping, Audit-Log). Fehlende Vorgaben nicht „einfach so" weglassen.
+7. **Sicherheit zuerst:** Security-Vorgaben aus Kapitel 13.3 sind verbindlich (bcrypt, Rate-Limit, CSRF, parametrisierte Queries, EJS-Escaping, Audit-Log). Fehlende Vorgaben nicht „einfach so" weglassen.
 8. **Diese Datei ist die einzige Referenz.** Bei scheinbarem Widerspruch: diese Datei gewinnt.
 
 ---
