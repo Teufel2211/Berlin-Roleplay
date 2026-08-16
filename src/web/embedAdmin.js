@@ -1,11 +1,18 @@
 const { ActionRowBuilder, ButtonBuilder } = require('discord.js');
 const { getClient, TABLES, withRetry } = require('../supabase');
+const { config } = require('../config');
 const logger = require('../logger');
 const auditService = require('../services/auditService');
 const discordApi = require('./discordApi');
 
 const BUTTON_STYLES = { primary: 1, secondary: 2, success: 3, danger: 4, link: 5 };
 const DEFAULT_COLOR = 0xe8453c;
+
+function assertDiscordToken() {
+  if (!config.discordToken) {
+    throw new Error('Discord-Bot-Token fehlt in Vercel. Setze DISCORD_TOKEN als Production Environment Variable.');
+  }
+}
 
 function parseColor(value) {
   if (!value) return DEFAULT_COLOR;
@@ -42,7 +49,7 @@ function buildComponents(embedId, buttons) {
     const isLink = style === BUTTON_STYLES.link;
     const b = new ButtonBuilder().setLabel(String(btn.label || '')).setStyle(isLink ? 5 : style >= 1 && style <= 4 ? style : 1);
     if (btn.emoji) {
-      try { b.setEmoji(String(btn.emoji).slice(0, 100)); } catch (err) { /* ignore invalid emoji */ }
+      try { b.setEmoji(String(btn.emoji).slice(0, 100)); } catch (_) {}
     }
     if (isLink) b.setURL(String(btn.url || 'https://example.com'));
     else b.setCustomId(`emb_${embedId}_${i}`);
@@ -56,7 +63,7 @@ function buildComponents(embedId, buttons) {
 function parseData(row) {
   if (!row) return null;
   if (typeof row.data === 'string') {
-    try { return JSON.parse(row.data); } catch (err) { return null; }
+    try { return JSON.parse(row.data); } catch (_) { return null; }
   }
   return row.data || null;
 }
@@ -68,6 +75,7 @@ function normalizeStoredData(row) {
 }
 
 async function postEmbed(row) {
+  assertDiscordToken();
   const data = normalizeStoredData(row);
   const payload = { embeds: [buildEmbed(data)], components: buildComponents(row.id, data.buttons).map((r) => r.toJSON()) };
   const msg = await discordApi.postMessage(row.channel_id, payload);
@@ -76,6 +84,7 @@ async function postEmbed(row) {
 }
 
 async function editEmbed(row) {
+  assertDiscordToken();
   if (!row.message_id) throw new Error('Dieses Embed wurde noch nicht gepostet.');
   const data = normalizeStoredData(row);
   const payload = { embeds: [buildEmbed(data)], components: buildComponents(row.id, data.buttons).map((r) => r.toJSON()) };
@@ -85,12 +94,9 @@ async function editEmbed(row) {
 }
 
 async function deleteMessage(row) {
+  assertDiscordToken();
   if (!row.channel_id || !row.message_id) return;
-  try {
-    await discordApi.deleteMessage(row.channel_id, row.message_id);
-  } catch (err) {
-    logger.warn(`Embed-Nachricht nicht gelöscht: ${err.message}`);
-  }
+  try { await discordApi.deleteMessage(row.channel_id, row.message_id); } catch (err) { logger.warn(`Embed-Nachricht nicht gelöscht: ${err.message}`); }
 }
 
 function collect(body) {
