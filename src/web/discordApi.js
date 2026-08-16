@@ -38,6 +38,34 @@ async function fetchRoles(guildId) {
     .map((r) => ({ id: r.id, name: r.name, position: r.position }));
 }
 
+async function postMessage(channelId, payload) {
+  const res = await fetch(`${OAUTH_BASE}/channels/${channelId}/messages`, {
+    method: 'POST',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(`Nachricht konnte nicht gesendet werden (${res.status})`);
+  return res.json();
+}
+
+async function editMessage(channelId, messageId, payload) {
+  const res = await fetch(`${OAUTH_BASE}/channels/${channelId}/messages/${messageId}`, {
+    method: 'PATCH',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(`Nachricht konnte nicht aktualisiert werden (${res.status})`);
+  return res.json();
+}
+
+async function deleteMessage(channelId, messageId) {
+  const res = await fetch(`${OAUTH_BASE}/channels/${channelId}/messages/${messageId}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error(`Nachricht konnte nicht gelöscht werden (${res.status})`);
+}
+
 async function sendDirectMessage(userId, content) {
   const dm = await fetch(`${OAUTH_BASE}/users/${userId}/channels`, {
     method: 'POST',
@@ -54,4 +82,4 @@ async function sendDirectMessage(userId, content) {
   if (!msg.ok) throw new Error(`DM-Sendung fehlgeschlagen (${msg.status})`);
 }
 
-module.exports = { fetchChannels, fetchRoles, sendDirectMessage };
+module.exports = { fetchChannels, fetchRoles, sendDirectMessage, postMessage, editMessage, deleteMessage };

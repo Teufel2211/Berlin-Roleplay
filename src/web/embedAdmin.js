@@ -1,8 +1,8 @@
 const { ActionRowBuilder, ButtonBuilder } = require('discord.js');
 const { getClient, TABLES, withRetry } = require('../supabase');
-const { client } = require('../discord/client');
 const logger = require('../logger');
 const auditService = require('../services/auditService');
+const discordApi = require('./discordApi');
 
 const BUTTON_STYLES = { primary: 1, secondary: 2, success: 3, danger: 4, link: 5 };
 const DEFAULT_COLOR = 0xe8453c;
@@ -69,8 +69,8 @@ function normalizeStoredData(row) {
 
 async function postEmbed(row) {
   const data = normalizeStoredData(row);
-  const channel = await client.channels.fetch(row.channel_id);
-  const msg = await channel.send({ embeds: [buildEmbed(data)], components: buildComponents(row.id, data.buttons) });
+  const payload = { embeds: [buildEmbed(data)], components: buildComponents(row.id, data.buttons).map((r) => r.toJSON()) };
+  const msg = await discordApi.postMessage(row.channel_id, payload);
   await withRetry(() => getClient().from(TABLES.embeds).update({ message_id: msg.id, data }).eq('id', row.id));
   return msg;
 }
@@ -78,19 +78,16 @@ async function postEmbed(row) {
 async function editEmbed(row) {
   if (!row.message_id) throw new Error('Dieses Embed wurde noch nicht gepostet.');
   const data = normalizeStoredData(row);
-  const channel = await client.channels.fetch(row.channel_id);
-  const msg = await channel.messages.fetch(row.message_id);
-  await msg.edit({ embeds: [buildEmbed(data)], components: buildComponents(row.id, data.buttons) });
+  const payload = { embeds: [buildEmbed(data)], components: buildComponents(row.id, data.buttons).map((r) => r.toJSON()) };
+  await discordApi.editMessage(row.channel_id, row.message_id, payload);
   await withRetry(() => getClient().from(TABLES.embeds).update({ data }).eq('id', row.id));
-  return msg;
+  return { id: row.message_id };
 }
 
 async function deleteMessage(row) {
   if (!row.channel_id || !row.message_id) return;
   try {
-    const channel = await client.channels.fetch(row.channel_id);
-    const msg = await channel.messages.fetch(row.message_id);
-    await msg.delete();
+    await discordApi.deleteMessage(row.channel_id, row.message_id);
   } catch (err) {
     logger.warn(`Embed-Nachricht nicht gelöscht: ${err.message}`);
   }
