@@ -2,6 +2,7 @@ const { ChannelType, PermissionFlagsBits, EmbedBuilder, ModalBuilder, TextInputB
 const { getClient, TABLES, withRetry } = require('../supabase');
 const settingsService = require('./settingsService');
 const auditService = require('./auditService');
+const interviewService = require('./interviewService');
 const embeds = require('../discord/embeds');
 const helpers = require('../discord/helpers');
 const logger = require('../logger');
@@ -158,7 +159,8 @@ async function finalize(session, user, guild) {
   const embed = buildReviewEmbed(guild, session.type, user, session.questions, session.answers, 'offen');
   const buttons = helpers.row(
     helpers.successButton(`app_accept_${row.id}`, 'Annehmen', '👍'),
-    helpers.dangerButton(`app_reject_${row.id}`, 'Ablehnen', '👎')
+    helpers.dangerButton(`app_reject_${row.id}`, 'Ablehnen', '👎'),
+    helpers.primaryButton(`app_interview_${row.id}`, 'Interview starten', '🎤')
   );
   const msg = await channel.send({ embeds: [embed], components: [buttons] });
   await withRetry(() => getClient().from(TABLES.applications).update({ message_id: msg.id }).eq('id', row.id));
@@ -220,7 +222,8 @@ async function handleDecisionButton(interaction) {
     try {
       const msg = await channel.messages.fetch(row.message_id);
       const embed = buildReviewEmbed(guild, row.type, user, questions, answers, newStatus);
-      await msg.edit({ embeds: [embed], components: [] });
+      const components = accepted ? [helpers.row(helpers.primaryButton(`app_interview_${row.id}`, 'Interview starten', '🎤'))] : [];
+      await msg.edit({ embeds: [embed], components });
     } catch (err) { logger.warn(`Bewerbungs-Embed nicht aktualisiert: ${err.message}`); }
   }
 
@@ -235,6 +238,33 @@ async function handleDecisionButton(interaction) {
 
   await auditService.log(gid, interaction.user.tag, `application.${newStatus}`, { id: row.id, type: row.type });
   return interaction.reply({ embeds: [embeds.success(accepted ? 'Angenommen' : 'Abgelehnt', `Bewerbung von <@${row.discord_id}> wurde ${accepted ? 'angenommen' : 'abgelehnt'}.`, guild)], ephemeral: true });
+}
+
+async function handleInterviewButton(interaction) {
+  const guild = interaction.guild;
+  const gid = guild.id;
+  const settings = await settingsService.getAll(gid);
+  if (!helpers.isGuildModerator(interaction.member, settings)) {
+    return interaction.reply({ embeds: [embeds.error('Keine Berechtigung', 'Nur Staff kann ein Interview starten.', guild)], ephemeral: true });
+  }
+
+  const id = Number(interaction.customId.split('_')[2]);
+  const { data: row } = await withRetry(() =>
+    getClient().from(TABLES.applications).select('*').eq('id', id).maybeSingle()
+  );
+  if (!row || row.guild_id !== gid) {
+    return interaction.reply({ embeds: [embeds.error('Nicht gefunden', 'Die Bewerbung existiert nicht mehr.', guild)], ephemeral: true });
+  }
+  if (row.status !== 'angenommen') {
+    return interaction.reply({ embeds: [embeds.error('Noch nicht angenommen', 'Ein Interview kann nur für angenommene Bewerbungen gestartet werden.', guild)], ephemeral: true });
+  }
+
+  const member = await guild.members.fetch(row.discord_id).catch(() => null);
+  if (!member) {
+    return interaction.reply({ embeds: [embeds.error('Nicht im Server', 'Der Bewerber ist nicht mehr auf diesem Server.', guild)], ephemeral: true });
+  }
+
+  return interviewService.startInterview(interaction, member.user, null, row.id);
 }
 
 async function close(interaction, channelId) {
@@ -269,4 +299,4 @@ async function list(interaction) {
   return interaction.reply({ embeds: [embeds.info('📝 Offene Bewerbungen', lines.join('\n'), guild)], ephemeral: true });
 }
 
-module.exports = { APPLICATION_TYPES, startDmFlow, handleDmMessage, handleDecisionButton, close, list, getQuestions, buildReviewEmbed };
+module.exports = { APPLICATION_TYPES, startDmFlow, handleDmMessage, handleDecisionButton, handleInterviewButton, close, list, getQuestions, buildReviewEmbed };

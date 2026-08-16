@@ -57,7 +57,6 @@ const FEATURES = [
   { id: 'bewerbung', name: 'Bewerbung', icon: '📝' },
   { id: 'interview', name: 'Interview', icon: '🎤' },
   { id: 'team', name: 'Team-System', icon: '👥' },
-  { id: 'calendar', name: 'Kalender', icon: '📅' },
   { id: 'embeds', name: 'Embed-Builder', icon: '🖼️' },
   { id: 'audit', name: 'Audit-Log', icon: '📋' },
 ];
@@ -138,9 +137,9 @@ const FEATURE_SECTIONS = {
     { id: 'abteilungen', label: 'Abteilungen', kind: 'content' },
     { id: 'raenge', label: 'Ränge', kind: 'content' },
     { id: 'abwesenheiten', label: 'Abwesenheiten', kind: 'content' },
+    { id: 'termine', label: 'Termine', kind: 'content' },
     { id: 'protokoll', label: 'Protokoll', kind: 'settings' },
   ],
-  calendar: [{ id: 'termine', label: 'Termine', kind: 'content' }],
   moderation: [
     { id: 'faelle', label: 'Fälle', kind: 'content' },
     { id: 'protokoll', label: 'Protokoll', kind: 'settings' },
@@ -230,8 +229,7 @@ function createApp() {
     if (feature.id === 'giveaway') { const { data: giveaways } = await getClient().from(TABLES.giveaways).select('*').eq('guild_id', gid).eq('ended', false).order('ends_at', { ascending: true }).limit(50); return res.render('server', { ...base, data: { ...sdata, giveaways: giveaways || [] } }); }
     if (feature.id === 'embeds') { const { data: embeds } = await getClient().from(TABLES.embeds).select('*').eq('guild_id', gid).order('created_at', { ascending: false }).limit(100); let edit = null; if (req.query.edit) { const { data: row } = await getClient().from(TABLES.embeds).select('*').eq('id', Number(req.query.edit)).eq('guild_id', gid).maybeSingle(); edit = row || null; } return res.render('server', { ...base, data: { ...sdata, embeds: embeds || [], edit } }); }
     if (feature.id === 'interview') { const [results, questions] = await Promise.all([interviewService.getResults(gid), interviewService.getQuestions(gid)]); return res.render('server', { ...base, data: { ...sdata, results, questions } }); }
-    if (feature.id === 'team') { const [members, ranks, departments, absences] = await Promise.all([teamService.listMembers(gid), teamService.listRanks(gid), teamService.listDepartments(gid), teamService.listAbsences(gid)]); return res.render('server', { ...base, data: { ...sdata, members, ranks, departments, absences } }); }
-    if (feature.id === 'calendar') return res.render('server', { ...base, data: { ...sdata, events: await teamService.listEvents(gid) } });
+    if (feature.id === 'team') { const [members, ranks, departments, absences, events] = await Promise.all([teamService.listMembers(gid), teamService.listRanks(gid), teamService.listDepartments(gid), teamService.listAbsences(gid), teamService.listEvents(gid)]); return res.render('server', { ...base, data: { ...sdata, members, ranks, departments, absences, events } }); }
     if (feature.id === 'moderation' || feature.id === 'security') return res.render('server', { ...base, data: { ...sdata, cases: await moderationService.getCases(gid) } });
     if (feature.id === 'welcome') return res.render('server', { ...base, data: { ...sdata, config: await welcomeService.getConfig(gid) } });
     if (feature.id === 'audit') { const { data: entries } = await getClient().from(TABLES.auditLog).select('*').eq('guild_id', gid).order('created_at', { ascending: false }).limit(200); return res.render('server', { ...base, data: { ...sdata, entries: entries || [] } }); }

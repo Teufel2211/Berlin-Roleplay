@@ -446,12 +446,13 @@ create table if not exists public.settings (
 2. **DM-Ablauf:** Der User antwortet per DM auf jede Frage. Nach jeder Antwort sendet der Bot die nächste Frage. Das Wort `abbrechen` bricht den Flow ab. Nach der letzten Antwort wird die Bewerbung gespeichert.
 3. **Cooldown:** Ein User kann sich pro Art nur einmal innerhalb von `settings.application_cooldown_days` (Standard 30) erneut bewerben. Bei Verstoß: Hinweis-Embed mit Restzeit, kein DM-Flow wird gestartet.
 4. Nach Abschluss des DM-Flows wird in `settings.application_category_id` ein privater Kanal pro Bewerbung erstellt (Name: `bewerbung-<art>-<kurzid>`), nur der Bewerber + Staff sehen ihn.
-5. Der Bot postet ein **Review-Embed** mit allen Antworten (eine Zeile/Feld je Frage) + zwei Buttons: **👍 Annehmen** und **👎 Ablehnen** *(nur Staff)*. Embed-Farbe: offen = Info-Blau, angenommen = Grün, abgelehnt = Rot; Footer mit Server-Name + Timestamp.
+5. Der Bot postet ein **Review-Embed** mit allen Antworten (eine Zeile/Feld je Frage) + drei Buttons: **👍 Annehmen**, **👎 Ablehnen** und **🎤 Interview starten** *(nur Staff)*. Embed-Farbe: offen = Info-Blau, angenommen = Grün, abgelehnt = Rot; Footer mit Server-Name + Timestamp.
 6. Ist `settings.application_staff_ping = true`, pingt der Bot zusätzlich die Staff-Rolle (`settings.staff_role`) als neue-Bewerbung-Benachrichtigung (einmalig, nur im Kanal).
-7. Button „Annehmen" → Embed wird grün/„Angenommen", Status in DB, **`settings.application_role_id` wird dem Bewerber vergeben** (falls konfiguriert), Bewerber-DM mit Glückwunsch, Kanal bleibt als Archiv.
-8. Button „Ablehnen" → Embed rot/„Abgelehnt", Bewerber-DM (sachlich), Kanal archiviert.
-9. `/bewerbung schließen <channel-id>` *(Staff)* — schließt/archiviert manuell (schreibt `audit_log`).
-10. `/bewerbung liste` — Übersicht offener Bewerbungen.
+7. Button „Annehmen" → Embed wird grün/„Angenommen", Status in DB, **`settings.application_role_id` wird dem Bewerber vergeben** (falls konfiguriert), Bewerber-DM mit Glückwunsch, Kanal bleibt als Archiv. Danach zeigt das Embed nur noch den Button „🎤 Interview starten".
+8. Button „Ablehnen" → Embed rot/„Abgelehnt", Bewerber-DM (sachlich), Kanal archiviert, alle Buttons entfernt.
+9. Button „🎤 Interview starten" *(nur Staff, nur bei Status `angenommen`)* → startet ein **Interview** für den Bewerber (siehe Kapitel 8, `eghr_interviews`), verknüpft über `eghr_interviews.application_id` mit der Bewerbung. Das Interview wird im konfigurierten Interview-Kanal (`interview_channel_id`) bzw. im aktuellen Kanal gestartet. Nach bestandenem Interview kann Staff den Bewerber im Dashboard über „Ins Team aufnehmen" als Teammitglied übernehmen; dabei werden `application_id` und `interview_id` im Teammitglied gespeichert (Kette Bewerbung → Interview → Team).
+10. `/bewerbung schließen <channel-id>` *(Staff)* — schließt/archiviert manuell (schreibt `audit_log`).
+11. `/bewerbung liste` — Übersicht offener Bewerbungen.
 
 ### Settings
 

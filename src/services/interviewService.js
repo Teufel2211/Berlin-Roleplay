@@ -90,7 +90,7 @@ async function getInterview(id, guildId) {
   return data || null;
 }
 
-async function startInterview(interaction, target, channel) {
+async function startInterview(interaction, target, channel, applicationId = null) {
   const guild = interaction.guild;
   const gid = guild.id;
   const settings = await settingsService.getAll(gid);
@@ -103,7 +103,7 @@ async function startInterview(interaction, target, channel) {
   const targetChannel = guild.channels.cache.get(channelId) || interaction.channel;
   if (!targetChannel || !targetChannel.isTextBased()) return interaction.reply({ embeds: [embeds.error('Kein Kanal', 'Der angegebene Kanal ist kein Textkanal.', guild)], flags: MessageFlags.Ephemeral });
 
-  const { data: row } = await withRetry(() => getClient().from(TABLES.interviews).insert({ guild_id: gid, applicant_id: target.id, applicant_name: target.tag, status: 'offen', scores: {}, channel_id: targetChannel.id }).select().single());
+  const { data: row } = await withRetry(() => getClient().from(TABLES.interviews).insert({ guild_id: gid, applicant_id: target.id, applicant_name: target.tag, status: 'offen', scores: {}, channel_id: targetChannel.id, application_id: applicationId || null }).select().single());
   if (!row) return interaction.reply({ embeds: [embeds.error('Fehler', 'Das Interview konnte nicht angelegt werden.', guild)], flags: MessageFlags.Ephemeral });
 
   const chunks = chunkQuestions(questions);

@@ -36,7 +36,7 @@
         <%- include('features/_embeds', { data, guildId }) %>
       <% } else if (feature.id === 'audit') { %>
         <%- include('features/_audit', { data, guildId }) %>
-      <% } else if (['team','calendar','moderation','security','welcome'].includes(feature.id)) { %>
+      <% } else if (['team','moderation','security','welcome'].includes(feature.id)) { %>
         <%- include('features/_management', { data, guildId, feature, csrf }) %>
       <% } %>
     </div>

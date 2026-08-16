@@ -29,16 +29,19 @@ async function handleAction(req, res) {
       }
       if (body.action === 'add_department' && String(body.name || '').trim()) await withRetry(() => getClient().from(TABLES.teamDepartments).insert({ guild_id: guildId, name: String(body.name).trim(), description: String(body.description || '').trim() || null }));
       if (body.action === 'add_rank' && String(body.name || '').trim()) await withRetry(() => getClient().from(TABLES.teamRanks).insert({ guild_id: guildId, name: String(body.name).trim(), discord_role_id: String(body.discord_role_id || '').trim() || null, department_id: body.department_id ? Number(body.department_id) : null }));
+      if (body.action === 'add_event' && String(body.title || '').trim() && body.starts_at) await teamService.createEvent(guildId, { title: String(body.title).trim(), description: String(body.description || '').trim() || null, starts_at: new Date(body.starts_at).toISOString(), ends_at: body.ends_at ? new Date(body.ends_at).toISOString() : null, location: String(body.location || '').trim() || null, created_by: req.session.user.id });
+      if (body.action === 'delete_event' && body.id) await teamService.removeEvent(guildId, Number(body.id));
     }
 
     if (feature === 'interview' && body.action === 'team_intake' && body.discord_id) {
-      await teamService.upsertMember(guildId, String(body.discord_id), { status: 'aktiv', notes: `Aufgenommen nach bestandenem Interview #${String(body.interview_id || '')}`.trim() });
-      await auditService.log(guildId, req.session.user.tag, 'team.member.intake_from_interview', { discord_id: String(body.discord_id), interview_id: Number(body.interview_id) || null });
-    }
-
-    if (feature === 'calendar') {
-      if (body.action === 'add_event' && String(body.title || '').trim() && body.starts_at) await teamService.createEvent(guildId, { title: String(body.title).trim(), description: String(body.description || '').trim() || null, starts_at: new Date(body.starts_at).toISOString(), ends_at: body.ends_at ? new Date(body.ends_at).toISOString() : null, location: String(body.location || '').trim() || null, created_by: req.session.user.id });
-      if (body.action === 'delete_event' && body.id) await teamService.removeEvent(guildId, Number(body.id));
+      const interviewId = Number(body.interview_id) || null;
+      let applicationId = null;
+      if (interviewId) {
+        const { data: interview } = await withRetry(() => getClient().from(TABLES.interviews).select('application_id').eq('id', interviewId).eq('guild_id', guildId).maybeSingle());
+        if (interview && interview.application_id) applicationId = Number(interview.application_id);
+      }
+      await teamService.upsertMember(guildId, String(body.discord_id), { status: 'aktiv', application_id: applicationId, interview_id: interviewId, notes: `Aufgenommen nach bestandenem Interview #${String(body.interview_id || '')}`.trim() });
+      await auditService.log(guildId, req.session.user.tag, 'team.member.intake_from_interview', { discord_id: String(body.discord_id), interview_id: interviewId, application_id: applicationId });
     }
 
     if (feature === 'welcome' && body.action === 'save') {

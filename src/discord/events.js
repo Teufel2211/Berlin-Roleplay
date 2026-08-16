@@ -67,6 +67,7 @@ function registerEvents(client) {
         if (id === 'ticket_panel') return await ticketService.handleOpen(interaction);
         if (id.startsWith('ticket_close_')) return await ticketService.showCloseModal(interaction);
         if (id.startsWith('app_accept_') || id.startsWith('app_reject_')) return await applicationService.handleDecisionButton(interaction);
+        if (id.startsWith('app_interview_')) return await applicationService.handleInterviewButton(interaction);
         if (id.startsWith('interview_')) return await interviewService.handleScore(interaction);
         if (id.startsWith('giveaway_join_')) return await giveawayService.handleJoinButton(interaction);
         if (id.startsWith('emb_')) return interaction.reply({ embeds: [embeds.info('Embed-Button', 'Für diesen Button ist keine Aktion konfiguriert.', interaction.guild)], flags: MessageFlags.Ephemeral });
