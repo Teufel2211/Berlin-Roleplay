@@ -1,240 +1,66 @@
 <h2 class="feature-title">Embed-Builder</h2>
-<p class="muted">Erstelle Discord-Embeds mit Live-Vorschau und poste sie in einen Kanal.</p>
+<p class="muted">Erstelle Discord-Embeds mit umfangreicher Vorschau und frei konfigurierbaren Button-Aktionen.</p>
 <% if (data.flash) { %><div class="alert"><%= data.flash %></div><% } %>
 <% if (data.dbError) { %><div class="alert error"><%= data.dbError %></div><% } %>
 
-<div class="feature-section" id="sec-embeds">
 <% if (data.embeds.length) { %>
 <h3 class="list-title">Vorhandene Embeds</h3>
-<div class="table-wrap">
-  <table class="data-table">
-    <thead><tr><th>Name</th><th>Gepostet</th><th>Aktionen</th></tr></thead>
-    <tbody>
-      <% data.embeds.forEach(function (e) { %>
-      <tr>
-        <td><strong><%= e.name %></strong></td>
-        <td><%= e.message_id ? 'Ja' : 'Nein' %></td>
-        <td>
-          <a class="btn small" href="?edit=<%= e.id %>">Bearbeiten</a>
-        </td>
-      </tr>
-      <% }) %>
-    </tbody>
-  </table>
-</div>
+<div class="table-wrap"><table class="data-table"><thead><tr><th>Name</th><th>Gepostet</th><th>Aktionen</th></tr></thead><tbody>
+<% data.embeds.forEach(function (e) { %><tr><td><strong><%= e.name %></strong></td><td><%= e.message_id ? 'Ja' : 'Nein' %></td><td><a class="btn small" href="?edit=<%= e.id %>">Bearbeiten</a></td></tr><% }) %>
+</tbody></table></div>
 <% } %>
 
 <h3 class="list-title"><%= data.edit ? 'Bearbeite: ' + data.edit.name : 'Neues Embed' %></h3>
-<% var ed = data.edit ? data.edit.data || {} : {}; %>
-<% var editId = data.edit ? data.edit.id : null; %>
-<% var editChannel = data.edit ? data.edit.channel_id : ''; %>
+<% var ed = data.edit ? data.edit.data || {} : {}; var editId = data.edit ? data.edit.id : null; var editChannel = data.edit ? data.edit.channel_id : ''; %>
 <form method="post" action="/dashboard/servers/<%= guildId %>/feature/embeds" class="embed-form" id="embedForm">
-  <input type="hidden" name="_csrf" value="<%= csrf %>">
-  <input type="hidden" name="edit_id" value="<%= editId %>">
-  <div class="embed-editor">
-    <div class="embed-fields-col">
-      <label class="field">
-        <span class="field-label">Name (Pflicht)</span>
-        <input type="text" name="name" value="<%= ed.name || '' %>" placeholder="z. B. Regeln">
-      </label>
-      <div class="settings-fields">
-        <label class="field">
-          <span class="field-label">Kanal</span>
-          <% if (data.channelOptions && data.channelOptions.length) { %>
-          <select name="channel">
-            <option value="">— Kanal wählen —</option>
-            <% data.channelOptions.forEach(function (c) { %>
-            <option value="<%= c.id %>"<%= String(editChannel) === String(c.id) ? ' selected' : '' %>><%= c.name %></option>
-            <% }) %>
-          </select>
-          <% } else { %>
-          <input type="text" name="channel" value="<%= editChannel %>" placeholder="Kanal-ID">
-          <% } %>
-        </label>
-        <label class="field">
-          <span class="field-label">Titel</span>
-          <input type="text" name="title" value="<%= ed.title || '' %>" placeholder="Titel des Embeds">
-        </label>
-        <label class="field">
-          <span class="field-label">Beschreibung</span>
-          <textarea name="description" rows="4" placeholder="Beschreibungstext"><%= ed.description || '' %></textarea>
-        </label>
-        <label class="field">
-          <span class="field-label">Farbe</span>
-          <div class="color-row">
-            <input type="color" name="color" value="<%= /^#[0-9a-fA-F]{6}$/.test(ed.color || '') ? ed.color : '#e8453c' %>">
-            <input type="text" name="color_text" value="<%= ed.color || '#e8453c' %>" placeholder="#e8453c">
-          </div>
-        </label>
-        <label class="field">
-          <span class="field-label">Bild-URL</span>
-          <input type="text" name="image" value="<%= ed.image || '' %>" placeholder="https://…">
-        </label>
-        <label class="field">
-          <span class="field-label">Footer</span>
-          <input type="text" name="footer" value="<%= ed.footer || '' %>" placeholder="Fußzeilentext">
-        </label>
-        <label class="field checkbox-field">
-          <input type="checkbox" name="timestamp" value="true"<%= ed.timestamp === 'true' ? ' checked' : '' %>>
-          <span>Timestamp anzeigen</span>
-        </label>
-      </div>
-
-      <h3 class="list-title">Felder</h3>
-      <div id="fieldRows" class="dynamic-rows">
-        <% if (ed.fields && ed.fields.length) { %>
-          <% ed.fields.forEach(function (f) { %>
-          <div class="dynamic-row">
-            <input type="text" name="field_name[]" value="<%= f.name || '' %>" placeholder="Name">
-            <input type="text" name="field_value[]" value="<%= f.value || '' %>" placeholder="Wert">
-            <label class="inline-check"><input type="checkbox" name="field_inline[]" value="true"<%= f.inline === true ? ' checked' : '' %>>Inline</label>
-            <button type="button" class="btn small remove-row">✕</button>
-          </div>
-          <% }) %>
-        <% } %>
-      </div>
-      <button type="button" class="btn small add-row" data-type="field">+ Feld</button>
-
-      <h3 class="list-title">Buttons</h3>
-      <div id="btnRows" class="dynamic-rows">
-        <% if (ed.buttons && ed.buttons.length) { %>
-          <% ed.buttons.forEach(function (b) { %>
-          <div class="dynamic-row btn-row">
-            <input type="text" name="btn_label[]" value="<%= b.label || '' %>" placeholder="Label">
-            <select name="btn_style[]">
-              <option value="1"<%= String(b.style) === '1' ? ' selected' : '' %>>Primary</option>
-              <option value="2"<%= String(b.style) === '2' ? ' selected' : '' %>>Secondary</option>
-              <option value="3"<%= String(b.style) === '3' ? ' selected' : '' %>>Success</option>
-              <option value="4"<%= String(b.style) === '4' ? ' selected' : '' %>>Danger</option>
-              <option value="5"<%= String(b.style) === '5' ? ' selected' : '' %>>Link</option>
-            </select>
-            <input type="text" name="btn_emoji[]" value="<%= b.emoji || '' %>" placeholder="Emoji" class="short">
-            <input type="text" name="btn_url[]" value="<%= b.url || '' %>" placeholder="URL (bei Link)" class="wide">
-            <button type="button" class="btn small remove-row">✕</button>
-          </div>
-          <% }) %>
-        <% } %>
-      </div>
-      <button type="button" class="btn small add-row" data-type="btn">+ Button</button>
-
-      <div class="embed-actions">
-        <button type="submit" name="action" value="save" class="btn primary">Speichern</button>
-        <% if (data.edit) { %>
-        <button type="submit" name="action" value="update" class="btn">Aktualisieren</button>
-        <button type="submit" name="action" value="repost" class="btn">Neu posten</button>
-        <button type="submit" name="action" value="delete" class="btn danger">Löschen</button>
-        <% } else { %>
-        <button type="submit" name="action" value="post" class="btn">Speichern &amp; posten</button>
-        <% } %>
-      </div>
-    </div>
-    <div class="embed-preview-col">
-      <h3 class="list-title">Live-Vorschau</h3>
-      <div class="embed-preview" id="embedPreview"></div>
-      <div class="embed-preview-buttons" id="embedPreviewBtns"></div>
-    </div>
-  </div>
-</form>
+<input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="edit_id" value="<%= editId %>">
+<div class="embed-editor">
+<div class="embed-fields-col">
+<label class="field"><span class="field-label">Name</span><input type="text" name="name" value="<%= ed.name || '' %>" placeholder="z. B. Regeln" required></label>
+<div class="settings-fields">
+<label class="field"><span class="field-label">Kanal</span><select name="channel"><option value="">— Kanal wählen —</option><% (data.channelOptions || []).forEach(function(c){ %><option value="<%= c.id %>"<%= String(editChannel)===String(c.id)?' selected':'' %>><%= c.name %></option><% }) %></select></label>
+<label class="field"><span class="field-label">Author</span><input name="author_name" value="<%= ed.author_name || '' %>" placeholder="Author-Name"><input name="author_url" value="<%= ed.author_url || '' %>" placeholder="Author-URL"><input name="author_icon" value="<%= ed.author_icon || '' %>" placeholder="Author-Icon-URL"></label>
+<label class="field"><span class="field-label">Titel</span><input name="title" value="<%= ed.title || '' %>" placeholder="Titel"><input name="title_url" value="<%= ed.title_url || '' %>" placeholder="Titel-Link"></label>
+<label class="field"><span class="field-label">Beschreibung</span><textarea name="description" rows="5"><%= ed.description || '' %></textarea></label>
+<label class="field"><span class="field-label">Farbe</span><div class="color-row"><input type="color" name="color" value="<%= /^#[0-9a-fA-F]{6}$/.test(ed.color || '') ? ed.color : '#e8453c' %>"><input type="text" name="color_text" value="<%= ed.color || '#e8453c' %>" placeholder="#e8453c"></div></label>
+<label class="field"><span class="field-label">Thumbnail</span><input name="thumbnail" value="<%= ed.thumbnail || '' %>" placeholder="Thumbnail-URL"></label>
+<label class="field"><span class="field-label">Großes Bild</span><input name="image" value="<%= ed.image || '' %>" placeholder="Bild-URL"></label>
+<label class="field"><span class="field-label">Footer</span><input name="footer" value="<%= ed.footer || '' %>" placeholder="Footer-Text"><input name="footer_icon" value="<%= ed.footer_icon || '' %>" placeholder="Footer-Icon-URL"></label>
+<label class="field checkbox-field"><input type="checkbox" name="timestamp" value="true"<%= ed.timestamp === 'true' ? ' checked' : '' %>><span>Timestamp</span></label>
 </div>
 
+<h3 class="list-title">Felder</h3>
+<div id="fieldRows" class="dynamic-rows"><% (ed.fields || []).forEach(function(f){ %><div class="dynamic-row"><input name="field_name[]" value="<%= f.name || '' %>" placeholder="Name"><input name="field_value[]" value="<%= f.value || '' %>" placeholder="Wert"><label class="inline-check"><input type="checkbox" name="field_inline[]" value="true"<%= f.inline===true?' checked':'' %>>Inline</label><button type="button" class="btn small remove-row">✕</button></div><% }) %></div>
+<button type="button" class="btn small add-row" data-type="field">+ Feld</button>
+
+<h3 class="list-title">Buttons &amp; Aktionen</h3>
+<p class="muted">Link-Buttons öffnen eine URL. Alle anderen Buttons können beim Klick eine gespeicherte Bot-Aktion ausführen.</p>
+<div id="btnRows" class="dynamic-rows"><% (ed.buttons || []).forEach(function(b){ %><div class="dynamic-row btn-row">
+<input name="btn_label[]" value="<%= b.label || '' %>" placeholder="Label"><select name="btn_style[]"><option value="1"<%=String(b.style)==='1'?' selected':''%>>Primary</option><option value="2"<%=String(b.style)==='2'?' selected':''%>>Secondary</option><option value="3"<%=String(b.style)==='3'?' selected':''%>>Success</option><option value="4"<%=String(b.style)==='4'?' selected':''%>>Danger</option><option value="5"<%=String(b.style)==='5'?' selected':''%>>Link</option></select><input name="btn_emoji[]" value="<%= b.emoji || '' %>" placeholder="Emoji" class="short">
+<select name="btn_action[]"><option value="none"<%=b.action==='none'||!b.action?' selected':''%>>Keine Aktion</option><option value="message"<%=b.action==='message'?' selected':''%>>Ephemeral Nachricht</option><option value="verify"<%=b.action==='verify'?' selected':''%>>Verifizierung</option><option value="ticket"<%=b.action==='ticket'?' selected':''%>>Ticket öffnen</option><option value="role_add"<%=b.action==='role_add'?' selected':''%>>Rolle vergeben</option><option value="role_remove"<%=b.action==='role_remove'?' selected':''%>>Rolle entfernen</option></select>
+<input name="btn_action_value[]" value="<%= b.action_value || '' %>" placeholder="Aktion-Wert: Nachricht oder Rollen-ID" class="wide"><input name="btn_url[]" value="<%= b.url || '' %>" placeholder="URL (nur Link-Style)" class="wide"><button type="button" class="btn small remove-row">✕</button>
+</div><% }) %></div>
+<button type="button" class="btn small add-row" data-type="btn">+ Button</button>
+
+<div class="embed-actions"><button type="submit" name="action" value="save" class="btn primary">Speichern</button><% if(data.edit){ %><button type="submit" name="action" value="update" class="btn">Aktualisieren</button><button type="submit" name="action" value="repost" class="btn">Neu posten</button><button type="submit" name="action" value="delete" class="btn danger">Löschen</button><% } else { %><button type="submit" name="action" value="post" class="btn">Speichern &amp; posten</button><% } %></div>
+</div>
+<div class="embed-preview-col"><h3 class="list-title">Live-Discord-Vorschau</h3><div class="embed-preview" id="embedPreview"></div><div class="embed-preview-buttons" id="embedPreviewBtns"></div><div class="muted" id="buttonActionHint"></div></div>
+</div></form>
+
 <script>
-(function () {
-  var form = document.getElementById('embedForm');
-  var preview = document.getElementById('embedPreview');
-  var btnPreview = document.getElementById('embedPreviewBtns');
-
-  function esc(s) {
-    var d = document.createElement('div');
-    d.textContent = s == null ? '' : String(s);
-    return d.innerHTML;
-  }
-  function val(name) {
-    var el = form.querySelector('[name="' + name + '"]');
-    return el ? el.value : '';
-  }
-  function isChecked(name) {
-    var el = form.querySelector('[name="' + name + '"]');
-    return el ? el.checked : false;
-  }
-  function fieldRows() {
-    return Array.prototype.slice.call(form.querySelectorAll('#fieldRows .dynamic-row')).map(function (row) {
-      return {
-        name: row.querySelector('[name="field_name[]"]').value,
-        value: row.querySelector('[name="field_value[]"]').value,
-        inline: row.querySelector('[name="field_inline[]"]').checked
-      };
-    });
-  }
-  function btnRows() {
-    return Array.prototype.slice.call(form.querySelectorAll('#btnRows .dynamic-row')).map(function (row) {
-      return {
-        label: row.querySelector('[name="btn_label[]"]').value,
-        style: row.querySelector('[name="btn_style[]"]').value,
-        emoji: row.querySelector('[name="btn_emoji[]"]').value,
-        url: row.querySelector('[name="btn_url[]"]').value
-      };
-    });
-  }
-  function colorText() {
-    var text = (val('color_text') || val('color') || '#e8453c').replace(/^#/, '');
-    return /^[0-9a-fA-F]{6}$/.test(text) ? '#' + text : '#e8453c';
-  }
-  var STYLE_LABEL = { 1: 'Primary', 2: 'Secondary', 3: 'Success', 4: 'Danger', 5: 'Link' };
-
-  function render() {
-    var title = val('title');
-    var desc = val('description');
-    var color = colorText();
-    var html = '<div class="ep-bar" style="background:' + color + '"></div><div class="ep-content">';
-    html += '<div class="ep-author">Emergency Hamburg Roleplay</div>';
-    if (title) html += '<div class="ep-title">' + esc(title) + '</div>';
-    if (desc) html += '<div class="ep-desc">' + esc(desc).replace(/\n/g, '<br>') + '</div>';
-    var fields = fieldRows().filter(function (f) { return f.name || f.value; });
-    if (fields.length) {
-      html += '<div class="ep-fields' + (fields.some(function (f) { return f.inline; }) ? ' has-inline' : '') + '">';
-      fields.forEach(function (f) {
-        html += '<div class="ep-field' + (f.inline ? ' inline' : '') + '"><div class="ep-field-name">' + esc(f.name || ' ') + '</div><div class="ep-field-value">' + esc(f.value || ' ').replace(/\n/g, '<br>') + '</div></div>';
-      });
-      html += '</div>';
-    }
-    var image = val('image');
-    if (image) html += '<div class="ep-image"><img src="' + esc(image) + '" alt="" onerror="this.style.display=\'none\'"></div>';
-    var footer = val('footer');
-    if (footer || isChecked('timestamp')) {
-      var now = new Date();
-      var time = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-      html += '<div class="ep-footer">' + (footer ? esc(footer) + ' • ' : '') + 'Heute um ' + time + '</div>';
-    }
-    html += '</div>';
-    preview.innerHTML = html;
-
-    var btns = btnRows().filter(function (b) { return b.label || b.style === '5'; });
-    btnPreview.innerHTML = '';
-    btns.forEach(function (b) {
-      var pill = document.createElement('span');
-      pill.className = 'ep-btn ep-btn-' + (b.style || '1');
-      pill.textContent = (b.emoji ? b.emoji + ' ' : '') + b.label;
-      btnPreview.appendChild(pill);
-    });
-  }
-
-  form.addEventListener('input', render);
-  form.addEventListener('change', render);
-
-  var fieldTmpl = '<div class="dynamic-row"><input type="text" name="field_name[]" placeholder="Name"><input type="text" name="field_value[]" placeholder="Wert"><label class="inline-check"><input type="checkbox" name="field_inline[]" value="true">Inline</label><button type="button" class="btn small remove-row">✕</button></div>';
-  var btnTmpl = '<div class="dynamic-row btn-row"><input type="text" name="btn_label[]" placeholder="Label"><select name="btn_style[]"><option value="1">Primary</option><option value="2">Secondary</option><option value="3">Success</option><option value="4">Danger</option><option value="5">Link</option></select><input type="text" name="btn_emoji[]" placeholder="Emoji" class="short"><input type="text" name="btn_url[]" placeholder="URL (bei Link)" class="wide"><button type="button" class="btn small remove-row">✕</button></div>';
-
-  form.addEventListener('click', function (e) {
-    if (e.target.classList.contains('add-row')) {
-      var container = e.target.dataset.type === 'field' ? document.getElementById('fieldRows') : document.getElementById('btnRows');
-      container.insertAdjacentHTML('beforeend', e.target.dataset.type === 'field' ? fieldTmpl : btnTmpl);
-      render();
-    } else if (e.target.classList.contains('remove-row')) {
-      e.target.closest('.dynamic-row').remove();
-      render();
-    }
-  });
-
-  render();
+(function(){
+ const form=document.getElementById('embedForm'), preview=document.getElementById('embedPreview'), btnPreview=document.getElementById('embedPreviewBtns'), hint=document.getElementById('buttonActionHint');
+ const esc=s=>{const d=document.createElement('div');d.textContent=s==null?'':String(s);return d.innerHTML;}; const val=n=>{const e=form.querySelector('[name="'+n+'"]');return e?e.value:'';}; const checked=n=>{const e=form.querySelector('[name="'+n+'"]');return !!(e&&e.checked);};
+ const rows=sel=>Array.from(form.querySelectorAll(sel));
+ function render(){
+   const color=(val('color_text')||val('color')||'#e8453c').replace(/^#/,''); const c=/^[0-9a-fA-F]{6}$/.test(color)?'#'+color:'#e8453c';
+   let h='<div class="ep-bar" style="background:'+c+'"></div><div class="ep-content">'; if(val('author_name'))h+='<div class="ep-author">'+esc(val('author_name'))+'</div>'; if(val('title'))h+='<div class="ep-title">'+esc(val('title'))+'</div>'; if(val('description'))h+='<div class="ep-desc">'+esc(val('description')).replace(/\n/g,'<br>')+'</div>';
+   const fs=rows('#fieldRows .dynamic-row').map(r=>({n:r.querySelector('[name="field_name[]"]').value,v:r.querySelector('[name="field_value[]"]').value,i:r.querySelector('[name="field_inline[]"]').checked})).filter(f=>f.n||f.v); if(fs.length){h+='<div class="ep-fields">';fs.forEach(f=>{h+='<div class="ep-field'+(f.i?' inline':'')+'"><div class="ep-field-name">'+esc(f.n)+'</div><div class="ep-field-value">'+esc(f.v).replace(/\n/g,'<br>')+'</div></div>';});h+='</div>';}
+   if(val('thumbnail'))h+='<div class="ep-thumb"><img src="'+esc(val('thumbnail'))+'" alt=""></div>'; if(val('image'))h+='<div class="ep-image"><img src="'+esc(val('image'))+'" alt=""></div>'; if(val('footer')||checked('timestamp'))h+='<div class="ep-footer">'+esc(val('footer'))+(checked('timestamp')?' • Heute um '+new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}):'')+'</div>'; h+='</div>'; preview.innerHTML=h;
+   btnPreview.innerHTML=''; let actionCount=0; rows('#btnRows .dynamic-row').forEach(r=>{const label=r.querySelector('[name="btn_label[]"]').value,style=r.querySelector('[name="btn_style[]"]').value,emoji=r.querySelector('[name="btn_emoji[]"]').value,action=r.querySelector('[name="btn_action[]"]').value;if(!label)return;const b=document.createElement('span');b.className='ep-btn ep-btn-'+style;b.textContent=(emoji?emoji+' ':'')+label;btnPreview.appendChild(b);if(style!=='5'&&action&&action!=='none')actionCount++;}); hint.textContent=actionCount+' interaktive Button-Aktion(en) konfiguriert.';
+ }
+ const fieldT='<div class="dynamic-row"><input name="field_name[]" placeholder="Name"><input name="field_value[]" placeholder="Wert"><label class="inline-check"><input type="checkbox" name="field_inline[]" value="true">Inline</label><button type="button" class="btn small remove-row">✕</button></div>';
+ const btnT='<div class="dynamic-row btn-row"><input name="btn_label[]" placeholder="Label"><select name="btn_style[]"><option value="1">Primary</option><option value="2">Secondary</option><option value="3">Success</option><option value="4">Danger</option><option value="5">Link</option></select><input name="btn_emoji[]" placeholder="Emoji" class="short"><select name="btn_action[]"><option value="none">Keine Aktion</option><option value="message">Ephemeral Nachricht</option><option value="verify">Verifizierung</option><option value="ticket">Ticket öffnen</option><option value="role_add">Rolle vergeben</option><option value="role_remove">Rolle entfernen</option></select><input name="btn_action_value[]" placeholder="Aktion-Wert: Nachricht oder Rollen-ID" class="wide"><input name="btn_url[]" placeholder="URL (nur Link-Style)" class="wide"><button type="button" class="btn small remove-row">✕</button></div>';
+ form.addEventListener('input',render);form.addEventListener('change',render);form.addEventListener('click',e=>{if(e.target.classList.contains('add-row')){(e.target.dataset.type==='field'?document.getElementById('fieldRows'):document.getElementById('btnRows')).insertAdjacentHTML('beforeend',e.target.dataset.type==='field'?fieldT:btnT);render();}else if(e.target.classList.contains('remove-row')){e.target.closest('.dynamic-row').remove();render();}});render();
 })();
 </script>
