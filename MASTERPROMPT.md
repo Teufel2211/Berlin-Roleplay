@@ -656,6 +656,46 @@ Host: <@host>
 
 ---
 
+## 14. Modul: Willkommen (Willkommensnachricht)
+
+### Ablauf (verbindlich)
+
+1. Tritt ein Mitglied dem Server bei (`guildMemberAdd`), lädt der Bot die Konfiguration aus `eghr_welcome_messages`.
+2. Ist das Modul nicht aktiv oder kein Kanal gesetzt, passiert nichts.
+3. Sonst wird ein Willkommens-Embed im Kanal `settings.channel_id` gesendet:
+   - **Titel**, **Beschreibung**, **Farbe**, **Bild-URL**, **Thumbnail-URL** aus `embed_data` (Platzhalter gerendert).
+   - **Felder** aus `embed_data.fields` (Array `{ name, value, inline }`), Platzhalter gerendert; max. 25 Felder, leere Felder übersprungen.
+4. Ist `dm_enabled` gesetzt, erhält das Mitglied dieselbe Nachricht als DM.
+5. Ist `auto_role_ids` gesetzt, werden diese Rollen vergeben.
+
+### Platzhalter
+
+| Platzhalter | Ergebnis |
+|---|---|
+| `{user}` | Ping `<@id>` |
+| `{username}` | Reiner Nutzername |
+| `{server}` | Servername |
+| `{member_count}` | Server-Mitgliederzahl |
+| `{join_date}` | Beitrittsdatum des Mitglieds (`DD.MM.YYYY`, Fallback: heute) |
+| `{user_count}` | Anzahl Nicht-Bot-Mitglieder |
+| `{bot_count}` | Anzahl Bot-Mitglieder |
+
+- Unbekannte Platzhalter bleiben unangetastet (kein Fehler).
+
+### Fehlerfälle (verbindlich)
+
+| Fall | Verhalten |
+|---|---|
+| Kein Kanal / Modul deaktiviert | Nichts tun |
+| Kanal nicht gefunden / nicht textbasiert | Still überspringen |
+| `fields` kein Array | Ignorieren |
+| Feld mit leerem Name oder Wert | Überspringen |
+| Mehr als 25 Felder | Nach 25 stoppen + Log-Warnung |
+| DM nicht sendbar (DMs geschlossen) | Still überspringen |
+| Auto-Rollen nicht findbar | Still überspringen |
+
+---
+
 ## 15. Abnahmekriterien (Definition of Done)
 
 Der Bot gilt als fertig, wenn alle Punkte erfüllt sind:

@@ -46,8 +46,12 @@ async function handleAction(req, res) {
 
     if (feature === 'welcome' && body.action === 'save') {
       const roles = Array.isArray(body.auto_role_ids) ? body.auto_role_ids : body.auto_role_ids ? [body.auto_role_ids] : [];
-      await welcomeService.saveConfig(guildId, { channel_id: String(body.channel_id || '').trim() || null, dm_enabled: body.dm_enabled === 'true' || body.dm_enabled === 'on', enabled: body.enabled !== 'false', auto_role_ids: roles, embed_data: { title: String(body.title || 'Willkommen!'), description: String(body.description || 'Willkommen auf {server}, {user}!'), color: String(body.color || '#2B3A67'), image: String(body.image || ''), thumbnail: String(body.thumbnail || '') } });
-      await auditService.log(guildId, req.session.user.tag, 'welcome.save', {});
+      const names = Array.isArray(body.field_name) ? body.field_name : body.field_name ? [body.field_name] : [];
+      const values = Array.isArray(body.field_value) ? body.field_value : body.field_value ? [body.field_value] : [];
+      const inlines = Array.isArray(body.field_inline) ? body.field_inline : body.field_inline ? [body.field_inline] : [];
+      const fields = names.map((name, i) => ({ name: String(name || '').trim(), value: String(values[i] || '').trim(), inline: inlines[i] === 'true' || inlines[i] === 'on' })).filter((f) => f.name && f.value);
+      await welcomeService.saveConfig(guildId, { channel_id: String(body.channel_id || '').trim() || null, dm_enabled: body.dm_enabled === 'true' || body.dm_enabled === 'on', enabled: body.enabled !== 'false', auto_role_ids: roles, embed_data: { title: String(body.title || 'Willkommen!'), description: String(body.description || 'Willkommen auf {server}, {user}!'), color: String(body.color || '#2B3A67'), image: String(body.image || ''), thumbnail: String(body.thumbnail || ''), fields } });
+      await auditService.log(guildId, req.session.user.tag, 'welcome.save', { fields: fields.length });
     }
 
     if (feature === 'moderation' && body.action === 'clear_warning' && body.id) await withRetry(() => getClient().from(TABLES.moderationWarnings).delete().eq('id', Number(body.id)).eq('guild_id', guildId));
