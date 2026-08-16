@@ -19,7 +19,6 @@ function parseColor(value) {
 }
 function buildEmbed(data) {
   const embed = { color: parseColor(data.color) };
-  if (data.author_name) { embed.author = { name: String(data.author_name).slice(0, 256) }; if (data.author_url) embed.author.url = String(data.author_url).slice(0, 2048); if (data.author_icon) embed.author.icon_url = String(data.author_icon).slice(0, 2048); }
   if (data.title) { embed.title = String(data.title).slice(0, 256); if (data.title_url) embed.url = String(data.title_url).slice(0, 2048); }
   if (data.description) embed.description = String(data.description).slice(0, 4096);
   if (data.thumbnail) embed.thumbnail = { url: String(data.thumbnail) };
@@ -42,13 +41,13 @@ function buildComponents(embedId, buttons) {
   if (row.components.length) rows.push(row); return rows.slice(0, 5);
 }
 function parseData(row) { if (!row) return null; if (typeof row.data === 'string') { try { return JSON.parse(row.data); } catch (_) { return null; } } return row.data || null; }
-function normalizeStoredData(row) { const data = parseData(row) || {}; if (!data.name && row.name) data.name = row.name; return data; }
+function normalizeStoredData(row) { const data = parseData(row) || {}; if (!data.name && row.name) data.name = row.name; delete data.author_name; delete data.author_url; delete data.author_icon; return data; }
 async function postEmbed(row) { assertDiscordToken(); const data = normalizeStoredData(row); const msg = await discordApi.postMessage(row.channel_id, { embeds: [buildEmbed(data)], components: buildComponents(row.id, data.buttons).map((r) => r.toJSON()) }); await withRetry(() => getClient().from(TABLES.embeds).update({ message_id: msg.id, data }).eq('id', row.id)); return msg; }
 async function editEmbed(row) { assertDiscordToken(); if (!row.message_id) throw new Error('Dieses Embed wurde noch nicht gepostet.'); const data = normalizeStoredData(row); await discordApi.editMessage(row.channel_id, row.message_id, { embeds: [buildEmbed(data)], components: buildComponents(row.id, data.buttons).map((r) => r.toJSON()) }); await withRetry(() => getClient().from(TABLES.embeds).update({ data }).eq('id', row.id)); }
 async function deleteMessage(row) { assertDiscordToken(); if (!row.channel_id || !row.message_id) return; try { await discordApi.deleteMessage(row.channel_id, row.message_id); } catch (err) { logger.warn(`Embed-Nachricht nicht gelöscht: ${err.message}`); } }
 function arr(v) { return Array.isArray(v) ? v : v == null ? [] : [v]; }
 function collect(body) {
-  const data = { name: String(body.name || '').trim(), author_name: String(body.author_name || '').trim(), author_url: String(body.author_url || '').trim(), author_icon: String(body.author_icon || '').trim(), title: String(body.title || ''), title_url: String(body.title_url || '').trim(), description: String(body.description || ''), color: String(body.color_text || body.color || '').trim(), thumbnail: String(body.thumbnail || '').trim(), image: String(body.image || '').trim(), footer: String(body.footer || ''), footer_icon: String(body.footer_icon || '').trim(), timestamp: body.timestamp === 'true' ? 'true' : 'false', fields: [], buttons: [] };
+  const data = { name: String(body.name || '').trim(), title: String(body.title || ''), title_url: String(body.title_url || '').trim(), description: String(body.description || ''), color: String(body.color_text || body.color || '').trim(), thumbnail: String(body.thumbnail || '').trim(), image: String(body.image || '').trim(), footer: String(body.footer || ''), footer_icon: String(body.footer_icon || '').trim(), timestamp: body.timestamp === 'true' ? 'true' : 'false', fields: [], buttons: [] };
   const names = arr(body.field_name), values = arr(body.field_value), inlines = arr(body.field_inline);
   for (let i = 0; i < names.length; i++) { const name = String(names[i] || '').trim(), value = String(values[i] || '').trim(); if (name || value) data.fields.push({ name, value, inline: String(inlines[i] || '') === 'true' }); }
   const labels = arr(body.btn_label), styles = arr(body.btn_style), emojis = arr(body.btn_emoji), urls = arr(body.btn_url), actions = arr(body.btn_action), actionValues = arr(body.btn_action_value);
