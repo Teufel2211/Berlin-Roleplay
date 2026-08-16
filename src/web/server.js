@@ -29,7 +29,7 @@ const i18n = require('./i18n');
 const settingsLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 100 });
 
 const CHANNEL_KEYS = [
-  'verify_channel_id', 'verify_log_channel_id', 'ticket_category_id', 'ticket_panel_channel_id', 'ticket_log_channel_id',
+  'verify_channel_id', 'verify_rules_channel_id', 'verify_log_channel_id', 'ticket_category_id', 'ticket_panel_channel_id', 'ticket_log_channel_id',
   'application_category_id', 'giveaway_channel_id', 'giveaway_announce_channel_id', 'warteraum_voice_channel_id',
   'warteraum_target_channel_id', 'interview_channel_id', 'welcome_channel_id', 'moderation_log_channel_id', 'team_log_channel_id',
 ];
@@ -37,7 +37,7 @@ const ROLE_KEYS = ['staff_roles', 'admin_roles', 'verified_roles', 'warteraum_ro
 
 const LABELS = {
   staff_roles: 'Staff-Rollen', admin_roles: 'Admin-Rollen', verified_roles: 'Verifizierte Rollen', warteraum_roles: 'Warteraum-Rollen',
-  giveaway_required_roles: 'Pflicht-Rollen (Giveaway)', verify_channel_id: 'Verifizierungs-Kanal', verify_log_channel_id: 'Verifizierungs-Log',
+  giveaway_required_roles: 'Pflicht-Rollen (Giveaway)', verify_channel_id: 'Verifizierungs-Kanal', verify_rules_channel_id: 'Regeln-Kanal', verify_log_channel_id: 'Verifizierungs-Log',
   ticket_category_id: 'Ticket-Kategorie', ticket_panel_channel_id: 'Ticket-Panel', ticket_log_channel_id: 'Ticket-Log',
   application_category_id: 'Bewerbungs-Kategorie', giveaway_channel_id: 'Giveaway-Kanal', giveaway_announce_channel_id: 'Gewinner-Kanal',
   warteraum_voice_channel_id: 'Warteraum-Voice', warteraum_target_channel_id: 'Ziel-Voice', interview_channel_id: 'Interview-Kanal',
@@ -79,7 +79,7 @@ function enabledFeaturesFor(all) {
 
 const SETTING_GROUPS = [
   { feature: 'overview', id: 'home', subgroup: 'Home', keys: ['language', 'theme', 'enabled_modules'] },
-  { feature: 'verification', id: 'kanale', subgroup: 'Kanäle', keys: ['verify_channel_id', 'verify_log_channel_id'] },
+  { feature: 'verification', id: 'kanale', subgroup: 'Kanäle', keys: ['verify_channel_id', 'verify_rules_channel_id', 'verify_log_channel_id'] },
   { feature: 'verification', id: 'rollen', subgroup: 'Rollen', keys: ['verified_roles'] },
   { feature: 'verification', id: 'verhalten', subgroup: 'Verhalten', keys: ['verify_dm', 'verify_min_account_age_days'] },
   { feature: 'warteraum', id: 'rollen', subgroup: 'Rollen', keys: ['warteraum_roles'] },

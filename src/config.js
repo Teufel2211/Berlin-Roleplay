@@ -13,6 +13,7 @@ const DEFAULT_SETTINGS = {
   verified_roles: '',
   giveaway_required_roles: '',
   verify_channel_id: '',
+  verify_rules_channel_id: '',
   verify_dm: 'true',
   verify_log_channel_id: '',
   verify_min_account_age_days: '0',

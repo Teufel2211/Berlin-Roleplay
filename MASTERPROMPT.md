@@ -284,19 +284,21 @@ create table if not exists public.settings (
 
 ---
 
-## 5. Modul: Verifizierung (Button-Verifizierung)
+## 5. Modul: Verifizierung (Button-Verifizierung, mehrstufig)
 
 ### Ablauf (verbindlich)
 
 1. Der Admin postet das Panel mit `/verify panel` im Kanal `settings.verify_channel_id`. Alternativ wird das Panel beim Setup einmalig automatisch gepostet (Einrichtung, Kapitel 13).
 2. Das Panel ist ein Embed mit Titel „**Verifizierung**", kurzer Beschreibung („Klicke auf ✅, um dich als Mitglied zu verifizieren") und einem Button **✅ Verifizieren**.
 3. Klickt ein nicht verifiziertes Mitglied auf den Button:
-   - Der Bot vergibt `settings.verified_role` an das Mitglied.
+   - **Stufe 1 (Regeln):** Ist `settings.verify_rules_channel_id` gesetzt und hat der Kanal mindestens eine Nachricht, zeigt der Bot die neueste Nachricht des Kanals (Inhalt oder Embed-Beschreibungen) als ephemerales Embed mit Button **✅ Regeln akzeptieren**. Der Button ist nur 60 Sekunden gültig und nur für den startenden Nutzer ausführbar. Fehlt der Kanal oder ist er leer, wird diese Stufe übersprungen (mit Log-Warnung bei unlesbarem Kanal).
+   - **Stufe 2 (Alter-Check):** `settings.verify_min_account_age_days` > 0 und Account jünger → Blockierung mit Fehler-Embed, `verify.rejected_age`-Audit und Log-Eintrag, keine Rolle.
+   - **Stufe 3 (Rolle):** Der Bot vergibt `settings.verified_roles` an das Mitglied.
    - Optionaler DM-Ping („Du bist jetzt verifiziert. Willkommen!").
    - Eintrag in `users`-Tabelle: `discord_id`, `username`, `verified_at`.
    - Optionaler Log-Embed in `settings.verify_log_channel_id` (User, Zeitpunkt).
    - Antwort auf die Interaktion: kurzes Erfolgs-Embed.
-4. Klickt ein **bereits verifiziertes** Mitglied erneut: Hinweis-Embed „Du bist bereits verifiziert." (kein Fehler).
+4. Klickt ein **bereits verifiziertes** Mitglied erneut: Hinweis-Embed „Du bist bereits verifiziert." (kein Fehler), ohne Regeln-Schritt.
 5. `guildMemberRemove` → `verified_role` wird nicht automatisch entfernt (Rolle bleibt beim Wiedereintritt), aber der `users`-Eintrag wird auf `left_at` gesetzt.
 6. **Anti-Spam:** Klicks pro Kanal werden nicht limitiert (ein Button-Klick kostet nichts); es ist kein Code/kein externer Dienst beteiligt.
 
@@ -313,6 +315,11 @@ create table if not exists public.settings (
 | Fall | Verhalten |
 |---|---|
 | `verify_channel_id` nicht gesetzt | `/verify panel` antwortet mit klarer Anleitung, kein Panel posten |
+| `verify_rules_channel_id` gesetzt, aber Kanal nicht gefunden/unlesbar | Regeln-Stufe überspringen + Log-Warnung |
+| Regeln-Nachricht leer (kein Inhalt, keine Embeds) | Regeln-Stufe überspringen |
+| Regeln-Text länger als Embed-Limit | Auf 4000 Zeichen kürzen + Hinweis im Embed |
+| `verify_accept_rules_<userId>` von fremdem Nutzer geklickt | Hinweis-Embed „Nicht für dich", kein Crash |
+| Zeit abgelaufen (Button älter als 60s) | Fehler-Embed „Zeit abgelaufen", erneut auf Verifizieren klicken |
 | `verified_role` nicht gefunden (ID gelöscht) | Button-Klick → Fehler-Embed + Log-Warnung, keine Rolle vergeben |
 | Button-Interaktion fehlschlägt (Berechtigungen) | Log-Warnung + Embed-Hinweis an den Moderator-Kanal |
 | Mitglied existiert nicht mehr im Server | Interaktion still ignorieren (kein Crash) |
@@ -322,9 +329,11 @@ create table if not exists public.settings (
 | Key | Default | Zweck |
 |---|---|---|
 | `verify_channel_id` | *(leer)* | Kanal, in dem das Panel gepostet wird |
+| `verify_rules_channel_id` | *(leer)* | Kanal, dessen neueste Nachricht als Regeln-Stufe angezeigt wird (leer = Stufe übersprungen) |
 | `verified_role` | *(leer)* | Rolle, die nach Klick vergeben wird |
 | `verify_dm` | `true` | DM-Ping nach erfolgreicher Verifizierung |
 | `verify_log_channel_id` | *(leer)* | Log-Kanal für Verifizierungs-Events (optional) |
+| `verify_min_account_age_days` | `0` | Mindestalter des Discord-Accounts in Tagen (0 = deaktiviert) |
 
 ---
 

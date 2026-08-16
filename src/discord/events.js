@@ -64,6 +64,7 @@ function registerEvents(client) {
       if (interaction.isButton()) {
         const id = interaction.customId;
         if (id === 'verify_panel') return await verifyService.handlePanelButton(interaction);
+        if (id.startsWith('verify_accept_rules_')) return await verifyService.handleAcceptRules(interaction);
         if (id === 'ticket_panel') return await ticketService.handleOpen(interaction);
         if (id.startsWith('ticket_close_')) return await ticketService.showCloseModal(interaction);
         if (id.startsWith('app_accept_') || id.startsWith('app_reject_')) return await applicationService.handleDecisionButton(interaction);
