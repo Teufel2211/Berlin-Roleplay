@@ -1,5 +1,5 @@
 <h2 class="feature-title">Giveaways</h2>
-<p class="muted">Hier siehst du alle aktuell laufenden Giveaways mit Name und eindeutiger ID.</p>
+<p class="muted">Laufende Giveaways und zentrale Standard-Einstellungen für deinen Server.</p>
 <% if (data.dbError) { %><div class="alert error"><%= data.dbError %></div><% } %>
 
 <div class="feature-section" id="sec-liste">
@@ -25,6 +25,86 @@
   <% } else { %>
     <div class="empty-state"><p>Aktuell läuft kein Giveaway.</p></div>
   <% } %>
+</div>
+
+<div class="feature-section" id="sec-kanale">
+  <h3 class="list-title">Kanäle</h3>
+  <form method="post" action="/dashboard/servers/<%= guildId %>/feature/giveaway" class="settings-form">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <div class="settings-group">
+      <h3 class="settings-subgroup">Giveaway-Kanäle</h3>
+      <div class="settings-fields">
+        <% [['giveaway_channel_id','Giveaway-Kanal'],['giveaway_announce_channel_id','Gewinner-Ankündigungen'],['giveaway_log_channel_id','Giveaway-Log']].forEach(function(item){ %>
+        <label class="field"><span class="field-label"><%= item[1] %></span>
+          <select name="settings[<%= item[0] %>]">
+            <option value="">— Keiner —</option>
+            <% (data.channelOptions || []).forEach(function(c){ %>
+              <option value="<%= c.id %>" <%= String(data.all[item[0]] || '') === String(c.id) ? 'selected' : '' %>><%= c.name %></option>
+            <% }) %>
+          </select>
+        </label>
+        <% }) %>
+      </div>
+    </div>
+    <button type="submit" class="btn primary">Speichern</button>
+  </form>
+</div>
+
+<div class="feature-section" id="sec-rollen">
+  <h3 class="list-title">Rollen</h3>
+  <form method="post" action="/dashboard/servers/<%= guildId %>/feature/giveaway" class="settings-form">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <div class="settings-group">
+      <h3 class="settings-subgroup">Teilnahme & Bonus</h3>
+      <div class="settings-fields">
+        <% var requiredRoles = []; var excludedRoles = []; try { requiredRoles = JSON.parse(data.all.giveaway_required_roles || '[]').map(String); } catch (e) {} try { excludedRoles = JSON.parse(data.all.giveaway_excluded_roles || '[]').map(String); } catch (e) {} %>
+        <label class="field"><span class="field-label">Pflichtrollen</span>
+          <input type="hidden" name="settings[giveaway_required_roles][]" value="">
+          <select name="settings[giveaway_required_roles][]" class="role-multiselect" multiple size="8">
+            <% (data.roleOptions || []).forEach(function(r){ %><option value="<%= r.id %>" <%= requiredRoles.indexOf(String(r.id)) !== -1 ? 'selected' : '' %>><%= r.name %></option><% }) %>
+          </select>
+          <span class="field-help">Mindestens eine dieser Rollen ist zur Teilnahme erforderlich.</span>
+        </label>
+        <label class="field"><span class="field-label">Ausgeschlossene Rollen</span>
+          <input type="hidden" name="settings[giveaway_excluded_roles][]" value="">
+          <select name="settings[giveaway_excluded_roles][]" class="role-multiselect" multiple size="8">
+            <% (data.roleOptions || []).forEach(function(r){ %><option value="<%= r.id %>" <%= excludedRoles.indexOf(String(r.id)) !== -1 ? 'selected' : '' %>><%= r.name %></option><% }) %>
+          </select>
+          <span class="field-help">Mit diesen Rollen darf ein User nicht teilnehmen.</span>
+        </label>
+        <label class="field"><span class="field-label">Standard-Bonusrollen</span>
+          <input type="text" name="settings[giveaway_bonus_role_weights]" value="<%= data.all.giveaway_bonus_role_weights || '' %>" placeholder="Rollen-ID:2,Rollen-ID:3">
+          <span class="field-help">Beispiel: <code>123456789:2,987654321:3</code> = doppelte bzw. dreifache Gewinnchance.</span>
+        </label>
+      </div>
+    </div>
+    <button type="submit" class="btn primary">Speichern</button>
+  </form>
+</div>
+
+<div class="feature-section" id="sec-verhalten">
+  <h3 class="list-title">Verhalten</h3>
+  <form method="post" action="/dashboard/servers/<%= guildId %>/feature/giveaway" class="settings-form">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <div class="settings-group">
+      <h3 class="settings-subgroup">Allgemeine Regeln</h3>
+      <div class="settings-fields">
+        <label class="field"><span class="field-label">Standard-Gewinner</span><input type="number" min="1" name="settings[giveaway_default_winners]" value="<%= data.all.giveaway_default_winners || '1' %>"></label>
+        <label class="field"><span class="field-label">Maximale Einträge pro Nutzer</span><input type="number" min="1" name="settings[giveaway_max_tickets]" value="<%= data.all.giveaway_max_tickets || '5' %>"></label>
+        <label class="field"><span class="field-label">Mindestalter des Discord-Accounts (Tage)</span><input type="number" min="0" name="settings[giveaway_min_account_age_days]" value="<%= data.all.giveaway_min_account_age_days || '0' %>"></label>
+        <label class="field"><span class="field-label">Mindestzeit auf dem Server (Tage)</span><input type="number" min="0" name="settings[giveaway_min_server_age_days]" value="<%= data.all.giveaway_min_server_age_days || '0' %>"></label>
+      </div>
+    </div>
+    <div class="settings-group">
+      <h3 class="settings-subgroup">Nach dem Giveaway</h3>
+      <div class="settings-fields">
+        <label class="field"><span class="field-label">Gewinner beim Reroll behalten</span><select name="settings[giveaway_reroll_keep_winners]"><option value="true" <%= data.all.giveaway_reroll_keep_winners !== 'false' ? 'selected' : '' %>>Ja</option><option value="false" <%= data.all.giveaway_reroll_keep_winners === 'false' ? 'selected' : '' %>>Nein</option></select></label>
+        <label class="field"><span class="field-label">Gewinner öffentlich ankündigen</span><select name="settings[giveaway_announce_winners]"><option value="true" <%= data.all.giveaway_announce_winners !== 'false' ? 'selected' : '' %>>Ja</option><option value="false" <%= data.all.giveaway_announce_winners === 'false' ? 'selected' : '' %>>Nein</option></select></label>
+        <label class="field"><span class="field-label">Gewinner per DM benachrichtigen</span><select name="settings[giveaway_winner_dm]"><option value="true" <%= data.all.giveaway_winner_dm !== 'false' ? 'selected' : '' %>>Ja</option><option value="false" <%= data.all.giveaway_winner_dm === 'false' ? 'selected' : '' %>>Nein</option></select></label>
+      </div>
+    </div>
+    <button type="submit" class="btn primary">Speichern</button>
+  </form>
 </div>
 
 <script>
