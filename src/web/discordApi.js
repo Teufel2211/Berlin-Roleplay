@@ -22,11 +22,15 @@ function authHeaders() {
   return { Authorization: `Bot ${config.discordToken}` };
 }
 
-async function discordFetch(url) {
+async function discordFetch(url, options = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
   try {
-    return await fetch(url, { headers: authHeaders(), signal: controller.signal });
+    return await fetch(url, {
+      ...options,
+      headers: { ...authHeaders(), ...(options.headers || {}) },
+      signal: controller.signal,
+    });
   } catch (err) {
     if (err && err.name === 'AbortError') throw new Error('Discord-API Timeout');
     throw err;
@@ -52,7 +56,6 @@ async function fetchChannels(guildId, { force = false } = {}) {
     const hit = cached(key);
     if (hit) return hit;
   }
-
   const res = await discordFetch(`${OAUTH_BASE}/guilds/${guildId}/channels`);
   if (!res.ok) throw new Error(`Kanal-Abruf fehlgeschlagen (${res.status})`);
   const data = await res.json();
@@ -68,7 +71,6 @@ async function fetchRoles(guildId, { force = false } = {}) {
     const hit = cached(key);
     if (hit) return hit;
   }
-
   const res = await discordFetch(`${OAUTH_BASE}/guilds/${guildId}/roles`);
   if (!res.ok) throw new Error(`Rollen-Abruf fehlgeschlagen (${res.status})`);
   const data = await res.json();
@@ -88,15 +90,19 @@ function clearCache() {
 }
 
 async function postMessage(channelId, payload) {
-  const res = await discordFetch(`${OAUTH_BASE}/channels/${channelId}/messages`, { method: 'POST' });
+  const res = await discordFetch(`${OAUTH_BASE}/channels/${channelId}/messages`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
   if (!res.ok) throw new Error(`Nachricht konnte nicht gesendet werden (${res.status})`);
   return res.json();
 }
 
 async function editMessage(channelId, messageId, payload) {
-  const res = await fetch(`${OAUTH_BASE}/channels/${channelId}/messages/${messageId}`, {
+  const res = await discordFetch(`${OAUTH_BASE}/channels/${channelId}/messages/${messageId}`, {
     method: 'PATCH',
-    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
   if (!res.ok) throw new Error(`Nachricht konnte nicht aktualisiert werden (${res.status})`);
@@ -109,16 +115,16 @@ async function deleteMessage(channelId, messageId) {
 }
 
 async function sendDirectMessage(userId, content) {
-  const dm = await fetch(`${OAUTH_BASE}/users/${userId}/channels`, {
+  const dm = await discordFetch(`${OAUTH_BASE}/users/${userId}/channels`, {
     method: 'POST',
-    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ recipient_id: userId }),
   });
   if (!dm.ok) throw new Error(`DM-Kanal fehlgeschlagen (${dm.status})`);
   const { id } = await dm.json();
-  const msg = await fetch(`${OAUTH_BASE}/channels/${id}/messages`, {
+  const msg = await discordFetch(`${OAUTH_BASE}/channels/${id}/messages`, {
     method: 'POST',
-    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ content }),
   });
   if (!msg.ok) throw new Error(`DM-Sendung fehlgeschlagen (${msg.status})`);
