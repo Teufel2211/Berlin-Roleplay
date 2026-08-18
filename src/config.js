@@ -6,7 +6,7 @@ const REQUIRED_SECRETS = ['DISCORD_TOKEN', 'CLIENT_ID', 'SUPABASE_URL', 'SUPABAS
 const DEFAULT_SETTINGS = {
   language: 'de',
   theme: 'dark',
-  enabled_modules: '',
+  enabled_modules: '["giveaway"]',
   staff_roles: '',
   admin_roles: '',
   warteraum_roles: '',
