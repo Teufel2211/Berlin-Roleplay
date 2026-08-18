@@ -4,6 +4,7 @@ const OAUTH_BASE = 'https://discord.com/api';
 const CACHE_TTL = 60 * 1000;
 const REQUEST_TIMEOUT = 5000;
 const cache = new Map();
+const inflight = new Map();
 
 function channelLabel(c) {
   switch (c.type) {
@@ -50,34 +51,59 @@ function store(key, value) {
   return value;
 }
 
-async function fetchChannels(guildId, { force = false } = {}) {
+function dedupe(key, task) {
+  if (inflight.has(key)) return inflight.get(key);
+  const promise = Promise.resolve().then(task).finally(() => inflight.delete(key));
+  inflight.set(key, promise);
+  return promise;
+}
+
+async function fetchChannels(guildId, { force = false, prefetch = true } = {}) {
   const key = `channels:${guildId}`;
   if (!force) {
     const hit = cached(key);
     if (hit) return hit;
   }
-  const res = await discordFetch(`${OAUTH_BASE}/guilds/${guildId}/channels`);
-  if (!res.ok) throw new Error(`Kanal-Abruf fehlgeschlagen (${res.status})`);
-  const data = await res.json();
-  return store(key, data
-    .filter((c) => [0, 2, 4, 5, 13, 15].includes(c.type))
-    .sort((a, b) => (a.position || 0) - (b.position || 0))
-    .map((c) => ({ id: c.id, name: channelLabel(c), type: c.type, rawName: c.name })));
+
+  if (prefetch && !cached(`roles:${guildId}`) && !inflight.has(`roles:${guildId}`)) {
+    void fetchRoles(guildId, { force: false, prefetch: false }).catch(() => {});
+  }
+
+  return dedupe(key, async () => {
+    const hit = !force ? cached(key) : null;
+    if (hit) return hit;
+    const res = await discordFetch(`${OAUTH_BASE}/guilds/${guildId}/channels`);
+    if (!res.ok) throw new Error(`Kanal-Abruf fehlgeschlagen (${res.status})`);
+    const data = await res.json();
+    return store(key, data
+      .filter((c) => [0, 2, 4, 5, 13, 15].includes(c.type))
+      .sort((a, b) => (a.position || 0) - (b.position || 0))
+      .map((c) => ({ id: c.id, name: channelLabel(c), type: c.type, rawName: c.name })));
+  });
 }
 
-async function fetchRoles(guildId, { force = false } = {}) {
+async function fetchRoles(guildId, { force = false, prefetch = true } = {}) {
   const key = `roles:${guildId}`;
   if (!force) {
     const hit = cached(key);
     if (hit) return hit;
   }
-  const res = await discordFetch(`${OAUTH_BASE}/guilds/${guildId}/roles`);
-  if (!res.ok) throw new Error(`Rollen-Abruf fehlgeschlagen (${res.status})`);
-  const data = await res.json();
-  return store(key, data
-    .filter((r) => r.name !== '@everyone')
-    .sort((a, b) => (b.position || 0) - (a.position || 0))
-    .map((r) => ({ id: r.id, name: r.name, position: r.position })));
+
+  if (prefetch && !cached(`channels:${guildId}`) && !inflight.has(`channels:${guildId}`)) {
+    void fetchChannels(guildId, { force: false, prefetch: false }).catch(() => {});
+  }
+
+  return dedupe(key, async () => {
+    const hit = !force ? cached(key) : null;
+    if (hit) return hit;
+    const res = await discordFetch(`${OAUTH_BASE}/guilds/${guildId}/roles`);
+    if (!res.ok) throw new Error(`Rollen-Abruf fehlgeschlagen (${res.status})`);
+    const data = await res.json();
+    return store(key, data
+      .filter((r) => r.name !== '@everyone')
+      .sort((a, b) => (b.position || 0) - (a.position || 0))
+      .map((r) => ({ id: r.id, name: r.name, position: r.position })));
+  });
 }
 
 function invalidateGuild(guildId) {
@@ -87,6 +113,7 @@ function invalidateGuild(guildId) {
 
 function clearCache() {
   cache.clear();
+  inflight.clear();
 }
 
 async function postMessage(channelId, payload) {
