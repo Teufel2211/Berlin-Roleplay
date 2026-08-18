@@ -1,26 +1,28 @@
-<h2 class="feature-title"><%= t('feat.giveaway.name') %></h2>
-<p class="muted"><%= t('feat.giveaway.desc') %></p>
+<h2 class="feature-title">Giveaways</h2>
+<p class="muted">Hier siehst du alle aktuell laufenden Giveaways mit Name und eindeutiger ID.</p>
 <% if (data.dbError) { %><div class="alert error"><%= data.dbError %></div><% } %>
+
 <div class="feature-section" id="sec-liste">
-  <% if (data.giveaways.length) { %>
-  <h3 class="list-title"><%= t('sec.giveaway.liste') %></h3>
+  <h3 class="list-title">Laufende Giveaways</h3>
+  <% var running = (data.giveaways || []).filter(function(g){ return !g.ended && g.ends_at && new Date(g.ends_at).getTime() > Date.now(); }); %>
+  <% if (running.length) { %>
   <div class="table-wrap">
     <table class="data-table">
-      <thead><tr><th><%= t('giveaway.prize') %></th><th><%= t('giveaway.winners') %></th><th><%= t('giveaway.lose') %></th><th><%= t('giveaway.ends') %></th></tr></thead>
+      <thead><tr><th>Name</th><th>ID</th><th>Gewinner</th><th>Teilnehmer</th><th>Ende</th></tr></thead>
       <tbody>
-        <% data.giveaways.forEach(function (g) { %>
+      <% running.forEach(function(g){ %>
         <tr>
-          <td><%= g.prize %></td>
-          <td><%= g.winners_count %></td>
-          <td><%= g.ticket_count %></td>
-          <td><%= g.ends_at ? new Date(g.ends_at).toLocaleString('de-DE') : '—' %></td>
+          <td><strong><%= g.name || g.prize %></strong></td>
+          <td><span class="code"><%= g.id %></span></td>
+          <td><%= g.winners_count || 1 %></td>
+          <td><%= g.participant_count || 0 %></td>
+          <td><%= new Date(g.ends_at).toLocaleString('de-DE') %></td>
         </tr>
-        <% }) %>
+      <% }) %>
       </tbody>
     </table>
   </div>
-  <% } else { %><div class="empty-state"><p><%= t('giveaway.none') %></p></div><% } %>
+  <% } else { %>
+    <div class="empty-state"><p>Aktuell läuft kein Giveaway.</p></div>
+  <% } %>
 </div>
-<%- include('../partials/_sec_settings', { sectionId: 'kanale', data, featureId: 'giveaway', guildId }) %>
-<%- include('../partials/_sec_settings', { sectionId: 'rollen', data, featureId: 'giveaway', guildId }) %>
-<%- include('../partials/_sec_settings', { sectionId: 'verhalten', data, featureId: 'giveaway', guildId }) %>
