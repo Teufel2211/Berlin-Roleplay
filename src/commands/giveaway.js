@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder } = require('discord.js');
 const giveawayService = require('../services/giveawayService');
 const embeds = require('../discord/embeds');
 
@@ -6,7 +6,6 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('giveaway')
     .setDescription('Giveaway-Verwaltung')
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .addSubcommand((s) => s
       .setName('create')
       .setDescription('Erstellt ein Giveaway')
