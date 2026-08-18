@@ -1,168 +1,25 @@
 const { getClient, TABLES, withRetry } = require('../supabase');
+const { config } = require('../config');
 const auditService = require('./auditService');
 const embeds = require('../discord/embeds');
 const helpers = require('../discord/helpers');
 const logger = require('../logger');
 
 let intervalStarted = false;
-
-function roleIds(raw) {
-  return [...String(raw || '').matchAll(/<@&(\d{15,25})>|\b(\d{15,25})\b/g)].map((m) => m[1] || m[2]);
-}
-
-function bonusRoles(raw) {
-  const out = {};
-  for (const part of String(raw || '').split(',').map((p) => p.trim()).filter(Boolean)) {
-    const match = part.match(/^(?:<@&(\d{15,25})>|(\d{15,25}))\s*:\s*(\d+)$/);
-    if (match) out[match[1] || match[2]] = Math.max(1, Math.min(100, Number(match[3])));
-  }
-  return out;
-}
-
-function choose(pool, count) {
-  const source = [...new Set(pool)];
-  const result = [];
-  while (source.length && result.length < count) result.push(source.splice(Math.floor(Math.random() * source.length), 1)[0]);
-  return result;
-}
-
-async function fetchGiveaway(id, guildId) {
-  const { data } = await withRetry(() => getClient().from(TABLES.giveaways).select('*').eq('id', Number(id)).eq('guild_id', guildId).maybeSingle());
-  return data || null;
-}
-
-async function participants(id) {
-  const { data } = await withRetry(() => getClient().from(TABLES.giveawayParticipants).select('*').eq('giveaway_id', id));
-  return data || [];
-}
-
-function weightedPool(rows, weights, guild, excluded = []) {
-  const pool = [];
-  for (const row of rows) {
-    if (excluded.includes(row.discord_id)) continue;
-    const member = guild.members.cache.get(row.discord_id);
-    let weight = 1;
-    for (const [roleId, value] of Object.entries(weights || {})) {
-      if (member?.roles.cache.has(roleId)) weight = Math.max(weight, Number(value) || 1);
-    }
-    for (let i = 0; i < weight; i++) pool.push(row.discord_id);
-  }
-  return pool;
-}
-
-function runningEmbed(guild, row) {
-  const remaining = Math.max(0, new Date(row.ends_at).getTime() - Date.now());
-  const required = (row.required_role_ids || []).map((id) => `<@&${id}>`).join(', ');
-  const bonus = Object.entries(row.bonus_role_weights || {}).map(([id, weight]) => `<@&${id}>: x${weight}`).join('\n');
-  const description = [
-    `**ID:** \`${row.id}\``,
-    `**Gewinner:** ${row.winners_count}`,
-    `**Teilnehmer:** ${row.participant_count || 0}`,
-    `**Endet:** ${helpers.formatDateTime(row.ends_at)} (${helpers.formatRemaining(remaining)})`,
-    required ? `**Requirements:** ${required}` : '',
-    bonus ? `**Extra Entries:**\n${bonus}` : '',
-    row.requirements_text ? `**Hinweis:** ${row.requirements_text}` : '',
-  ].filter(Boolean).join('\n\n');
-  const embed = embeds.giveaway(`🎉 ${row.name}`, description, guild, 0x5865F2);
-  embed.setFooter({ text: 'Mit dem Button teilnehmen • Emergency Hamburg Roleplay' });
-  return embed;
-}
-
-function endedEmbed(guild, row, winners) {
-  return embeds.giveaway(`🏆 ${row.name}`, `**ID:** \`${row.id}\`\n**Gewinner:** ${winners.length ? winners.map((id) => `<@${id}>`).join(', ') : 'Keine Gewinner'}\n**Gewinnerplätze:** ${row.winners_count}`, guild, winners.length ? 0x2ECC71 : 0xE74C3C);
-}
-
-async function updateMessage(guild, row, ended = false, winners = []) {
-  if (!guild || !row.channel_id || !row.message_id) return;
-  const channel = guild.channels.cache.get(row.channel_id);
-  const message = channel ? await channel.messages.fetch(row.message_id).catch(() => null) : null;
-  if (!message) return;
-  await message.edit({ embeds: [ended ? endedEmbed(guild, row, winners) : runningEmbed(guild, row)], components: ended ? [] : message.components });
-}
-
-async function createGiveaway(interaction, { name, duration, winners, extraEntries, requirements }) {
-  const ms = helpers.parseDuration(duration);
-  if (!ms || ms < 1000) return interaction.reply({ embeds: [embeds.error('Ungültige Länge', 'Beispiele: `30m`, `2h`, `3d`.', interaction.guild)], ephemeral: true });
-  const requiredRoleIds = roleIds(requirements);
-  const bonusRoleWeights = bonusRoles(extraEntries);
-  const endsAt = new Date(Date.now() + ms);
-  const { data: row, error } = await withRetry(() => getClient().from(TABLES.giveaways).insert({
-    guild_id: interaction.guild.id, name: String(name).slice(0, 100), prize: String(name).slice(0, 100), channel_id: interaction.channel.id,
-    winners_count: winners, participant_count: 0, ticket_count: 0, ends_at: endsAt.toISOString(), ended: false, host_id: interaction.user.id,
-    required_role_ids: requiredRoleIds, excluded_role_ids: [], bonus_role_weights: bonusRoleWeights, requirements_text: String(requirements || '').slice(0, 1000), max_entries_per_user: 1,
-  }).select('*').single());
-  if (error || !row) return interaction.reply({ embeds: [embeds.error('Fehler', 'Das Giveaway konnte nicht gespeichert werden.', interaction.guild)], ephemeral: true });
-
-  const message = await interaction.channel.send({ embeds: [runningEmbed(interaction.guild, row)], components: [helpers.row(helpers.successButton(`giveaway_join_${row.id}`, 'Teilnehmen', '🎉'))] });
-  await withRetry(() => getClient().from(TABLES.giveaways).update({ message_id: message.id }).eq('id', row.id));
-  await auditService.log(interaction.guild.id, interaction.user.tag, 'giveaway.create', { id: row.id, name: row.name, winners, ends_at: row.ends_at });
-  return interaction.reply({ embeds: [embeds.success('Giveaway erstellt', `**${row.name}**\nID: \`${row.id}\`\nEnde: ${helpers.formatDateTime(row.ends_at)}`, interaction.guild)], ephemeral: true });
-}
-
-function canManage(interaction) {
-  return Boolean(interaction.member?.permissions?.has('ManageGuild') || interaction.member?.permissions?.has('Administrator'));
-}
-
-async function endNow(interaction, id) {
-  if (!canManage(interaction)) return interaction.reply({ embeds: [embeds.error('Keine Berechtigung', 'Manage Server oder Administrator wird benötigt.', interaction.guild)], ephemeral: true });
-  const row = await fetchGiveaway(id, interaction.guild.id);
-  if (!row) return interaction.reply({ embeds: [embeds.error('Nicht gefunden', 'Die Giveaway-ID existiert auf diesem Server nicht.', interaction.guild)], ephemeral: true });
-  if (row.ended) return interaction.reply({ embeds: [embeds.error('Bereits beendet', 'Das Giveaway wurde bereits beendet.', interaction.guild)], ephemeral: true });
-  const rows = await participants(row.id);
-  const winners = choose(weightedPool(rows, row.bonus_role_weights || {}, interaction.guild), row.winners_count);
-  await withRetry(() => getClient().from(TABLES.giveaways).update({ ended: true, participant_count: rows.length, ticket_count: rows.length, winners }).eq('id', row.id));
-  await updateMessage(interaction.guild, { ...row, ended: true }, true, winners);
-  await interaction.channel.send({ embeds: [endedEmbed(interaction.guild, row, winners)] });
-  await auditService.log(interaction.guild.id, interaction.user.tag, 'giveaway.end', { id: row.id, winners });
-  return interaction.reply({ embeds: [embeds.success('Giveaway beendet', `\`${row.id}\` wurde beendet.`, interaction.guild)], ephemeral: true });
-}
-
-async function reroll(interaction, id, amount, keepWinner) {
-  if (!canManage(interaction)) return interaction.reply({ embeds: [embeds.error('Keine Berechtigung', 'Manage Server oder Administrator wird benötigt.', interaction.guild)], ephemeral: true });
-  const row = await fetchGiveaway(id, interaction.guild.id);
-  if (!row || !row.ended) return interaction.reply({ embeds: [embeds.error('Nicht möglich', 'Das Giveaway muss zuerst beendet werden.', interaction.guild)], ephemeral: true });
-  const rows = await participants(row.id);
-  const previous = Array.isArray(row.winners) ? row.winners : [];
-  const excluded = keepWinner ? previous : [];
-  const fresh = choose(weightedPool(rows, row.bonus_role_weights || {}, interaction.guild, excluded), amount);
-  const combined = keepWinner ? [...previous, ...fresh] : fresh;
-  await withRetry(() => getClient().from(TABLES.giveaways).update({ winners: combined }).eq('id', row.id));
-  await updateMessage(interaction.guild, row, true, combined);
-  await auditService.log(interaction.guild.id, interaction.user.tag, 'giveaway.reroll', { id: row.id, amount, keepWinner, winners: fresh });
-  return interaction.reply({ embeds: [embeds.success('Reroll', `\`${row.id}\`: ${fresh.length} neue Gewinner gezogen.`, interaction.guild)], ephemeral: true });
-}
-
-async function handleJoinButton(interaction) {
-  const id = Number(String(interaction.customId).replace('giveaway_join_', ''));
-  const row = await fetchGiveaway(id, interaction.guild.id);
-  if (!row || row.ended || new Date(row.ends_at).getTime() <= Date.now()) return interaction.reply({ embeds: [embeds.error('Giveaway beendet', 'Dieses Giveaway läuft nicht mehr.', interaction.guild)], ephemeral: true });
-  const required = row.required_role_ids || [];
-  if (required.length && !required.every((roleId) => interaction.member.roles.cache.has(roleId))) return interaction.reply({ embeds: [embeds.error('Requirements nicht erfüllt', 'Dir fehlt mindestens eine benötigte Rolle.', interaction.guild)], ephemeral: true });
-  const { data: existing } = await withRetry(() => getClient().from(TABLES.giveawayParticipants).select('*').eq('giveaway_id', id).eq('discord_id', interaction.user.id).maybeSingle());
-  if (existing) return interaction.reply({ embeds: [embeds.info('Bereits dabei', 'Du bist bereits für dieses Giveaway eingetragen.', interaction.guild)], ephemeral: true });
-  await withRetry(() => getClient().from(TABLES.giveawayParticipants).insert({ giveaway_id: id, discord_id: interaction.user.id, username: interaction.user.username, tickets: 1 }));
-  const count = await participants(id);
-  await withRetry(() => getClient().from(TABLES.giveaways).update({ participant_count: count.length, ticket_count: count.length }).eq('id', id));
-  await updateMessage(interaction.guild, { ...row, participant_count: count.length, ticket_count: count.length });
-  return interaction.reply({ embeds: [embeds.success('Teilnahme bestätigt', `Du bist bei **${row.name}** dabei.`, interaction.guild)], ephemeral: true });
-}
-
-async function finishExpired(client) {
-  const { data: rows } = await withRetry(() => getClient().from(TABLES.giveaways).select('*').eq('ended', false).lte('ends_at', new Date().toISOString()));
-  for (const row of rows || []) {
-    const guild = client.guilds.cache.get(row.guild_id);
-    if (!guild) continue;
-    const users = await participants(row.id);
-    const winners = choose(weightedPool(users, row.bonus_role_weights || {}, guild), row.winners_count);
-    await withRetry(() => getClient().from(TABLES.giveaways).update({ ended: true, participant_count: users.length, ticket_count: users.length, winners }).eq('id', row.id));
-    await updateMessage(guild, { ...row, ended: true }, true, winners);
-  }
-}
-
-function startInterval(client) {
-  if (intervalStarted) return;
-  intervalStarted = true;
-  setInterval(() => finishExpired(client).catch((err) => logger.error(`Giveaway-Scheduler: ${err.message}`)), 15000);
-}
-
+function roleIds(raw) { return [...String(raw || '').matchAll(/<@&(\d{15,25})>|\b(\d{15,25})\b/g)].map((m) => m[1] || m[2]); }
+function bonusRoles(raw) { const out = {}; for (const part of String(raw || '').split(',').map((p) => p.trim()).filter(Boolean)) { const m = part.match(/^(?:<@&(\d{15,25})>|(\d{15,25}))\s*:\s*(\d+)$/); if (m) out[m[1] || m[2]] = Math.max(1, Math.min(100, Number(m[3]))); } return out; }
+function choose(pool, count) { const source = [...new Set(pool)]; const result = []; while (source.length && result.length < count) result.push(source.splice(Math.floor(Math.random() * source.length), 1)[0]); return result; }
+async function fetchGiveaway(id, guildId) { const { data } = await withRetry(() => getClient().from(TABLES.giveaways).select('*').eq('id', Number(id)).eq('guild_id', guildId).maybeSingle()); return data || null; }
+async function participants(id) { const { data } = await withRetry(() => getClient().from(TABLES.giveawayParticipants).select('*').eq('giveaway_id', id)); return data || []; }
+function weightedPool(rows, weights, guild, excluded = []) { const pool = []; for (const row of rows) { if (excluded.includes(row.discord_id)) continue; const member = guild.members.cache.get(row.discord_id); let weight = 1; for (const [roleId, value] of Object.entries(weights || {})) if (member?.roles.cache.has(roleId)) weight = Math.max(weight, Number(value) || 1); for (let i = 0; i < weight; i++) pool.push(row.discord_id); } return pool; }
+function runningEmbed(guild, row) { const remaining = Math.max(0, new Date(row.ends_at).getTime() - Date.now()); const required = (row.required_role_ids || []).map((id) => `<@&${id}>`).join(', '); const bonus = Object.entries(row.bonus_role_weights || {}).map(([id, weight]) => `<@&${id}>: x${weight}`).join('\n'); const description = [`**ID:** \`${row.id}\``,`**Gewinner:** ${row.winners_count}`,`**Teilnehmer:** ${row.participant_count || 0}`,`**Endet:** ${helpers.formatDateTime(row.ends_at)} (${helpers.formatRemaining(remaining)})`,required ? `**Requirements:** ${required}` : '',bonus ? `**Extra Entries:**\n${bonus}` : '',row.requirements_text ? `**Hinweis:** ${row.requirements_text}` : ''].filter(Boolean).join('\n\n'); const embed = embeds.giveaway(`🎉 ${row.name}`, description, guild, 0x5865F2); embed.setFooter({ text: 'Mit dem Button teilnehmen • Emergency Hamburg Roleplay' }); return embed; }
+function endedEmbed(guild, row, winners) { return embeds.giveaway(`🏆 ${row.name}`, `**ID:** \`${row.id}\`\n**Gewinner:** ${winners.length ? winners.map((id) => `<@${id}>`).join(', ') : 'Keine Gewinner'}\n**Gewinnerplätze:** ${row.winners_count}`, guild, winners.length ? 0x2ECC71 : 0xE74C3C); }
+async function updateMessage(guild, row, ended = false, winners = []) { if (!guild || !row.channel_id || !row.message_id) return; const channel = guild.channels.cache.get(row.channel_id); const message = channel ? await channel.messages.fetch(row.message_id).catch(() => null) : null; if (!message) return; await message.edit({ embeds: [ended ? endedEmbed(guild, row, winners) : runningEmbed(guild, row)], components: ended ? [] : message.components }); }
+async function createGiveaway(interaction, { name, duration, winners, extraEntries, requirements }) { const ms = helpers.parseDuration(duration); if (!ms || ms < 1000) return interaction.reply({ embeds: [embeds.error('Ungültige Länge', 'Beispiele: `30m`, `2h`, `3d`.', interaction.guild)], ephemeral: true }); const requiredRoleIds = roleIds(requirements); const bonusRoleWeights = bonusRoles(extraEntries); const endsAt = new Date(Date.now() + ms); const { data: row, error } = await withRetry(() => getClient().from(TABLES.giveaways).insert({ guild_id: interaction.guild.id, name: String(name).slice(0, 100), prize: String(name).slice(0, 100), channel_id: interaction.channel.id, winners_count: winners, participant_count: 0, ticket_count: 0, ends_at: endsAt.toISOString(), ended: false, host_id: interaction.user.id, required_role_ids: requiredRoleIds, excluded_role_ids: [], bonus_role_weights: bonusRoleWeights, requirements_text: String(requirements || '').slice(0, 1000), max_entries_per_user: 1 }).select('*').single()); if (error || !row) return interaction.reply({ embeds: [embeds.error('Fehler', 'Das Giveaway konnte nicht gespeichert werden.', interaction.guild)], ephemeral: true }); const message = await interaction.channel.send({ embeds: [runningEmbed(interaction.guild, row)], components: [helpers.row(helpers.successButton(`giveaway_join_${row.id}`, 'Teilnehmen', '🎉'))] }); await withRetry(() => getClient().from(TABLES.giveaways).update({ message_id: message.id }).eq('id', row.id)); await auditService.log(interaction.guild.id, interaction.user.tag, 'giveaway.create', { id: row.id, name: row.name, winners, ends_at: row.ends_at }); return interaction.reply({ embeds: [embeds.success('Giveaway erstellt', `**${row.name}**\nID: \`${row.id}\`\nEnde: ${helpers.formatDateTime(row.ends_at)}`, interaction.guild)], ephemeral: true }); }
+function canManage(interaction) { return interaction.user.id === config.ownerUserId || Boolean(interaction.member?.permissions?.has('ManageGuild') || interaction.member?.permissions?.has('Administrator')); }
+async function endNow(interaction, id) { if (!canManage(interaction)) return interaction.reply({ embeds: [embeds.error('Keine Berechtigung', 'Manage Server oder Administrator wird benötigt.', interaction.guild)], ephemeral: true }); const row = await fetchGiveaway(id, interaction.guild.id); if (!row) return interaction.reply({ embeds: [embeds.error('Nicht gefunden', 'Die Giveaway-ID existiert auf diesem Server nicht.', interaction.guild)], ephemeral: true }); if (row.ended) return interaction.reply({ embeds: [embeds.error('Bereits beendet', 'Das Giveaway wurde bereits beendet.', interaction.guild)], ephemeral: true }); const rows = await participants(row.id); const winners = choose(weightedPool(rows, row.bonus_role_weights || {}, interaction.guild), row.winners_count); await withRetry(() => getClient().from(TABLES.giveaways).update({ ended: true, participant_count: rows.length, ticket_count: rows.length, winners }).eq('id', row.id)); await updateMessage(interaction.guild, { ...row, ended: true }, true, winners); await auditService.log(interaction.guild.id, interaction.user.tag, 'giveaway.end', { id: row.id, winners }); return interaction.reply({ embeds: [embeds.success('Giveaway beendet', `\`${row.id}\` wurde beendet. Gewinner: ${winners.length}.`, interaction.guild)], ephemeral: true }); }
+async function reroll(interaction, id, amount, keepWinner) { if (!canManage(interaction)) return interaction.reply({ embeds: [embeds.error('Keine Berechtigung', 'Manage Server oder Administrator wird benötigt.', interaction.guild)], ephemeral: true }); const row = await fetchGiveaway(id, interaction.guild.id); if (!row || !row.ended) return interaction.reply({ embeds: [embeds.error('Nicht möglich', 'Das Giveaway muss zuerst beendet werden.', interaction.guild)], ephemeral: true }); const rows = await participants(row.id); const previous = Array.isArray(row.winners) ? row.winners : []; const excluded = keepWinner ? previous : []; const fresh = choose(weightedPool(rows, row.bonus_role_weights || {}, interaction.guild, excluded), amount); const combined = keepWinner ? [...previous, ...fresh] : fresh; await withRetry(() => getClient().from(TABLES.giveaways).update({ winners: combined }).eq('id', row.id)); await updateMessage(interaction.guild, row, true, combined); await auditService.log(interaction.guild.id, interaction.user.tag, 'giveaway.reroll', { id: row.id, amount, keepWinner, winners: fresh }); return interaction.reply({ embeds: [embeds.success('Reroll', `\`${row.id}\`: ${fresh.length} neue Gewinner gezogen.`, interaction.guild)], ephemeral: true }); }
+async function handleJoinButton(interaction) { const id = Number(String(interaction.customId).replace('giveaway_join_', '')); const row = await fetchGiveaway(id, interaction.guild.id); if (!row || row.ended || new Date(row.ends_at).getTime() <= Date.now()) return interaction.reply({ embeds: [embeds.error('Giveaway beendet', 'Dieses Giveaway läuft nicht mehr.', interaction.guild)], ephemeral: true }); const required = row.required_role_ids || []; if (required.length && !required.every((roleId) => interaction.member.roles.cache.has(roleId))) return interaction.reply({ embeds: [embeds.error('Requirements nicht erfüllt', 'Dir fehlt mindestens eine benötigte Rolle.', interaction.guild)], ephemeral: true }); const { data: existing } = await withRetry(() => getClient().from(TABLES.giveawayParticipants).select('*').eq('giveaway_id', id).eq('discord_id', interaction.user.id).maybeSingle()); if (existing) return interaction.reply({ embeds: [embeds.info('Bereits dabei', 'Du bist bereits für dieses Giveaway eingetragen.', interaction.guild)], ephemeral: true }); await withRetry(() => getClient().from(TABLES.giveawayParticipants).insert({ giveaway_id: id, discord_id: interaction.user.id, username: interaction.user.username, tickets: 1 })); const count = await participants(id); await withRetry(() => getClient().from(TABLES.giveaways).update({ participant_count: count.length, ticket_count: count.length }).eq('id', id)); await updateMessage(interaction.guild, { ...row, participant_count: count.length, ticket_count: count.length }); return interaction.reply({ embeds: [embeds.success('Teilnahme bestätigt', `Du bist bei **${row.name}** dabei.`, interaction.guild)], ephemeral: true }); }
+async function finishExpired(client) { const { data: rows } = await withRetry(() => getClient().from(TABLES.giveaways).select('*').eq('ended', false).lte('ends_at', new Date().toISOString())); for (const row of rows || []) { const guild = client.guilds.cache.get(row.guild_id); if (!guild) continue; const users = await participants(row.id); const winners = choose(weightedPool(users, row.bonus_role_weights || {}, guild), row.winners_count); await withRetry(() => getClient().from(TABLES.giveaways).update({ ended: true, participant_count: users.length, ticket_count: users.length, winners }).eq('id', row.id)); await updateMessage(guild, { ...row, ended: true }, true, winners); } }
+function startInterval(client) { if (intervalStarted) return; intervalStarted = true; setInterval(() => finishExpired(client).catch((err) => logger.error(`Giveaway-Scheduler: ${err.message}`)), 15000); }
 module.exports = { createGiveaway, endNow, reroll, handleJoinButton, startInterval, checkExpired: finishExpired };
