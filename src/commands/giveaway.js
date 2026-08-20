@@ -18,7 +18,12 @@ module.exports = {
     .addSubcommand((s) => s
       .setName('end')
       .setDescription('Beendet ein Giveaway')
-      .addStringOption((o) => o.setName('id').setDescription('Giveaway-ID').setRequired(true))
+      .addStringOption((o) => o
+        .setName('id')
+        .setDescription('Aktives Giveaway auswählen')
+        .setRequired(true)
+        .setAutocomplete(true)
+      )
     )
     .addSubcommand((s) => s
       .setName('reroll')
@@ -27,6 +32,20 @@ module.exports = {
       .addIntegerOption((o) => o.setName('anzahl').setDescription('Wie viele neue Gewinner').setMinValue(1).setRequired(true))
       .addBooleanOption((o) => o.setName('sieger_behalten').setDescription('Bereits gewählte Sieger behalten'))
     ),
+  async autocomplete(interaction) {
+    const sub = interaction.options.getSubcommand();
+    if (sub !== 'end' || !interaction.guildId) return interaction.respond([]);
+    const focused = interaction.options.getFocused().toLowerCase();
+    const active = await giveawayService.listActive(interaction.guildId).catch(() => []);
+    const choices = active
+      .filter((g) => {
+        const haystack = `${g.name || ''} ${g.id}`.toLowerCase();
+        return !focused || haystack.includes(focused);
+      })
+      .slice(0, 25)
+      .map((g) => ({ name: `${g.name || g.prize} • ID ${g.id}`, value: String(g.id) }));
+    return interaction.respond(choices);
+  },
   async execute(interaction) {
     if (!interaction.guild) return interaction.reply({ embeds: [embeds.error('Nur auf einem Server', 'Dieser Command funktioniert nur auf einem Discord-Server.', interaction.guild)], ephemeral: true });
     const sub = interaction.options.getSubcommand();
