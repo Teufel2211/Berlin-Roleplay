@@ -10,7 +10,7 @@ module.exports = {
       .setName('create')
       .setDescription('Erstellt ein Giveaway')
       .addStringOption((o) => o.setName('name').setDescription('Name des Giveaways').setRequired(true))
-      .addStringOption((o) => o.setName('laenge').setDescription('z.B. 30m, 2h, 3d').setRequired(true))
+      .addStringOption((o) => o.setName('dauer').setDescription('z.B. 30m, 2h, 3d').setRequired(true))
       .addIntegerOption((o) => o.setName('gewinner').setDescription('Anzahl der Gewinner').setMinValue(1).setRequired(true))
       .addStringOption((o) => o.setName('extra_entries').setDescription('Bonus-Lose: @Rolle:2,@Rolle:3'))
       .addStringOption((o) => o.setName('requirements').setDescription('Pflichtrollen/Anforderungen; Rollen erwähnen'))
@@ -32,7 +32,7 @@ module.exports = {
     const sub = interaction.options.getSubcommand();
     if (sub === 'create') return giveawayService.createGiveaway(interaction, {
       name: interaction.options.getString('name'),
-      duration: interaction.options.getString('laenge'),
+      duration: interaction.options.getString('dauer'),
       winners: interaction.options.getInteger('gewinner'),
       extraEntries: interaction.options.getString('extra_entries') || '',
       requirements: interaction.options.getString('requirements') || '',
