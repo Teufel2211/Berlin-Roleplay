@@ -59,6 +59,11 @@ function registerEvents(client) {
   client.once(Events.ClientReady, async (c) => { logger.info(`Bot online als ${c.user.tag} in ${c.guilds.cache.size} Server(n)`); await giveawayService.checkExpired(client); giveawayService.startInterval(client); });
   client.on(Events.InteractionCreate, async (interaction) => {
     try {
+      if (interaction.isAutocomplete()) {
+        const cmd = commands.find((c) => c.data.name === interaction.commandName);
+        if (!cmd || typeof cmd.autocomplete !== 'function') return interaction.respond([]);
+        return await cmd.autocomplete(interaction);
+      }
       if (interaction.isChatInputCommand()) {
         const cmd = commands.find((c) => c.data.name === interaction.commandName); if (!cmd) return;
         const module = COMMAND_MODULES[interaction.commandName];
