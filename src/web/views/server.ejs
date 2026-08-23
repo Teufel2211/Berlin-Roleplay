@@ -47,9 +47,6 @@
   var nav = document.getElementById('subnav');
   if (!nav) return;
 
-  // Ticket dashboard content is rendered as cards. Promote those cards to
-  // the same feature-section model used by the shared sub-navigation so each
-  // ticket area is shown independently instead of all being under "Offene Tickets".
   if (window.location.pathname.indexOf('/feature/tickets') !== -1) {
     var ticketMap = {
       'Übersicht': 'liste',
@@ -59,7 +56,7 @@
       'Panel': 'panel',
       'Prioritäten': 'prioritaeten',
       'Tags': 'tags',
-      'Tickets': 'liste',
+      'Tickets': 'tickets',
       'Transcripts': 'transcripts',
       'Ticket-Log': 'protokoll'
     };
@@ -69,7 +66,38 @@
       var id = ticketMap[label];
       if (!id || card.classList.contains('feature-section')) return;
       card.classList.add('feature-section');
-      card.id = id;
+      card.id = 'sec-' + id;
+    });
+
+    var existingTargets = {};
+    Array.prototype.slice.call(nav.querySelectorAll('.subnav-btn')).forEach(function (button) {
+      existingTargets[button.dataset.target] = true;
+    });
+    [
+      ['sec-fragen', 'Ticket-Fragen'],
+      ['sec-panel', 'Panel'],
+      ['sec-prioritaeten', 'Prioritäten'],
+      ['sec-tags', 'Tags'],
+      ['sec-tickets', 'Tickets'],
+      ['sec-transcripts', 'Transcripts'],
+      ['sec-protokoll', 'Ticket-Log']
+    ].forEach(function (item) {
+      if (existingTargets[item[0]]) return;
+      var button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'subnav-btn';
+      button.dataset.target = item[0];
+      button.textContent = item[1];
+      nav.appendChild(button);
+    });
+
+    var rename = {
+      'sec-liste': 'Offene Tickets',
+      'sec-typen': 'Kategorien',
+      'sec-verhalten': 'Verhalten'
+    };
+    Array.prototype.slice.call(nav.querySelectorAll('.subnav-btn')).forEach(function (button) {
+      if (rename[button.dataset.target]) button.textContent = rename[button.dataset.target];
     });
   }
 
