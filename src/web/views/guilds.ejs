@@ -122,8 +122,6 @@
         <% } else { %><span class="guild-fallback"><%= g.name.charAt(0) %></span><% } %>
       </div>
       <div class="guild-name"><%= g.name %></div>
-      <div class="guild-meta"><%= g.botIn ? (g.botOnline ? t('guilds.botOnline') : t('guilds.botOffline')) : t('guilds.botNotInvited') %></div>
-      <% if (g.botIn) { %></a><% } %>
       <% if (!g.botIn) { %>
       <a href="<%= inviteUrl %>" class="btn invite-btn" target="_blank" rel="noopener"><%= t('guilds.add') %></a>
       <% } %>
