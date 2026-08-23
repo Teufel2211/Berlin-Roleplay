@@ -43,15 +43,6 @@ function csrfCheck(req, res, next) {
   return next();
 }
 
-function csrfLoginCheck(req, res, next) {
-  const fail = csrfFailReason(req);
-  if (fail) {
-    logger.warn(`CSRF-Login-Ablehnung von ${req.ip}: ${fail} -> Redirect`);
-    return res.redirect('/dashboard/login?error=session');
-  }
-  return next();
-}
-
 async function refreshDiscordGuilds(req) {
   if (!req.session || !req.session.user) return;
 
@@ -121,7 +112,6 @@ function logout(req, res) {
 module.exports = {
   csrfToken,
   csrfCheck,
-  csrfLoginCheck,
   requireAuth,
   requireAuthApi,
   loginPage,
