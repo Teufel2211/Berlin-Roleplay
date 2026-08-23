@@ -20,8 +20,8 @@ One Node.js process (`discord.js` v14, CommonJS) runs both the Discord bot and a
 │   ├── logger.js             # Winston logger -> logs/app.log
 │   ├── supabase.js           # Supabase client, TABLES map (eghr_ prefix), withRetry
 │   ├── discord/              # client, deploy, embeds, helpers, events
-│   ├── commands/             # verify, warteraum, giveaway, application, ticket, admin
-│   ├── services/             # per-feature DB/domain logic (verify, warteraum, giveaway, application, ticket, settings, audit)
+│   ├── commands/             # giveaway, ticket (only registered slash commands)
+│   ├── services/             # per-feature DB/domain logic (verify, warteraum, giveaway, application, interview, team, moderation, welcome, ticket, settings, audit)
 │   └── web/                  # server, auth, settings/audit routes, views (EJS), public/css
 ├── scripts/                  # migrate.js, setup.js, deploy.js, lint.js
 ├── supabase/migrations/      # 001_init.sql (schema + default settings)
@@ -46,10 +46,10 @@ npm start         # Starts bot + dashboard (reads .env)
 # Conventions
 
 - All embeds and bot messages are **German**; footer: `Emergency Hamburg Roleplay • <Server-Name>`.
-- Slash commands: `/verify`, `/warteraum`, `/giveaway`, `/bewerbung`, `/bewerbung-verwalten`, `/ticket`, `/admin`.
+- Registered slash commands: `/giveaway` (`create`, `end`, `reroll`) and `/ticket` (`setup`, `create`, `close`, `reopen`, `delete`, `claim`, `unclaim`, `add`, `remove`, `rename`, `priority`, `tag`, `transcript`, `info`). All other flows (verify, applications, interviews, tickets) run through panels/buttons/modals handled in `src/discord/events.js`; legacy command files were removed in commit `268c509`.
 - Roles are configurable via settings keys (`staff_role`, `admin_role`, `warteraum_role`, ...); Staff = moderator, Admin = admin.
 - All tables/queries use the `eghr_` prefix (defined once in `src/supabase.js`).
-- `MASTERPROMPT.md` is the behavioral source of truth. If spec and code diverge, ask before changing either.
+- `MASTERPROMPT.md` is the behavioral source of truth. If spec and code diverge, ask before changing either. Note: its `/verify`, `/warteraum`, `/bewerbung`, and `/interview` command chapters are outdated — those flows are now panel/button-driven (see Conventions).
 - RLS is enabled on all Supabase tables (no policies). The bot uses the service role key, which bypasses RLS; anon/authenticated clients get no access.
 - No code comments unless asked; follow existing style (CommonJS, `require`/`module.exports`).
 
