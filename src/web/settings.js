@@ -1,5 +1,5 @@
 const settingsService = require('../services/settingsService');
-const auditService = require('./audit');
+const auditService = require('../services/auditService');
 const logger = require('../logger');
 const ticketService = require('../services/proTicketService');
 const { getClient, TABLES, withRetry } = require('../supabase');
@@ -8,13 +8,13 @@ async function getApi(req, res) {
   try {
     const guildId = req.guildId;
     if (req.query.ticket === '1') {
-      const [settings, categories, priorities, tags, stats, tickets, transcripts] = await Promise.all([
+      const [ticketSettings, categories, priorities, tags, stats, tickets, transcripts] = await Promise.all([
         ticketService.settings(guildId), ticketService.categories(guildId, true), ticketService.priorities(guildId), ticketService.tags(guildId),
         ticketService.stats(guildId), ticketService.list(guildId, { status: req.query.status || '', categoryId: req.query.category || '', assigned: req.query.assigned || '', priorityId: req.query.priority || '', searchText: req.query.search || '', offset: Number(req.query.offset || 0) }),
         ticketService.transcripts(guildId, { ticketId: req.query.ticketId || '', userId: req.query.userId || '' }),
       ]);
       const { data: events } = await withRetry(() => getClient().from(TABLES.ticketEvents).select('*').eq('guild_id', guildId).order('created_at', { ascending: false }).limit(100));
-      return res.json({ settings, categories, priorities, tags, stats, tickets, transcripts, events: events || [] });
+      return res.json({ settings: ticketSettings, categories, priorities, tags, stats, tickets, transcripts, events: events || [] });
     }
     const all = await settingsService.getAll(guildId);
     res.json(all);
