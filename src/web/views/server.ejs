@@ -25,7 +25,7 @@
       <% } else if (feature.id === 'warteraum') { %>
         <%- include('features/_settings_only', { data, featureId: 'warteraum', guildId }) %>
       <% } else if (feature.id === 'tickets') { %>
-        <%- include('features/_tickets', { data, guildId }) %>
+        <%- include('features/_tickets', { data, guildId, csrf }) %>
       <% } else if (feature.id === 'bewerbung') { %>
         <%- include('features/_bewerbung', { data, guildId }) %>
       <% } else if (feature.id === 'giveaway') { %>
@@ -47,7 +47,8 @@
   var nav = document.getElementById('subnav');
   if (!nav) return;
 
-  if (window.location.pathname.indexOf('/feature/tickets') !== -1) {
+  function ticketSections() {
+    if (window.location.pathname.indexOf('/feature/tickets') === -1) return;
     var ticketMap = {
       'Übersicht': 'liste',
       'Verhalten / Allgemein': 'verhalten',
@@ -60,11 +61,12 @@
       'Transcripts': 'transcripts',
       'Ticket-Log': 'protokoll'
     };
-    Array.prototype.slice.call(document.querySelectorAll('.settings-group')).forEach(function (card) {
+
+    Array.prototype.slice.call(document.querySelectorAll('#ticket-app .settings-group')).forEach(function (card) {
       var heading = card.querySelector('.settings-subgroup');
       var label = heading ? heading.textContent.trim() : '';
       var id = ticketMap[label];
-      if (!id || card.classList.contains('feature-section')) return;
+      if (!id) return;
       card.classList.add('feature-section');
       card.id = 'sec-' + id;
     });
@@ -101,17 +103,47 @@
     });
   }
 
-  var sections = Array.prototype.slice.call(document.querySelectorAll('.feature-section'));
   function show(id) {
-    sections.forEach(function (s) { s.classList.toggle('active', s.id === id); });
-    Array.prototype.slice.call(nav.querySelectorAll('.subnav-btn')).forEach(function (b) { b.classList.toggle('active', b.dataset.target === id); });
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.feature-section'));
+    sections.forEach(function (s) {
+      var active = s.id === id;
+      s.classList.toggle('active', active);
+      s.style.display = active ? '' : 'none';
+    });
+    Array.prototype.slice.call(nav.querySelectorAll('.subnav-btn')).forEach(function (b) {
+      b.classList.toggle('active', b.dataset.target === id);
+    });
   }
+
+  function init() {
+    ticketSections();
+    var first = nav.querySelector('.subnav-btn.active') || nav.querySelector('.subnav-btn');
+    if (first) show(first.dataset.target);
+    return Boolean(document.querySelector('#ticket-app .feature-section'));
+  }
+
   nav.addEventListener('click', function (e) {
     var btn = e.target.closest ? e.target.closest('.subnav-btn') : null;
     if (btn) show(btn.dataset.target);
   });
-  var first = nav.querySelector('.subnav-btn');
-  if (first) show(first.dataset.target);
+
+  document.addEventListener('ticket-dashboard-rendered', function () {
+    ticketSections();
+    var active = nav.querySelector('.subnav-btn.active') || nav.querySelector('.subnav-btn');
+    if (active) show(active.dataset.target);
+  });
+
+  var ticketApp = document.getElementById('ticket-app');
+  if (ticketApp && typeof MutationObserver !== 'undefined') {
+    var observer = new MutationObserver(function () {
+      ticketSections();
+      var active = nav.querySelector('.subnav-btn.active') || nav.querySelector('.subnav-btn');
+      if (active) show(active.dataset.target);
+    });
+    observer.observe(ticketApp, { childList: true, subtree: true });
+  }
+
+  init();
 })();
 </script>
 <%- include('partials/foot') %>
