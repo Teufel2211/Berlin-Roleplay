@@ -12,7 +12,24 @@ const TABLES = {
   applications: 'eghr_applications',
   tickets: 'eghr_tickets',
   ticketTypes: 'eghr_ticket_types',
+  ticketSettings: 'eghr_ticket_settings',
+  ticketCategories: 'eghr_ticket_categories',
+  ticketPanels: 'eghr_ticket_panels',
+  ticketQuestions: 'eghr_ticket_questions',
+  ticketAnswers: 'eghr_ticket_answers',
+  ticketPriorities: 'eghr_ticket_priorities',
+  ticketTags: 'eghr_ticket_tags',
+  ticketEvents: 'eghr_ticket_events',
+  ticketMessages: 'eghr_ticket_messages',
+  ticketMembers: 'eghr_ticket_members',
+  ticketAssignments: 'eghr_ticket_assignments',
+  ticketAutomations: 'eghr_ticket_automations',
+  ticketPermissions: 'eghr_ticket_permissions',
+  ticketNotifications: 'eghr_ticket_notifications',
   ticketTranscripts: 'eghr_ticket_transcripts',
+  ticketTranscriptMessages: 'eghr_ticket_transcript_messages',
+  ticketArchives: 'eghr_ticket_archives',
+  ticketStatistics: 'eghr_ticket_statistics',
   auditLog: 'eghr_audit_log',
   settings: 'eghr_settings',
   sessions: 'eghr_sessions',
@@ -33,12 +50,8 @@ const TABLES = {
 
 function getClient() {
   if (!client) {
-    if (!config.supabaseUrl || !config.supabaseServiceRoleKey) {
-      throw new Error('SUPABASE_URL und SUPABASE_SERVICE_ROLE_KEY fehlen in .env');
-    }
-    client = createClient(config.supabaseUrl, config.supabaseServiceRoleKey, {
-      auth: { persistSession: false },
-    });
+    if (!config.supabaseUrl || !config.supabaseServiceRoleKey) throw new Error('SUPABASE_URL und SUPABASE_SERVICE_ROLE_KEY fehlen in .env');
+    client = createClient(config.supabaseUrl, config.supabaseServiceRoleKey, { auth: { persistSession: false } });
   }
   return client;
 }
@@ -46,15 +59,8 @@ function getClient() {
 async function withRetry(fn) {
   let lastErr;
   for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      return await fn();
-    } catch (err) {
-      lastErr = err;
-      if (attempt < 2) {
-        logger.warn(`DB-Aufruf fehlgeschlagen (Versuch ${attempt + 1}): ${err.message}`);
-        await new Promise((r) => setTimeout(r, 500));
-      }
-    }
+    try { return await fn(); }
+    catch (err) { lastErr = err; if (attempt < 2) { logger.warn(`DB-Aufruf fehlgeschlagen (Versuch ${attempt + 1}): ${err.message}`); await new Promise((r) => setTimeout(r, 500)); } }
   }
   throw lastErr;
 }
