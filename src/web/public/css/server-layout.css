@@ -3,23 +3,17 @@
   min-height: 128px;
   padding: 28px 30px;
   margin-bottom: 22px;
-  border-radius: 20px;
-  background:
-    radial-gradient(520px 180px at 100% 0%, rgba(88, 101, 242, 0.08), transparent 68%),
-    linear-gradient(135deg, var(--surface), var(--bg-shell));
-  box-shadow: var(--shadow-md);
 }
 .server-head-main { gap: 20px; }
 .server-icon {
   width: 76px;
   height: 76px;
+  border-radius: 20px;
   font-size: 30px;
-  box-shadow: 0 0 0 4px var(--bg-shell), 0 0 0 5px var(--border-strong);
 }
 .server-head-text h1 {
-  font-size: 26px;
+  font-size: 28px;
   margin-bottom: 6px;
-  letter-spacing: -0.02em;
 }
 .server-id { font-size: 12.5px; }
 .server-head .btn.subtle { align-self: center; }
@@ -32,10 +26,8 @@
 .feature-sidebar {
   top: 92px;
   padding: 12px;
-  border-radius: 18px;
   max-height: calc(100vh - 116px);
   overflow-y: auto;
-  box-shadow: var(--shadow-sm);
 }
 .feature-nav-group:first-child .feature-nav-label {
   padding-top: 10px;
@@ -53,7 +45,7 @@
 }
 .feature-nav-group:first-child { margin-bottom: 10px; }
 .feature-nav-group + .feature-nav-group { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border); }
-.feature-nav-label { padding-left: 10px; }
+.feature-nav-label { padding-left: 10px; letter-spacing: 0.16em; font-size: 10.5px; }
 .feature-link { padding-left: 10px; padding-right: 10px; }
 
 .feature-content {
@@ -71,7 +63,7 @@
     height: 64px;
     font-size: 26px;
   }
-  .server-head-text h1 { font-size: 21px; }
+  .server-head-text h1 { font-size: 23px; }
   .server-body { grid-template-columns: 1fr; }
   .feature-sidebar {
     max-height: none;
