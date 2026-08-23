@@ -1,66 +1,50 @@
-<h2 class="feature-title">Tickets</h2>
-<p class="muted">Support-Tickets über ein Panel. Konfiguriere Kategorie, Panel- und Log-Kanal.</p>
-<% if (data.dbError) { %><div class="alert error"><%= data.dbError %></div><% } %>
-<div class="feature-section" id="sec-liste">
-  <% if (data.records.length) { %>
-  <h3 class="list-title">Tickets</h3>
-  <div class="table-wrap">
-    <table class="data-table">
-      <thead><tr><th>#</th><th>Thema</th><th>Status</th><th>Ersteller</th><th>Übernommen von</th><th>Erstellt am</th></tr></thead>
-      <tbody>
-        <% data.records.forEach(function (t) { %>
-        <tr>
-          <td><%= t.id %></td>
-          <td><%= t.topic %></td>
-          <td><span class="badge <%= t.status %>"><%= t.status %></span></td>
-          <td><%= t.owner_id %></td>
-          <td><%= t.claimed_by || '—' %></td>
-          <td><%= t.created_at ? new Date(t.created_at).toLocaleString('de-DE') : '—' %></td>
-        </tr>
-        <% }) %>
-      </tbody>
-    </table>
-  </div>
-  <% } else { %><div class="empty-state"><p>Keine offenen Tickets.</p></div><% } %>
-</div>
-<div class="feature-section" id="sec-typen">
-  <h3 class="list-title">Ticket-Typ hinzufügen</h3>
-  <form method="post" action="/dashboard/servers/<%= guildId %>/feature/tickets/types" class="question-add-form">
-    <input type="hidden" name="_csrf" value="<%= csrf %>">
-    <input type="hidden" name="action" value="add">
-    <input name="name" placeholder="Name (z.B. Support)" required>
-    <input name="emoji" placeholder="🎫" value="🎫">
-    <select name="category_id"><option value="">Kategorie auswählen</option><% data.channelOptions.forEach(function(c){ if (c.type === 4) { %><option value="<%= c.id %>"><%= c.name %></option><% } }) %></select>
-    <input name="max_open" type="number" min="1" value="1">
-    <select name="ping_role_id"><option value="">Keine Ping-Rolle</option><% data.roleOptions.forEach(function(r){ %><option value="<%= r.id %>"><%= r.name %></option><% }) %></select>
-    <button class="btn primary">Hinzufügen</button>
-  </form>
-  <% if (data.ticketTypes.length) { %>
-  <div class="table-wrap">
-    <table class="data-table">
-      <thead><tr><th>Name</th><th>Kategorie</th><th>Limit</th><th>Ping-Rolle</th><th></th></tr></thead>
-      <tbody>
-        <% data.ticketTypes.forEach(function (t) {
-          var cat = data.channelOptions.find(function(c){ return c.id === t.category_id; });
-          var role = data.roleOptions.find(function(r){ return r.id === t.ping_role_id; });
-        %>
-        <tr>
-          <td><strong><%= t.emoji || '🎫' %> <%= t.name %></strong></td>
-          <td><%= cat ? cat.name : (t.category_id ? t.category_id : '—') %></td>
-          <td><%= t.max_open %></td>
-          <td><%= role ? role.name : (t.ping_role_id ? t.ping_role_id : '—') %></td>
-          <td>
-            <form method="post" action="/dashboard/servers/<%= guildId %>/feature/tickets/types" class="inline-form"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="action" value="move"><input type="hidden" name="id" value="<%= t.id %>"><input type="hidden" name="dir" value="up"><button type="submit" class="btn icon-btn">↑</button></form>
-            <form method="post" action="/dashboard/servers/<%= guildId %>/feature/tickets/types" class="inline-form"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="action" value="move"><input type="hidden" name="id" value="<%= t.id %>"><input type="hidden" name="dir" value="down"><button type="submit" class="btn icon-btn">↓</button></form>
-            <form method="post" action="/dashboard/servers/<%= guildId %>/feature/tickets/types" class="inline-form"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="action" value="edit"><input type="hidden" name="id" value="<%= t.id %>"><input name="name" value="<%= t.name %>" class="wide"><input name="emoji" value="<%= t.emoji || '🎫' %>"><select name="category_id"><option value="">Kategorie auswählen</option><% data.channelOptions.forEach(function(c){ if (c.type === 4) { %><option value="<%= c.id %>"<%= t.category_id === c.id ? ' selected' : '' %>><%= c.name %></option><% } }) %></select><input name="max_open" type="number" min="1" value="<%= t.max_open %>"><select name="ping_role_id"><option value="">Keine Ping-Rolle</option><% data.roleOptions.forEach(function(r){ %><option value="<%= r.id %>"<%= t.ping_role_id === r.id ? ' selected' : '' %>><%= r.name %></option><% }) %></select><button type="submit" class="btn small">Speichern</button></form>
-            <form method="post" action="/dashboard/servers/<%= guildId %>/feature/tickets/types" class="inline-form"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<%= t.id %>"><button type="submit" class="btn small danger">Löschen</button></form>
-          </td>
-        </tr>
-        <% }) %>
-      </tbody>
-    </table>
-  </div>
-  <% } else { %><div class="empty-state"><p>Keine Ticket-Typen konfiguriert. Ohne Typen gilt die Standard-Kategorie.</p></div><% } %>
-</div>
-<%- include('../partials/_sec_settings', { sectionId: 'kanale', data, featureId: 'tickets', guildId }) %>
-<%- include('../partials/_sec_settings', { sectionId: 'verhalten', data, featureId: 'tickets', guildId }) %>
+<h2 class="feature-title">🎫 Ticket-System</h2>
+<p class="muted">Zentrale Verwaltung für Tickets, Kategorien, Panel, Transcripts, Prioritäten, Tags und Statistiken.</p>
+<div id="ticket-app"><div class="empty-state"><p>Ticket-Daten werden geladen …</p></div></div>
+<script>
+(() => {
+  const root=document.getElementById('ticket-app');
+  const csrf=<%- JSON.stringify(typeof csrf !== 'undefined' ? csrf : '') %>;
+  const guildId=<%- JSON.stringify(guildId) %>;
+  const api=`/api/settings?guild=${encodeURIComponent(guildId)}&ticket=1`;
+  async function load(query=''){const r=await fetch(api+query,{headers:{Accept:'application/json'}});if(!r.ok)throw new Error('API '+r.status);return r.json();}
+  async function save(ticketAction,ticket){const r=await fetch('/api/settings?guild='+encodeURIComponent(guildId),{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrf},body:JSON.stringify({ticketAction,ticket})});if(!r.ok)throw new Error('Speichern '+r.status);return r.json();}
+  const esc=s=>String(s??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\\':'&#92;','"':'&quot;'}[c]));
+  const card=(title,body)=>`<section class="settings-group"><h3 class="settings-subgroup">${title}</h3>${body}</section>`;
+  const field=(label,name,value='',type='text')=>`<label class="field"><span class="field-label">${label}</span><input type="${type}" name="${name}" value="${esc(value)}"></label>`;
+  function render(d){
+    const s=d.settings||{}, st=d.stats||{};
+    const metrics=[['Offen',st.open||0],['Geschlossen',st.closed||0],['Heute',st.today||0],['Diese Woche',st.week||0],['Dieser Monat',st.month||0]];
+    let html=`<div class="stats-grid">${metrics.map(x=>`<div class="stat-card"><div class="stat-value">${x[1]}</div><div class="stat-label">${x[0]}</div></div>`).join('')}</div>`;
+    html+=card('Übersicht',`<div class="table-wrap"><table class="data-table"><thead><tr><th>Meistgenutzte Kategorie</th><th>Aktivster Supporter</th><th>Tickets pro Mitarbeiter</th></tr></thead><tbody><tr><td>${esc(d.categories?.find(c=>String(c.id)===String(st.mostCategoryId))?.name||'—')}</td><td>${st.activeSupporterId?`<@${esc(st.activeSupporterId)}>`:'—'}</td><td>${Object.entries(st.ticketsPerEmployee||{}).map(([u,n])=>`<div><code>${esc(u)}</code> — ${n}</div>`).join('')||'—'}</td></tr></tbody></table></div>`);
+    html+=card('Verhalten / Allgemein',`<div class="settings-fields">
+      ${field('Präfix','prefix',s.prefix||'ticket')}${field('Nummerierung ab','number_start',s.number_start||1,'number')}${field('Standard-Ticket-Limit','default_ticket_limit',s.default_ticket_limit||1,'number')}
+      ${field('Auto-Close Stunden','auto_close_hours',s.auto_close_hours||72,'number')}${field('Warnung vor Auto-Close','auto_close_warning_hours',s.auto_close_warning_hours||24,'number')}${field('Auto-Delete Stunden','auto_delete_hours',s.auto_delete_hours||24,'number')}
+      ${field('Transcript-Kanal','transcript_channel_id',s.transcript_channel_id||'')}${field('Log-Kanal','log_channel_id',s.log_channel_id||'')}
+      <label class="field"><span class="field-label">Auto-Close</span><select name="auto_close_enabled"><option value="true"${s.auto_close_enabled?' selected':''}>Aktiv</option><option value="false"${!s.auto_close_enabled?' selected':''}>Deaktiviert</option></select></label>
+      <label class="field"><span class="field-label">Auto-Delete</span><select name="auto_delete_enabled"><option value="true"${s.auto_delete_enabled?' selected':''}>Aktiv</option><option value="false"${!s.auto_delete_enabled?' selected':''}>Deaktiviert</option></select></label>
+      <label class="field"><span class="field-label">Transcripts</span><select name="transcript_enabled"><option value="true"${s.transcript_enabled?' selected':''}>Aktiv</option><option value="false"${!s.transcript_enabled?' selected':''}>Deaktiviert</option></select></label>
+      <label class="field"><span class="field-label">Transcript bei Schließen</span><select name="transcript_on_close"><option value="true"${s.transcript_on_close?' selected':''}>Ja</option><option value="false"${!s.transcript_on_close?' selected':''}>Nein</option></select></label>
+      <label class="field"><span class="field-label">Transcript bei Löschen</span><select name="transcript_on_delete"><option value="true"${s.transcript_on_delete?' selected':''}>Ja</option><option value="false"${!s.transcript_on_delete?' selected':''}>Nein</option></select></label>
+      <label class="field"><span class="field-label">Ein Claim gleichzeitig</span><select name="claim_single"><option value="true"${s.claim_single?' selected':''}>Ja</option><option value="false"${!s.claim_single?' selected':''}>Nein</option></select></label>
+    </div><button class="btn primary" id="save-settings">Einstellungen speichern</button>`);
+    html+=card('Kategorien',`<form id="cat-form" class="settings-form"><div class="settings-fields">${field('Name','name','','text')}${field('Beschreibung','description','','text')}${field('Emoji','emoji','🎫')}${field('Discord Kategorie-Channel','category_channel_id')}${field('Ticket-Limit','ticket_limit','1','number')}${field('Präfix','prefix','ticket')}${field('Prioritäts-ID','priority_id','')}${field('Farbe (Integer)','color','5793266','number')}${field('Support-Rollen (IDs, Komma)','support_role_ids')}${field('Admin-Rollen (IDs, Komma)','admin_role_ids')}${field('Ping-Rollen (IDs, Komma)','ping_role_ids')}</div><button class="btn primary">Kategorie hinzufügen</button></form><div class="table-wrap"><table class="data-table"><thead><tr><th>Name</th><th>Channel</th><th>Limit</th><th>Präfix</th><th></th></tr></thead><tbody>${(d.categories||[]).map(c=>`<tr><td>${esc(c.emoji)} ${esc(c.name)}</td><td>${esc(c.category_channel_id||'—')}</td><td>${c.ticket_limit}</td><td>${esc(c.prefix||s.prefix)}</td><td><button class="btn small danger" data-del-cat="${c.id}">Löschen</button></td></tr>`).join('')||'<tr><td colspan="5">Keine Kategorien</td></tr>'}</tbody></table></div>`);
+    html+=card('Panel',`<form id="panel-form" class="settings-form"><div class="settings-fields">${field('Panel-Name','name','Standard Panel')}${field('Titel','title','🎫 Support')}${field('Beschreibung','description','Wähle eine Kategorie, um ein Ticket zu erstellen.')}${field('Farbe (Integer)','color','5793266','number')}${field('Thumbnail','thumbnail')}${field('Banner','banner')}${field('Footer','footer','Emergency Hamburg Roleplay')}</div><button class="btn primary">Panel speichern</button></form><p class="muted">Zum Senden des Panels:</p><form id="panel-send-form" class="question-add-form"><input name="channel" placeholder="Channel-ID" required><button class="btn primary">Panel in Discord senden</button></form>`);
+    html+=card('Prioritäten',`<form id="prio-form" class="question-add-form"><input name="name" placeholder="Name" required><input name="emoji" placeholder="🔵" value="🔵"><input name="color" type="number" value="5793266"><input name="sort_order" type="number" value="0"><button class="btn primary">Hinzufügen</button></form><div class="table-wrap"><table class="data-table"><tbody>${(d.priorities||[]).map(p=>`<tr><td>${esc(p.emoji)} ${esc(p.name)}</td><td>${p.id}</td></tr>`).join('')}</tbody></table></div>`);
+    html+=card('Tags',`<form id="tag-form" class="question-add-form"><input name="name" placeholder="Tag" required><input name="emoji" placeholder="🏷️"><input name="color" type="number" value="8421504"><input name="description" placeholder="Beschreibung"><button class="btn primary">Hinzufügen</button></form>`);
+    html+=card('Tickets',`<div class="table-wrap"><table class="data-table"><thead><tr><th>ID</th><th>Nummer</th><th>Owner</th><th>Status</th><th>Kategorie</th><th>Priorität</th><th>Bearbeiter</th></tr></thead><tbody>${(d.tickets||[]).map(t=>`<tr><td>${t.id}</td><td>${t.ticket_number||'—'}</td><td>${esc(t.owner_id)}</td><td>${esc(t.status)}</td><td>${esc(d.categories?.find(c=>String(c.id)===String(t.category_id))?.name||t.category_id||'—')}</td><td>${esc(d.priorities?.find(p=>String(p.id)===String(t.priority_id))?.name||t.priority_id||'—')}</td><td>${esc(t.assigned_user_id||'—')}</td></tr>`).join('')||'<tr><td colspan="7">Keine Tickets</td></tr>'}</tbody></table></div>`);
+    html+=card('Transcripts',`<div class="table-wrap"><table class="data-table"><thead><tr><th>Ticket</th><th>Typ</th><th>Nachrichten</th><th>Erstellt</th><th>Pfad</th></tr></thead><tbody>${(d.transcripts||[]).map(t=>`<tr><td>${t.ticket_id}</td><td>${esc(t.transcript_type||'html')}</td><td>${t.message_count||0}</td><td>${t.created_at?new Date(t.created_at).toLocaleString('de-DE'):'—'}</td><td><code>${esc(t.storage_path||t.html_path||'—')}</code></td></tr>`).join('')||'<tr><td colspan="5">Keine Transcripts</td></tr>'}</tbody></table></div>`);
+    html+=card('Ticket-Log',`<div class="table-wrap"><table class="data-table"><thead><tr><th>Event</th><th>Ticket</th><th>Actor</th><th>Zeit</th></tr></thead><tbody>${(d.events||[]).map(e=>`<tr><td>${esc(e.event)}</td><td>${e.ticket_id||'—'}</td><td>${esc(e.actor_tag||e.actor_id||'System')}</td><td>${e.created_at?new Date(e.created_at).toLocaleString('de-DE'):'—'}</td></tr>`).join('')||'<tr><td colspan="4">Keine Events</td></tr>'}</tbody></table></div>`);
+    root.innerHTML=html;
+    document.getElementById('save-settings').onclick=async()=>{const inputs=[...root.querySelectorAll('[name]')];const ticket={};inputs.forEach(i=>{if(['name','description','emoji','category_channel_id','ticket_limit','prefix','priority_id','color','support_role_ids','admin_role_ids','ping_role_ids','channel','options'].includes(i.name))return;ticket[i.name]=i.type==='number'?Number(i.value):i.value;});await save('settings',ticket);await refresh();};
+    document.getElementById('cat-form').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.currentTarget),t=Object.fromEntries(f.entries());['support_role_ids','admin_role_ids','ping_role_ids'].forEach(k=>t[k]=String(t[k]||'').split(',').map(x=>x.trim()).filter(Boolean));await save('category_save',t);await refresh();};
+    document.querySelectorAll('[data-del-cat]').forEach(b=>b.onclick=async()=>{await save('category_delete',{id:b.dataset.delCat});await refresh();});
+    document.getElementById('panel-form').onsubmit=async e=>{e.preventDefault();await save('panel_save',Object.fromEntries(new FormData(e.currentTarget).entries()));await refresh();};
+    document.getElementById('panel-send-form').onsubmit=async e=>{e.preventDefault();const channel=new FormData(e.currentTarget).get('channel');await save('panel_send',{channel_id:channel});alert('Panel-Sendeaktion ausgelöst.');};
+    document.getElementById('prio-form').onsubmit=async e=>{e.preventDefault();await save('priority_save',Object.fromEntries(new FormData(e.currentTarget).entries()));await refresh();};
+    document.getElementById('tag-form').onsubmit=async e=>{e.preventDefault();await save('tag_save',Object.fromEntries(new FormData(e.currentTarget).entries()));await refresh();};
+  }
+  async function refresh(){root.innerHTML='<div class="empty-state"><p>Ticket-Daten werden geladen …</p></div>';try{render(await load())}catch(e){root.innerHTML='<div class="alert error">Ticket-Dashboard konnte nicht geladen werden: '+esc(e.message)+'</div>';}}
+  refresh();
+})();
+</script>
