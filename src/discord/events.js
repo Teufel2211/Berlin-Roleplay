@@ -2,9 +2,10 @@ const { Events, MessageFlags } = require('discord.js');
 const commands = require('../commands');
 const logger = require('../logger');
 const embeds = require('./embeds');
-const { getClient, TABLES } = require('../supabase');
+const { getClient, TABLES, withRetry } = require('../supabase');
 const giveawayService = require('../services/giveawayService');
 const proTicketService = require('../services/proTicketService');
+const ticketAutomation = require('../services/proTicketAutomation');
 const verifyService = require('../services/verifyService');
 const ticketService = require('../services/ticketService');
 const applicationService = require('../services/applicationService');
@@ -19,7 +20,7 @@ async function isModuleEnabled(guildId, moduleId) { const all = await settingsSe
 async function replyError(interaction, err) { logger.error(`Interaktion fehlgeschlagen: ${err.stack || err.message}`); if (!interaction.replied && !interaction.deferred) { try { await interaction.reply({ embeds: [embeds.error('Fehler', 'Beim Ausführen ist ein Fehler aufgetreten.', interaction.guild)], flags: MessageFlags.Ephemeral }); } catch (_) {} } }
 
 function registerEvents(client) {
-  client.once(Events.ClientReady, async (c) => { logger.info(`Bot online als ${c.user.tag} in ${c.guilds.cache.size} Server(n)`); await giveawayService.checkExpired(client); giveawayService.startInterval(client); });
+  client.once(Events.ClientReady, async (c) => { logger.info(`Bot online als ${c.user.tag} in ${c.guilds.cache.size} Server(n)`); await giveawayService.checkExpired(client); giveawayService.startInterval(client); ticketAutomation.start(client); });
   client.on(Events.InteractionCreate, async (interaction) => {
     try {
       if (interaction.isAutocomplete()) { const cmd = commands.find((c) => c.data.name === interaction.commandName); if (!cmd || typeof cmd.autocomplete !== 'function') return interaction.respond([]); return cmd.autocomplete(interaction); }
@@ -33,7 +34,17 @@ function registerEvents(client) {
       if (interaction.isModalSubmit()) { if (interaction.customId.startsWith('pt:questions:')) return proTicketService.questionModal(interaction); if (interaction.customId.startsWith('ticket_close_modal')) return ticketService.handleCloseModal(interaction); }
     } catch (err) { await replyError(interaction, err); }
   });
-  client.on(Events.MessageCreate, (message) => { applicationService.handleDmMessage(message).catch((err) => logger.error(`Bewerbungs-DM fehlgeschlagen: ${err.message}`)); });
+  client.on(Events.MessageCreate, async (message) => {
+    applicationService.handleDmMessage(message).catch((err) => logger.error(`Bewerbungs-DM fehlgeschlagen: ${err.message}`));
+    if (!message.guild || message.author.bot) return;
+    try {
+      const { data: ticket } = await withRetry(() => getClient().from(TABLES.tickets).select('id,guild_id').eq('guild_id', message.guild.id).eq('channel_id', message.channel.id).maybeSingle());
+      if (ticket) {
+        await withRetry(() => getClient().from(TABLES.tickets).update({ last_activity_at: message.createdAt.toISOString() }).eq('id', ticket.id));
+        await withRetry(() => getClient().from(TABLES.ticketMessages).insert({ guild_id: message.guild.id, ticket_id: ticket.id, message_id: message.id, author_id: message.author.id, author_username: message.author.tag, content: message.content || '', attachments: [...message.attachments.values()].map(a=>({name:a.name,url:a.url,size:a.size})), embeds: message.embeds.map(e=>e.toJSON()), created_at: message.createdAt.toISOString() }));
+      }
+    } catch (err) { logger.warn(`Ticket-Aktivität konnte nicht gespeichert werden: ${err.message}`); }
+  });
   client.on(Events.GuildMemberAdd, (member) => { welcomeService.handleMemberJoin(member).catch((err) => logger.error(`Welcome fehlgeschlagen: ${err.message}`)); });
   client.on(Events.GuildMemberRemove, async (member) => { try { await getClient().from(TABLES.users).update({ left_at: new Date().toISOString() }).eq('guild_id', member.guild.id).eq('discord_id', member.id); } catch (err) { logger.warn(`users-Update bei MemberRemove fehlgeschlagen: ${err.message}`); } await warteraumService.cleanupMember(member.guild.id, member.id); });
 }
