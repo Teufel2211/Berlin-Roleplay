@@ -1,36 +1,24 @@
-const { SlashCommandBuilder } = require('discord.js');
-const ticketService = require('../services/ticketService');
-const settingsService = require('../services/settingsService');
+const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+const service = require('../services/proTicketService');
 const embeds = require('../discord/embeds');
-const helpers = require('../discord/helpers');
+const { getClient, TABLES, withRetry } = require('../supabase');
 
-module.exports = {
-  data: new SlashCommandBuilder()
-    .setName('ticket')
-    .setDescription('Ticket-Support')
-    .addSubcommand((s) => s.setName('panel').setDescription('Postet das Ticket-Panel'))
-    .addSubcommand((s) => s.setName('claim').setDescription('Übernimmt dieses Ticket'))
-    .addSubcommand((s) => s.setName('unclaim').setDescription('Gibt dieses Ticket wieder frei'))
-    .addSubcommand((s) => s.setName('schließen').setDescription('Schließt dieses Ticket sofort'))
-    .addSubcommand((s) => s.setName('hinzufügen').setDescription('Fügt jemanden zum Ticket hinzu').addUserOption((o) => o.setName('user').setDescription('Benutzer').setRequired(true))),
-  async execute(interaction) {
-    const sub = interaction.options.getSubcommand();
-    const settings = await settingsService.getAll(interaction.guild.id);
-    const guild = interaction.guild;
-    const staff = helpers.isGuildModerator(interaction.member, settings);
+const data = new SlashCommandBuilder().setName('ticket').setDescription('Professionelle Ticket-Verwaltung')
+  .addSubcommand(s=>s.setName('setup').setDescription('Ticket-Panel senden').addChannelOption(o=>o.setName('kanal').setDescription('Zielkanal')))
+  .addSubcommand(s=>s.setName('create').setDescription('Ticket erstellen').addStringOption(o=>o.setName('kategorie').setDescription('Kategorie-ID').setRequired(true)))
+  .addSubcommand(s=>s.setName('close').setDescription('Ticket schließen').addStringOption(o=>o.setName('id').setDescription('Ticket-ID')))
+  .addSubcommand(s=>s.setName('reopen').setDescription('Ticket wieder öffnen').addStringOption(o=>o.setName('id').setDescription('Ticket-ID')))
+  .addSubcommand(s=>s.setName('delete').setDescription('Ticket löschen').addStringOption(o=>o.setName('id').setDescription('Ticket-ID')))
+  .addSubcommand(s=>s.setName('claim').setDescription('Ticket übernehmen').addStringOption(o=>o.setName('id').setDescription('Ticket-ID')))
+  .addSubcommand(s=>s.setName('unclaim').setDescription('Ticket freigeben').addStringOption(o=>o.setName('id').setDescription('Ticket-ID')))
+  .addSubcommand(s=>s.setName('add').setDescription('Benutzer hinzufügen').addUserOption(o=>o.setName('benutzer').setDescription('Benutzer').setRequired(true)).addStringOption(o=>o.setName('id').setDescription('Ticket-ID')))
+  .addSubcommand(s=>s.setName('remove').setDescription('Benutzer entfernen').addUserOption(o=>o.setName('benutzer').setDescription('Benutzer').setRequired(true)).addStringOption(o=>o.setName('id').setDescription('Ticket-ID')))
+  .addSubcommand(s=>s.setName('rename').setDescription('Ticket umbenennen').addStringOption(o=>o.setName('name').setDescription('Neuer Name').setRequired(true)).addStringOption(o=>o.setName('id').setDescription('Ticket-ID')))
+  .addSubcommand(s=>s.setName('priority').setDescription('Priorität setzen').addIntegerOption(o=>o.setName('prioritaet').setDescription('Prioritäts-ID').setRequired(true)).addStringOption(o=>o.setName('id').setDescription('Ticket-ID')))
+  .addSubcommand(s=>s.setName('tag').setDescription('Tag hinzufügen').addIntegerOption(o=>o.setName('tag').setDescription('Tag-ID').setRequired(true)).addStringOption(o=>o.setName('id').setDescription('Ticket-ID')))
+  .addSubcommand(s=>s.setName('transcript').setDescription('Transcript erstellen').addStringOption(o=>o.setName('id').setDescription('Ticket-ID')))
+  .addSubcommand(s=>s.setName('info').setDescription('Ticket-Info').addStringOption(o=>o.setName('id').setDescription('Ticket-ID')));
 
-    if (sub === 'panel') {
-      if (!helpers.isGuildAdmin(interaction.member, settings)) {
-        return interaction.reply({ embeds: [embeds.error('Keine Berechtigung', 'Nur Admin kann das Panel posten.', guild)], ephemeral: true });
-      }
-      return ticketService.postPanel(interaction);
-    }
-    if (!staff) {
-      return interaction.reply({ embeds: [embeds.error('Keine Berechtigung', 'Nur Staff kann Tickets verwalten.', guild)], ephemeral: true });
-    }
-    if (sub === 'claim') return ticketService.claim(interaction);
-    if (sub === 'unclaim') return ticketService.unclaim(interaction);
-    if (sub === 'schließen') return ticketService.closeCommand(interaction);
-    if (sub === 'hinzufügen') return ticketService.addUser(interaction, interaction.options.getUser('user'));
-  },
-};
+async function current(interaction){const {data}=await withRetry(()=>getClient().from(TABLES.tickets).select('id').eq('guild_id',interaction.guild.id).eq('channel_id',interaction.channel.id).maybeSingle());return data?.id;}
+const id = async i => i.options.getString('id') || current(i);
+module.exports={data,async execute(interaction){if(!interaction.guild)return interaction.reply({embeds:[embeds.error('Nur auf Servern','Dieser Command benötigt einen Discord-Server.',interaction.guild)],flags:64});const sub=interaction.options.getSubcommand();if(sub==='setup'){if(!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild))return interaction.reply({embeds:[embeds.error('Keine Berechtigung','Manage Server wird benötigt.',interaction.guild)],flags:64});return service.panel(interaction,interaction.options.getChannel('kanal')?.id||interaction.channel.id);}if(sub==='create')return service.open(interaction,interaction.options.getString('kategorie'));const ticketId=await id(interaction);if(!ticketId)return interaction.reply({embeds:[embeds.error('Kein Ticket','Dieser Kanal ist kein Ticket und es wurde keine ID angegeben.',interaction.guild)],flags:64});if(sub==='close')return service.close(interaction,ticketId);if(sub==='reopen')return service.reopen(interaction,ticketId);if(sub==='delete')return service.deleteTicket(interaction,ticketId);if(sub==='claim')return service.claim(interaction,ticketId);if(sub==='unclaim')return service.unclaim(interaction,ticketId);if(sub==='add')return service.add(interaction,ticketId,interaction.options.getUser('benutzer').id);if(sub==='remove')return service.remove(interaction,ticketId,interaction.options.getUser('benutzer').id);if(sub==='rename')return service.rename(interaction,ticketId,interaction.options.getString('name'));if(sub==='priority')return service.priority(interaction,ticketId,interaction.options.getInteger('prioritaet'));if(sub==='tag')return service.tag(interaction,ticketId,interaction.options.getInteger('tag'));if(sub==='transcript')return service.transcript(interaction,ticketId);return service.info(interaction,ticketId);}};
