@@ -200,12 +200,11 @@ async function syncSessionGuilds(req) {
 }
 
 function landingFeatures(t) {
-  return FEATURES.filter((f) => f.id !== 'overview').map((f) => ({
-    id: f.id,
-    name: t('feat.' + f.id + '.name', f.name),
-    icon: f.icon,
-    desc: t('feat.' + f.id + '.desc', ''),
-  }));
+  const ids = ['tickets', 'giveaway'];
+  return ids.map((id) => {
+    const f = FEATURES.find((x) => x.id === id);
+    return { id, name: t('feat.' + id + '.name', f.name), icon: f.icon, desc: t('feat.' + id + '.desc', '') };
+  });
 }
 
 function createApp() {
