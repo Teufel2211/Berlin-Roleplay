@@ -1,5 +1,6 @@
 const { getClient, TABLES, withRetry } = require('../supabase');
 const embeds = require('../discord/embeds');
+const proTickets = require('./proTicketService');
 const logger = require('../logger');
 
 let started = false;
@@ -17,6 +18,7 @@ async function tick(client) {
       await withRetry(() => getClient().from(TABLES.tickets).update({ status:'closed', closed_at:new Date().toISOString(), last_activity_at:new Date().toISOString() }).eq('id',ticket.id));
       const guild=client.guilds.cache.get(ticket.guild_id); const ch=guild?.channels.cache.get(ticket.channel_id);
       if(ch) await ch.send({embeds:[embeds.v2({color:0xFEE75C,title:'🔒 Ticket automatisch geschlossen',description:`Dieses Ticket war ${hours} Stunden inaktiv.`,footer:'Emergency Hamburg Roleplay'})]}).catch(()=>null);
+      if(guild&&ch){try{if(!(await proTickets.hasTranscript(ticket.id)))await proTickets.createTranscript(guild,{...ticket,status:'closed',closed_at:new Date().toISOString()},null);}catch(err){logger.warn(`Auto-Close-Transcript fehlgeschlagen: ${err.message}`);}}
     } else if (settings.auto_close_warning_hours && idle >= (hours-Number(settings.auto_close_warning_hours))*3600000) {
       const guild=client.guilds.cache.get(ticket.guild_id); const ch=guild?.channels.cache.get(ticket.channel_id);
       if(ch) await ch.send({embeds:[embeds.v2({color:0xFEE75C,title:'⚠️ Ticket wird bald geschlossen',description:`Dieses Ticket wird bei weiterer Inaktivität automatisch geschlossen.`,footer:'Emergency Hamburg Roleplay'})]}).catch(()=>null);
@@ -28,7 +30,7 @@ async function tick(client) {
     if(!settings?.auto_delete_enabled)continue;
     if(Date.now()-new Date(ticket.closed_at).getTime() < Number(settings.auto_delete_hours||24)*3600000)continue;
     const guild=client.guilds.cache.get(ticket.guild_id); const ch=guild?.channels.cache.get(ticket.channel_id);
-    if(ch)await ch.delete().catch(()=>null);
+    if(ch){try{if(!(await proTickets.hasTranscript(ticket.id)))await proTickets.createTranscript(guild,{...ticket,status:'closed'},null);}catch(err){logger.warn(`Auto-Delete-Transcript fehlgeschlagen: ${err.message}`);}await ch.delete().catch(()=>null);}
     await withRetry(()=>getClient().from(TABLES.tickets).update({status:'deleted',deleted_at:new Date().toISOString()}).eq('id',ticket.id));
     await withRetry(()=>getClient().from(TABLES.ticketArchives).insert({guild_id:ticket.guild_id,ticket_id:ticket.id,archived_by:'System',reason:'auto-delete'}));
   }

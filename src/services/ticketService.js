@@ -143,7 +143,7 @@ async function openTicket(interaction, type) {
     : `**Nutzer:** <@${member.id}>\nBeschreibe hier dein Anliegen. Unser Team hilft dir gleich weiter.`;
   await channel.send({
     embeds: [embeds.info(title, description, guild)],
-    components: [helpers.row(helpers.dangerButton(`ticket_close_${row.id}`, 'Ticket schließen', '🔒'))],
+    components: [helpers.row(helpers.primaryButton(`ticket_claim_${row.id}`, 'Übernehmen', '👤'), helpers.dangerButton(`ticket_close_${row.id}`, 'Ticket schließen', '🔒'))],
   });
 
   if (type && type.ping_role_id && guild.roles.cache.has(type.ping_role_id)) {

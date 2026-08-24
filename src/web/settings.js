@@ -73,4 +73,6 @@ async function ticketAction(req, guildId, user) {
 
 async function saveApi(req,res){try{if(req.body?.ticketAction){await ticketAction(req,req.guildId,req.session.user.tag);return res.json({ok:true});}await applyChanges(req.guildId,req.session.user.tag,req.body?.settings);res.json({ok:true});}catch(err){logger.error(`Settings-API-Save fehlgeschlagen: ${err.stack||err.message}`);const msg=String(err.message||'Speichern fehlgeschlagen').slice(0,200);res.status(400).json({error:msg});}}
 async function saveForm(req,res){try{await applyChanges(req.guildId,req.session.user.tag,req.body?.settings);}catch(err){logger.error(`Settings-Save fehlgeschlagen: ${err.message}`);}res.redirect(`/dashboard/servers/${req.guildId}/feature/${req.params.feature||'overview'}`);}
-module.exports={getApi,saveApi,saveForm};
+
+async function getTranscript(req,res){try{const id=Number(req.params.id);if(!Number.isInteger(id)||id<=0)return res.status(400).send('Ungültige Transcript-ID.');const {data}=await withRetry(()=>getClient().from(TABLES.ticketTranscripts).select('content').eq('id',id).eq('guild_id',req.guildId).maybeSingle());if(!data||!data.content)return res.status(404).send('Transcript nicht gefunden.');res.type('html').send(data.content);}catch(err){logger.error(`Transcript-Abruf fehlgeschlagen: ${err.stack||err.message}`);res.status(500).send('Fehler beim Laden des Transcripts.');}}
+module.exports={getApi,saveApi,saveForm,getTranscript};
