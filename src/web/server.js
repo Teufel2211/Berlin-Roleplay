@@ -118,7 +118,6 @@ const FEATURE_SECTIONS = {
     { id: 'liste', label: 'Offene Tickets', kind: 'content' },
     { id: 'typen', label: 'Kategorien', kind: 'content' },
     { id: 'panel', label: 'Panel', kind: 'content' },
-    { id: 'prioritaeten', label: 'Prioritäten', kind: 'content' },
     { id: 'tickets', label: 'Tickets', kind: 'content' },
     { id: 'transcripts', label: 'Transcripts', kind: 'content' },
     { id: 'protokoll', label: 'Ticket-Log', kind: 'content' },

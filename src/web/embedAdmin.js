@@ -23,9 +23,8 @@ function buildEmbed(data) {
   if (data.title) texts.push(`## ${String(data.title).slice(0, 256)}`);
   if (data.description) texts.push(String(data.description).slice(0, 4000));
   if (texts.length) {
-    const section = { type: 9, components: [{ type: 10, content: texts.join('\n\n') }] };
-    if (data.thumbnail) section.accessory = { type: 11, media: { url: String(data.thumbnail) } };
-    children.push(section);
+    if (data.thumbnail) children.push({ type: 9, accessory: { type: 11, media: { url: String(data.thumbnail) }, description: 'Thumbnail' }, components: [{ type: 10, content: texts.join('\n\n') }] });
+    else children.push({ type: 10, content: texts.join('\n\n') });
   }
   for (const f of Array.isArray(data.fields) ? data.fields.slice(0, 25) : []) {
     const name = String(f.name || ' ').slice(0, 256);

@@ -40,9 +40,8 @@ function panelComponents(panel, cats) {
   const colorRaw = Number(panel?.color);
   const accent = Number.isFinite(colorRaw) && colorRaw > 0 ? colorRaw : 5793266;
   const children = [];
-  const section = { type: 9, components: [{ type: 10, content: `# ${title}` }, { type: 10, content: description }] };
-  if (panel?.thumbnail) section.accessory = { type: 11, media: { url: panel.thumbnail }, description: 'Thumbnail' };
-  children.push(section);
+  if (panel?.thumbnail) children.push({ type: 9, accessory: { type: 11, media: { url: panel.thumbnail }, description: 'Thumbnail' }, components: [{ type: 10, content: `# ${title}` }, { type: 10, content: description }] });
+  else { children.push({ type: 10, content: `# ${title}` }); if (description) children.push({ type: 10, content: description }); }
   if (panel?.banner) children.push({ type: 12, items: [{ media: { url: panel.banner }, description: 'Banner' }] });
   children.push({ type: 14, divider: true, spacing: 1 });
   children.push({ type: 1, components: [{ type: 3, custom_id: 'pt:category', placeholder: 'Ticket-Kategorie auswählen', options: cats.slice(0, 25).map((c) => ({ label: c.name.slice(0, 100), value: String(c.id), description: String(c.description || 'Ticket erstellen').slice(0, 100), emoji: c.emoji ? { name: c.emoji } : undefined })) }] });
@@ -72,6 +71,6 @@ async function ticketAction(req, guildId, user) {
   await auditService.log(guildId,user,`ticket.${a}`,body); return true;
 }
 
-async function saveApi(req,res){try{if(req.body?.ticketAction){await ticketAction(req,req.guildId,req.session.user.tag);return res.json({ok:true});}await applyChanges(req.guildId,req.session.user.tag,req.body?.settings);res.json({ok:true});}catch(err){logger.error(`Settings-API-Save fehlgeschlagen: ${err.stack||err.message}`);res.status(500).json({error:'Speichern fehlgeschlagen'});}}
+async function saveApi(req,res){try{if(req.body?.ticketAction){await ticketAction(req,req.guildId,req.session.user.tag);return res.json({ok:true});}await applyChanges(req.guildId,req.session.user.tag,req.body?.settings);res.json({ok:true});}catch(err){logger.error(`Settings-API-Save fehlgeschlagen: ${err.stack||err.message}`);const msg=String(err.message||'Speichern fehlgeschlagen').slice(0,200);res.status(400).json({error:msg});}}
 async function saveForm(req,res){try{await applyChanges(req.guildId,req.session.user.tag,req.body?.settings);}catch(err){logger.error(`Settings-Save fehlgeschlagen: ${err.message}`);}res.redirect(`/dashboard/servers/${req.guildId}/feature/${req.params.feature||'overview'}`);}
 module.exports={getApi,saveApi,saveForm};

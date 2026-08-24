@@ -28,9 +28,12 @@ function v2(opts = {}) {
   if (title) texts.push(`## ${title}`);
   if (description) texts.push(String(description));
   if (texts.length) {
-    const section = { type: 9, components: [{ type: 10, content: texts.join('\n\n') }] };
-    if (thumbnail) section.accessory = { type: 11, media: { url: String(thumbnail) } };
-    children.push(section);
+    if (thumbnail) {
+      const section = { type: 9, accessory: { type: 11, media: { url: String(thumbnail) }, description: 'Thumbnail' }, components: [{ type: 10, content: texts.join('\n\n') }] };
+      children.push(section);
+    } else {
+      children.push({ type: 10, content: texts.join('\n\n') });
+    }
   }
   for (const field of Array.isArray(fields) ? fields.slice(0, 25) : []) {
     if (!field || !field.name || !field.value) continue;
