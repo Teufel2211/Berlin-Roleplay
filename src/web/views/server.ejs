@@ -50,16 +50,13 @@
   function ticketSections() {
     if (window.location.pathname.indexOf('/feature/tickets') === -1) return;
     var ticketMap = {
-      'Übersicht': 'liste',
-      'Verhalten / Allgemein': 'verhalten',
-      'Kategorien': 'typen',
-      'Ticket-Fragen': 'fragen',
-      'Panel': 'panel',
-      'Prioritäten': 'prioritaeten',
-      'Tags': 'tags',
-      'Tickets': 'tickets',
-      'Transcripts': 'transcripts',
-      'Ticket-Log': 'protokoll'
+      'Übersicht': 'sec-liste',
+      'Kategorien': 'sec-typen',
+      'Panel': 'sec-panel',
+      'Prioritäten': 'sec-prioritaeten',
+      'Tickets': 'sec-tickets',
+      'Transcripts': 'sec-transcripts',
+      'Ticket-Log': 'sec-protokoll'
     };
 
     Array.prototype.slice.call(document.querySelectorAll('#ticket-app .settings-group')).forEach(function (card) {
@@ -68,38 +65,7 @@
       var id = ticketMap[label];
       if (!id) return;
       card.classList.add('feature-section');
-      card.id = 'sec-' + id;
-    });
-
-    var existingTargets = {};
-    Array.prototype.slice.call(nav.querySelectorAll('.subnav-btn')).forEach(function (button) {
-      existingTargets[button.dataset.target] = true;
-    });
-    [
-      ['sec-fragen', 'Ticket-Fragen'],
-      ['sec-panel', 'Panel'],
-      ['sec-prioritaeten', 'Prioritäten'],
-      ['sec-tags', 'Tags'],
-      ['sec-tickets', 'Tickets'],
-      ['sec-transcripts', 'Transcripts'],
-      ['sec-protokoll', 'Ticket-Log']
-    ].forEach(function (item) {
-      if (existingTargets[item[0]]) return;
-      var button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'subnav-btn';
-      button.dataset.target = item[0];
-      button.textContent = item[1];
-      nav.appendChild(button);
-    });
-
-    var rename = {
-      'sec-liste': 'Offene Tickets',
-      'sec-typen': 'Kategorien',
-      'sec-verhalten': 'Verhalten'
-    };
-    Array.prototype.slice.call(nav.querySelectorAll('.subnav-btn')).forEach(function (button) {
-      if (rename[button.dataset.target]) button.textContent = rename[button.dataset.target];
+      card.id = id;
     });
   }
 

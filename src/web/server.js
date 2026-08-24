@@ -116,9 +116,12 @@ const FEATURE_SECTIONS = {
   ],
   tickets: [
     { id: 'liste', label: 'Offene Tickets', kind: 'content' },
-    { id: 'typen', label: 'Ticket-Typen', kind: 'content' },
-    { id: 'kanale', label: 'Kanäle', kind: 'settings' },
-    { id: 'verhalten', label: 'Verhalten', kind: 'settings' },
+    { id: 'typen', label: 'Kategorien', kind: 'content' },
+    { id: 'panel', label: 'Panel', kind: 'content' },
+    { id: 'prioritaeten', label: 'Prioritäten', kind: 'content' },
+    { id: 'tickets', label: 'Tickets', kind: 'content' },
+    { id: 'transcripts', label: 'Transcripts', kind: 'content' },
+    { id: 'protokoll', label: 'Ticket-Log', kind: 'content' },
   ],
   bewerbung: [
     { id: 'liste', label: 'Bewerbungen', kind: 'content' },
