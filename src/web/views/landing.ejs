@@ -1,14 +1,4 @@
 <%- include('partials/head', { title, user, csrf, lang, t }) %>
-<section class="landing">
-  <div class="landing-hero">
-    <span class="landing-eyebrow"><span class="dot"></span><%= t('landing.eyebrow') %></span>
-    <h1>Emergency Hamburg Roleplay</h1>
-    <p class="muted"><%= t('landing.subtitle') %></p>
-    <% if (loggedIn) { %>
-    <a href="/dashboard" class="discord-btn"><%= t('landing.dashboardCta') %></a>
-    <% } else { %>
-    <a href="/dashboard/login" class="discord-btn"><%= t('landing.loginCta') %></a>
-    <% } %>
-  </div>
-</section>
+<main>
+</main>
 <%- include('partials/foot') %>
