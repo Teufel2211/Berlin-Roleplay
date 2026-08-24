@@ -1,5 +1,6 @@
 const { config } = require('./config');
 const logger = require('./logger');
+require('./discord/v2shim').install();
 const { client, login } = require('./discord/client');
 const { registerEvents } = require('./discord/events');
 const { registerCommands } = require('./discord/deploy');

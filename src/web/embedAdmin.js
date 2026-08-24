@@ -18,15 +18,28 @@ function parseColor(value) {
   const n = Number(value); return Number.isFinite(n) && n >= 0 ? n : DEFAULT_COLOR;
 }
 function buildEmbed(data) {
-  const embed = { color: parseColor(data.color) };
-  if (data.title) { embed.title = String(data.title).slice(0, 256); if (data.title_url) embed.url = String(data.title_url).slice(0, 2048); }
-  if (data.description) embed.description = String(data.description).slice(0, 4096);
-  if (data.thumbnail) embed.thumbnail = { url: String(data.thumbnail) };
-  if (data.image) embed.image = { url: String(data.image) };
-  if (data.footer) { embed.footer = { text: String(data.footer).slice(0, 2048) }; if (data.footer_icon) embed.footer.icon_url = String(data.footer_icon).slice(0, 2048); }
-  if (data.timestamp === 'true') embed.timestamp = new Date().toISOString();
-  if (Array.isArray(data.fields) && data.fields.length) embed.fields = data.fields.slice(0, 25).map((f) => ({ name: String(f.name || ' ').slice(0, 256), value: String(f.value || ' ').slice(0, 1024), inline: f.inline === true || f.inline === 'true' }));
-  return embed;
+  const children = [];
+  const texts = [];
+  if (data.title) texts.push(`## ${String(data.title).slice(0, 256)}`);
+  if (data.description) texts.push(String(data.description).slice(0, 4000));
+  if (texts.length) {
+    const section = { type: 9, components: [{ type: 10, content: texts.join('\n\n') }] };
+    if (data.thumbnail) section.accessory = { type: 11, media: { url: String(data.thumbnail) } };
+    children.push(section);
+  }
+  for (const f of Array.isArray(data.fields) ? data.fields.slice(0, 25) : []) {
+    const name = String(f.name || ' ').slice(0, 256);
+    const value = String(f.value || ' ').slice(0, 1024);
+    children.push({ type: 10, content: `**${name}**\n${value}` });
+  }
+  if (data.image) children.push({ type: 12, items: [{ media: { url: String(data.image) } }] });
+  let footer = String(data.footer || '');
+  if (footer && data.timestamp !== 'true') footer = footer;
+  else if (footer && data.timestamp === 'true') footer = `${footer} • ${new Date().toLocaleString('de-DE')}`;
+  else if (data.timestamp === 'true') footer = new Date().toLocaleString('de-DE');
+  children.push({ type: 14, divider: true, spacing: 1 });
+  children.push({ type: 10, content: `-# ${footer || 'Emergency Hamburg Roleplay'}` });
+  return { type: 17, accent_color: parseColor(data.color), components: children };
 }
 function buildComponents(embedId, buttons) {
   if (!Array.isArray(buttons) || !buttons.length) return [];
@@ -42,8 +55,8 @@ function buildComponents(embedId, buttons) {
 }
 function parseData(row) { if (!row) return null; if (typeof row.data === 'string') { try { return JSON.parse(row.data); } catch (_) { return null; } } return row.data || null; }
 function normalizeStoredData(row) { const data = parseData(row) || {}; if (!data.name && row.name) data.name = row.name; delete data.author_name; delete data.author_url; delete data.author_icon; return data; }
-async function postEmbed(row) { assertDiscordToken(); const data = normalizeStoredData(row); const msg = await discordApi.postMessage(row.channel_id, { embeds: [buildEmbed(data)], components: buildComponents(row.id, data.buttons).map((r) => r.toJSON()) }); await withRetry(() => getClient().from(TABLES.embeds).update({ message_id: msg.id, data }).eq('id', row.id)); return msg; }
-async function editEmbed(row) { assertDiscordToken(); if (!row.message_id) throw new Error('Dieses Embed wurde noch nicht gepostet.'); const data = normalizeStoredData(row); await discordApi.editMessage(row.channel_id, row.message_id, { embeds: [buildEmbed(data)], components: buildComponents(row.id, data.buttons).map((r) => r.toJSON()) }); await withRetry(() => getClient().from(TABLES.embeds).update({ data }).eq('id', row.id)); }
+async function postEmbed(row) { assertDiscordToken(); const data = normalizeStoredData(row); const msg = await discordApi.postMessage(row.channel_id, { components: [buildEmbed(data), ...buildComponents(row.id, data.buttons).map((r) => r.toJSON())], flags: 32768 }); await withRetry(() => getClient().from(TABLES.embeds).update({ message_id: msg.id, data }).eq('id', row.id)); return msg; }
+async function editEmbed(row) { assertDiscordToken(); if (!row.message_id) throw new Error('Dieses Embed wurde noch nicht gepostet.'); const data = normalizeStoredData(row); await discordApi.editMessage(row.channel_id, row.message_id, { components: [buildEmbed(data), ...buildComponents(row.id, data.buttons).map((r) => r.toJSON())], flags: 32768 }); await withRetry(() => getClient().from(TABLES.embeds).update({ data }).eq('id', row.id)); }
 async function deleteMessage(row) { assertDiscordToken(); if (!row.channel_id || !row.message_id) return; try { await discordApi.deleteMessage(row.channel_id, row.message_id); } catch (err) { logger.warn(`Embed-Nachricht nicht gelöscht: ${err.message}`); } }
 function arr(v) { return Array.isArray(v) ? v : v == null ? [] : [v]; }
 function collect(body) {

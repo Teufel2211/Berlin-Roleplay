@@ -1,4 +1,5 @@
 const { getClient, TABLES, withRetry } = require('../supabase');
+const embeds = require('../discord/embeds');
 const logger = require('../logger');
 
 let started = false;
@@ -15,10 +16,10 @@ async function tick(client) {
     if (idle >= hours * 3600000) {
       await withRetry(() => getClient().from(TABLES.tickets).update({ status:'closed', closed_at:new Date().toISOString(), last_activity_at:new Date().toISOString() }).eq('id',ticket.id));
       const guild=client.guilds.cache.get(ticket.guild_id); const ch=guild?.channels.cache.get(ticket.channel_id);
-      if(ch) await ch.send({embeds:[{color:0xFEE75C,title:'🔒 Ticket automatisch geschlossen',description:`Dieses Ticket war ${hours} Stunden inaktiv.`,footer:{text:'Emergency Hamburg Roleplay'}}]}).catch(()=>null);
+      if(ch) await ch.send({embeds:[embeds.v2({color:0xFEE75C,title:'🔒 Ticket automatisch geschlossen',description:`Dieses Ticket war ${hours} Stunden inaktiv.`,footer:'Emergency Hamburg Roleplay'})]}).catch(()=>null);
     } else if (settings.auto_close_warning_hours && idle >= (hours-Number(settings.auto_close_warning_hours))*3600000) {
       const guild=client.guilds.cache.get(ticket.guild_id); const ch=guild?.channels.cache.get(ticket.channel_id);
-      if(ch) await ch.send({embeds:[{color:0xFEE75C,title:'⚠️ Ticket wird bald geschlossen',description:`Dieses Ticket wird bei weiterer Inaktivität automatisch geschlossen.`,footer:{text:'Emergency Hamburg Roleplay'}}]}).catch(()=>null);
+      if(ch) await ch.send({embeds:[embeds.v2({color:0xFEE75C,title:'⚠️ Ticket wird bald geschlossen',description:`Dieses Ticket wird bei weiterer Inaktivität automatisch geschlossen.`,footer:'Emergency Hamburg Roleplay'})]}).catch(()=>null);
     }
   }
   const { data: closed } = await withRetry(() => getClient().from(TABLES.tickets).select('*').eq('status','closed').not('closed_at','is',null).limit(500));

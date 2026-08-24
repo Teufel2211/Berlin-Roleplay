@@ -1,5 +1,6 @@
 const { getClient, TABLES, withRetry } = require('../supabase');
 const { client } = require('../discord/client');
+const embeds = require('../discord/embeds');
 const logger = require('../logger');
 const auditService = require('../services/auditService');
 const { parseGradingSheet } = require('../services/interviewImport');
@@ -62,12 +63,12 @@ async function importGradingSheet(req, res, guildId, body) {
         const channel = await client.channels.fetch(interview.channel_id);
         if (channel && channel.isTextBased()) {
           await channel.send({
-            embeds: [{
+            embeds: [embeds.v2({
               color: passed ? 0x2ecc71 : 0xe74c3c,
               title: passed ? '🎉 Interview bestanden' : '❌ Interview nicht bestanden',
               description: `**${interview.applicant_name || interview.applicant_id}** hat **${total.toLocaleString('de-DE')}** von **${maxTotal.toLocaleString('de-DE')}** Punkten erreicht (**${pct.toLocaleString('de-DE')} %**).\nBestanden ab **${threshold.toLocaleString('de-DE')} %** (${thresholdPoints.toLocaleString('de-DE')} Punkte).`,
-              footer: { text: 'Emergency Hamburg Roleplay • Bewertungsbogen importiert' },
-            }],
+              footer: 'Emergency Hamburg Roleplay • Bewertungsbogen importiert',
+            })],
           });
         }
       }

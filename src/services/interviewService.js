@@ -44,12 +44,12 @@ function buildResultData(sum, maxTotal, threshold) {
 }
 
 function buildResultEmbed(name, sum, maxTotal, pct, threshold, thresholdPoints, passed, footerText) {
-  return {
+  return embeds.v2({
     color: passed ? 0x2ecc71 : 0xe74c3c,
     title: passed ? '🎉 Interview bestanden' : '❌ Interview nicht bestanden',
     description: `**${name}** hat **${sum.toLocaleString('de-DE')}** von **${maxTotal.toLocaleString('de-DE')}** Punkten erreicht (**${pct.toLocaleString('de-DE')} %**).\nBestanden ab **${threshold.toLocaleString('de-DE')} %** (${thresholdPoints.toLocaleString('de-DE')} Punkte).`,
-    footer: { text: footerText },
-  };
+    footer: footerText,
+  });
 }
 
 async function sendResultDm(applicantId, applicantName, total, maxTotal, pct, threshold, thresholdPoints, passed) {
@@ -57,12 +57,12 @@ async function sendResultDm(applicantId, applicantName, total, maxTotal, pct, th
   try {
     const user = await client.users.fetch(applicantId);
     await user.send({
-      embeds: [{
+      embeds: [embeds.v2({
         color: passed ? 0x2ecc71 : 0xe74c3c,
         title: passed ? '🎉 Interview bestanden' : '❌ Interview nicht bestanden',
         description: `Hallo **${applicantName}**, dein Interview ist abgeschlossen.\n\nErreicht: **${total.toLocaleString('de-DE')} / ${maxTotal.toLocaleString('de-DE')} Punkte** (**${pct.toLocaleString('de-DE')} %**)\nBestanden ab **${threshold.toLocaleString('de-DE')} %** (${thresholdPoints.toLocaleString('de-DE')} Punkte).`,
-        footer: { text: 'Emergency Hamburg Roleplay • Interview' },
-      }],
+        footer: 'Emergency Hamburg Roleplay • Interview',
+      })],
     });
   } catch (err) {
     logger.warn(`Interview-DM an ${applicantName} fehlgeschlagen: ${err.message}`);
@@ -111,13 +111,13 @@ function buildSectionEmbed(interview, chunk, startIndex, questions) {
   const maxPoints = getMaxPoints(questions);
   const fields = chunk.map((q, i) => ({ name: `Frage ${startIndex + i + 1} — Abschnitt ${q.section}`, value: `${q.frage}\n**Punktzahl: ${interview.scores[q.id] !== undefined ? SCORE_LABELS[interview.scores[q.id]] : '—'} / ${questionMaxPoints(q)}**` }));
   const done = scoredCount >= total;
-  return {
+  return embeds.v2({
     color: 0xe8453c,
     title: `🎤 Interview: ${interview.applicant_name || interview.applicant_id}`,
     description: `${done ? '✅ **Fertig**' : `**Bewertet: ${scoredCount}/${total} Fragen**`}${done ? ` — Ergebnis: **${interview.total} / ${maxPoints} Punkte**` : ''}`,
     fields,
-    footer: { text: 'Bewertung ändern: einfach neuen Button klicken' },
-  };
+    footer: 'Bewertung ändern: einfach neuen Button klicken',
+  });
 }
 
 function buildSectionMessage(interview, chunk, startIndex, questions) {

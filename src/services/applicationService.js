@@ -1,4 +1,4 @@
-const { ChannelType, PermissionFlagsBits, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
+const { ChannelType, PermissionFlagsBits, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
 const { getClient, TABLES, withRetry } = require('../supabase');
 const settingsService = require('./settingsService');
 const auditService = require('./auditService');
@@ -32,16 +32,13 @@ async function getQuestions(guildId, type) {
 
 function buildReviewEmbed(guild, type, user, questions, answers, status) {
   const color = status === 'angenommen' ? embeds.COLORS.success : status === 'abgelehnt' ? embeds.COLORS.error : embeds.COLORS.info;
-  const embed = new EmbedBuilder()
-    .setColor(color)
-    .setTitle(`📝 Bewerbung: ${type}`)
-    .setDescription(`**Bewerber:** <@${user.id}>\n**Status:** ${status === 'offen' ? '⏳ Offen' : status === 'angenommen' ? '✅ Angenommen' : '❌ Abgelehnt'}`)
-    .setFooter({ text: `Emergency Hamburg Roleplay • ${guild.name}` })
-    .setTimestamp(new Date());
-  questions.forEach((q, i) => {
-    embed.addFields({ name: `**${i + 1}. ${q.slice(0, 200)}**`, value: (answers[i] || '—').slice(0, 1024) });
+  return embeds.v2({
+    color,
+    title: `📝 Bewerbung: ${type}`,
+    description: `**Bewerber:** <@${user.id}>\n**Status:** ${status === 'offen' ? '⏳ Offen' : status === 'angenommen' ? '✅ Angenommen' : '❌ Abgelehnt'}`,
+    fields: questions.map((q, i) => ({ name: `${i + 1}. ${q.slice(0, 200)}`, value: (answers[i] || '—').slice(0, 1024) })),
+    guild,
   });
-  return embed;
 }
 
 async function startDmFlow(interaction, type) {
