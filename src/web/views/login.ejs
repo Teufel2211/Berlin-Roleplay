@@ -1,4 +1,4 @@
-<%- include('partials/head', { title, user, csrf, lang, t }) %>
+<%- include('partials/head', { title, user, csrf, lang, t, showTopbar: false }) %>
 <section class="login-box">
   <h1><%= t('login.title') %></h1>
   <% if (locals.error) { %><div class="alert error"><%= error %></div><% } %>

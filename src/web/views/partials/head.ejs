@@ -12,13 +12,14 @@
   <% if (locals.guildId) { %><link rel="stylesheet" href="/css/server-layout.css"><% } %>
 </head>
 <body>
+<% if (locals.showTopbar !== false) { %>
 <header class="topbar">
   <a href="/" class="brand"><img src="/img/logo.png" alt="Emergency Hamburg Roleplay" class="brand-logo">Emergency Hamburg Roleplay</a>
   <div class="topbar-right">
     <nav class="topnav">
       <a href="/" class="topnav-link<%= typeof pathName !== 'undefined' && pathName === '/' ? ' active' : '' %>"><%= t('topbar.home') %></a>
       <a href="/#systeme" class="topnav-link"><%= t('topbar.systems') %></a>
-      <a href="/dashboard" class="topnav-link"><%= t('topbar.dashboard') %></a>
+      <a href="/dashboard" class="topnav-link cta"><%= t('topbar.dashboard') %></a>
     </nav>
     <span class="lang-switch">
       <% if (locals.guildId) { %>
@@ -48,4 +49,5 @@
     <% } %>
   </div>
 </header>
+<% } %>
 <main>

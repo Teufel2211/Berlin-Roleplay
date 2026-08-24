@@ -1,4 +1,4 @@
-<%- include('partials/head', { title, user, csrf, lang, t }) %>
+<%- include('partials/head', { title, user, csrf, lang, t, showTopbar: false }) %>
 
 <% if (user && user.isOwner) { %>
 <section class="page owner-shell">

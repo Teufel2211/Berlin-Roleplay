@@ -1,4 +1,19 @@
 <%- include('partials/head', { title, user, csrf, lang, t }) %>
 <main>
+  <section class="landing-features" id="systeme">
+    <div class="landing-section-head">
+      <h2><%= t('landing.systemsTitle') %></h2>
+      <p class="muted"><%= t('landing.systemsSubtitle') %></p>
+    </div>
+    <div class="feature-grid">
+      <% features.forEach(function (f) { %>
+      <article class="feature-card">
+        <span class="feature-card-icon"><span class="feature-icon"><%= f.icon %></span></span>
+        <span class="feature-card-name"><%= f.name %></span>
+        <p class="feature-card-desc"><%= f.desc %></p>
+      </article>
+      <% }); %>
+    </div>
+  </section>
 </main>
 <%- include('partials/foot') %>
