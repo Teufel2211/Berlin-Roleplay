@@ -1068,6 +1068,90 @@ footer a:hover { color: var(--text); }
 .ep-btn-4 { background: #da373c; color: #fff; }
 .ep-btn-5 { background: transparent; border: 1px solid #4e5058; color: #fff; }
 
+/* ---------- Discord Components V2 preview ---------- */
+.panel-preview { margin-top: 20px; max-width: 640px; }
+.preview-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--text-faint);
+  margin-bottom: 8px;
+}
+.dc-message {
+  display: flex;
+  gap: 12px;
+  background: #313338;
+  border-radius: 8px;
+  padding: 16px;
+}
+.dc-avatar {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--font-display);
+  background: linear-gradient(135deg, #ff4d42, #5865f2);
+}
+.dc-msg-main { min-width: 0; flex: 1; }
+.dc-username {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #f2f3f5;
+}
+.dc-app-badge {
+  background: #5865f2;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+.dc-time { font-size: 11px; font-weight: 500; color: #949ba4; }
+.dc-container {
+  --dc-accent: #00a58c;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: #2b2d31;
+  border-left: 4px solid var(--dc-accent);
+  border-radius: 8px;
+}
+.dc-section { display: flex; justify-content: space-between; gap: 12px; }
+.dc-texts { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.dc-h { margin: 0; font-size: 20px; font-weight: 700; line-height: 1.25; color: #f2f3f5; overflow-wrap: anywhere; }
+.dc-desc { margin: 0; font-size: 14px; line-height: 1.45; color: #dbdee1; white-space: pre-wrap; word-break: break-word; }
+.dc-thumb { width: 80px; height: 80px; border-radius: 8px; object-fit: cover; flex: 0 0 auto; background: #1e1f22; }
+.dc-banner { width: 100%; max-height: 200px; border-radius: 8px; object-fit: cover; background: #1e1f22; }
+.dc-sep { border: none; height: 1px; background: #3f4147; margin: 0; }
+.dc-select {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #1e1f22;
+  border: 1px solid #26272b;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #949ba4;
+}
+.dc-caret { color: #b5bac1; font-size: 12px; }
+.dc-subtext { font-size: 12px; color: #949ba4; }
+
 /* ---------- Interview ---------- */
 .question-add-form { display: flex; gap: 10px; align-items: center; margin-bottom: 20px; max-width: 720px; flex-wrap: wrap; }
 .question-add-form select { padding: 10px 13px; background: var(--bg-shell); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 14px; }

@@ -33,10 +33,28 @@ async function applyChanges(guildId, user, settings) {
   if (Object.keys(changes).length) await auditService.log(guildId, user, 'settings.update', changes);
 }
 
+function panelComponents(panel, cats) {
+  const title = panel?.title || '🎫 Support';
+  const description = panel?.description || 'Wähle eine Kategorie, um ein Ticket zu erstellen.';
+  const footer = panel?.footer || 'Emergency Hamburg Roleplay';
+  const colorRaw = Number(panel?.color);
+  const accent = Number.isFinite(colorRaw) && colorRaw > 0 ? colorRaw : 5793266;
+  const children = [];
+  const section = { type: 9, components: [{ type: 10, content: `# ${title}` }, { type: 10, content: description }] };
+  if (panel?.thumbnail) section.accessory = { type: 11, media: { url: panel.thumbnail }, description: 'Thumbnail' };
+  children.push(section);
+  if (panel?.banner) children.push({ type: 12, items: [{ media: { url: panel.banner }, description: 'Banner' }] });
+  children.push({ type: 14, divider: true, spacing: 1 });
+  children.push({ type: 1, components: [{ type: 3, custom_id: 'pt:category', placeholder: 'Ticket-Kategorie auswählen', options: cats.slice(0, 25).map((c) => ({ label: c.name.slice(0, 100), value: String(c.id), description: String(c.description || 'Ticket erstellen').slice(0, 100), emoji: c.emoji ? { name: c.emoji } : undefined })) }] });
+  children.push({ type: 14, divider: true, spacing: 1 });
+  children.push({ type: 10, content: `-# ${footer}` });
+  return [{ type: 17, accent_color: accent, components: children }];
+}
+
 async function sendPanel(guildId, channelId, userTag) {
   const s = await ticketService.settings(guildId); const cats = await ticketService.categories(guildId); if (!cats.length) throw new Error('Keine Ticket-Kategorien aktiviert.');
   const { data: panel } = await withRetry(() => getClient().from(TABLES.ticketPanels).select('*').eq('guild_id', guildId).eq('enabled', true).order('id').limit(1).maybeSingle());
-  const payload = { embeds: [{ title: panel?.title || '🎫 Support', description: panel?.description || 'Wähle eine Kategorie, um ein Ticket zu erstellen.', color: panel?.color || 5793266, thumbnail: panel?.thumbnail ? { url: panel.thumbnail } : undefined, image: panel?.banner ? { url: panel.banner } : undefined, footer: { text: panel?.footer || 'Emergency Hamburg Roleplay' }, timestamp: new Date().toISOString() }], components: [{ type: 1, components: [{ type: 3, custom_id: 'pt:category', placeholder: 'Ticket-Kategorie auswählen', options: cats.slice(0,25).map(c=>({ label: c.name.slice(0,100), value: String(c.id), description: String(c.description||'Ticket erstellen').slice(0,100), emoji: c.emoji ? { name: c.emoji } : undefined })) }] }] };
+  const payload = { flags: 32768, components: panelComponents(panel, cats) };
   const r = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, { method:'POST', headers:{ Authorization:`Bot ${config.discordToken}`, 'Content-Type':'application/json' }, body:JSON.stringify(payload) }); if(!r.ok) throw new Error(`Discord API ${r.status}: ${await r.text()}`); const msg=await r.json(); await auditService.log(guildId,userTag,'ticket.panel.send',{channelId,messageId:msg.id}); return msg.id;
 }
 
