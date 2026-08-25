@@ -94,10 +94,14 @@ async function applyFile(f, touched, needsInstallRef) {
 let busy = false;
 let errorCount = 0;
 let intervalHandle = null;
+const status = { enabled: false, checks: 0, lastCheckAt: null, lastResult: null, lastCount: 0, lastFiles: [], lastError: null, sha: readSha() || null };
+function statusSnapshot() { return { ...status }; }
 
 async function tick() {
   if (busy) return;
   busy = true;
+  status.checks += 1;
+  status.lastCheckAt = new Date().toISOString();
   try {
     let applied = 0;
     let needsInstall = false;
@@ -107,6 +111,10 @@ async function tick() {
       const r = await fullSync();
       applied = r.count;
       head = r.sha;
+      status.lastResult = 'installed';
+      status.lastCount = applied;
+      status.lastFiles = [`Erstinstallation: ${applied} Dateien`];
+      status.sha = head;
       logger.info(`Auto-Update: Erstinstallation mit ${applied} Dateien (Commit ${head.slice(0, 7)}).`);
     } else {
       let cmp = null;
@@ -119,10 +127,19 @@ async function tick() {
         applied = r.count;
         head = r.sha;
         logger.info(`Auto-Update: Basis unbekannt, Erstinstallation mit ${applied} Dateien (Commit ${head.slice(0, 7)}).`);
+        status.lastResult = 'installed';
+        status.lastCount = applied;
+        status.lastFiles = [`Erstinstallation: ${applied} Dateien`];
+        status.sha = head;
       }
       if (cmp) {
         if (!cmp.files || !cmp.files.length) {
           errorCount = 0;
+          status.lastResult = 'up-to-date';
+          status.lastCount = 0;
+          status.lastFiles = [];
+          status.lastError = null;
+          status.sha = base;
           return;
         }
         const touched = [];
@@ -136,9 +153,18 @@ async function tick() {
         head = await latestCommitSha();
         if (!applied) {
           writeSha(head);
+          status.lastResult = 'up-to-date';
+          status.lastCount = 0;
+          status.lastFiles = [];
+          status.lastError = null;
+          status.sha = head;
           return;
         }
         logger.info(`Auto-Update: ${applied} Datei(en) aktualisiert (${touched.join(', ')}, Commit ${head.slice(0, 7)}).`);
+        status.lastResult = 'updated';
+        status.lastCount = applied;
+        status.lastFiles = touched;
+        status.sha = head;
       }
     }
     writeSha(head);
@@ -152,6 +178,8 @@ async function tick() {
     setTimeout(() => process.exit(0), 1500).unref();
   } catch (err) {
     errorCount += 1;
+    status.lastResult = 'error';
+    status.lastError = err.message;
     logger.error(`Auto-Update fehlgeschlagen (${errorCount}): ${err.stack || err.message}`);
     if (errorCount >= 5) {
       logger.error('Auto-Update nach 5 Fehlern deaktiviert – bitte Logs prüfen.');
@@ -167,9 +195,10 @@ function init() {
     logger.info('Auto-Update deaktiviert (AUTO_UPDATE != true).');
     return;
   }
+  status.enabled = true;
   setTimeout(() => tick().catch(() => {}), 15000);
   intervalHandle = setInterval(() => tick().catch(() => {}), config.selfUpdateIntervalMs);
   logger.info(`Auto-Update aktiv – prüfe alle ${Math.round(config.selfUpdateIntervalMs / 1000)} Sekunden auf neue Commits.`);
 }
 
-module.exports = { init, tick };
+module.exports = { init, tick, status: statusSnapshot };
