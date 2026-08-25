@@ -79,7 +79,13 @@ create table if not exists public.eghr_tickets (
 
 create table if not exists public.eghr_ticket_transcripts (
   id bigint generated always as identity primary key,
+  guild_id text,
   ticket_id bigint references public.eghr_tickets(id) on delete cascade,
+  created_by text,
+  ticket_owner text,
+  status text,
+  transcript_type text,
+  storage_path text,
   content text not null,
   created_at timestamptz default now()
 );
