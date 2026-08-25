@@ -62,9 +62,10 @@ async function updatePanelMessage(guildId) {
     const { data: panel } = await withRetry(() => getClient().from(TABLES.ticketPanels).select('*').eq('guild_id', guildId).eq('enabled', true).order('id').limit(1).maybeSingle());
     if (!panel || !panel.message_id || !panel.channel_id) return;
     const cats = await ticketService.categories(guildId);
-    const payload = { components: panelComponents(panel, cats) };
+    const payload = { flags: 32768, components: panelComponents(panel, cats) };
     const r = await fetch(`https://discord.com/api/v10/channels/${panel.channel_id}/messages/${panel.message_id}`, { method: 'PATCH', headers: { Authorization: `Bot ${config.discordToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-    if (!r.ok) logger.warn(`Panel-Update fehlgeschlagen: Discord API ${r.status}`);
+    if (!r.ok) { const t = await r.text().catch(() => ''); logger.warn(`Panel-Update fehlgeschlagen: Discord API ${r.status} ${t}`); }
+    else logger.info(`Panel-Message ${panel.message_id} aktualisiert (${cats.length} Kategorien)`);
   } catch (err) { logger.warn(`Panel-Update fehlgeschlagen: ${err.message}`); }
 }
 
