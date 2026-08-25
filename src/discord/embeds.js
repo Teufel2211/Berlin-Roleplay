@@ -8,7 +8,8 @@ const COLORS = {
 };
 
 function footerText(guild) {
-  return guild ? `Emergency Hamburg Roleplay • ${guild.name}` : 'Emergency Hamburg Roleplay';
+  if (!guild) return 'Emergency Hamburg Roleplay';
+  return guild.name === 'Emergency Hamburg Roleplay' ? 'Emergency Hamburg Roleplay' : `Emergency Hamburg Roleplay • ${guild.name}`;
 }
 
 function v2(opts = {}) {
