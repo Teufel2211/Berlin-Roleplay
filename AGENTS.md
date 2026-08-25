@@ -46,7 +46,7 @@ npm start         # Starts bot + dashboard (reads .env)
 # Conventions
 
 - All embeds and bot messages are **German**; footer: `Emergency Hamburg Roleplay • <Server-Name>`.
-- Registered slash commands: `/giveaway` (`create`, `end`, `reroll`) and `/ticket` (`setup`, `create`, `close`, `reopen`, `delete`, `claim`, `unclaim`, `add`, `remove`, `rename`, `priority`, `tag`, `transcript`, `info`). All other flows (verify, applications, interviews, tickets) run through panels/buttons/modals handled in `src/discord/events.js`; legacy command files were removed in commit `268c509`.
+- Registered slash commands: `/giveaway` (`create`, `end`, `reroll`) and `/ticket` (`setup`, `create`, `close`, `reopen`, `delete`, `claim`, `unclaim`, `add`, `remove`, `rename`, `tag`, `transcript`, `info`). All other flows (verify, applications, interviews, tickets) run through panels/buttons/modals handled in `src/discord/events.js`; legacy command files were removed in commit `268c509`.
 - Roles are configurable via settings keys (`staff_role`, `admin_role`, `warteraum_role`, ...); Staff = moderator, Admin = admin.
 - All tables/queries use the `eghr_` prefix (defined once in `src/supabase.js`).
 - `MASTERPROMPT.md` is the behavioral source of truth. If spec and code diverge, ask before changing either. Note: its `/verify`, `/warteraum`, `/bewerbung`, and `/interview` command chapters are outdated — those flows are now panel/button-driven (see Conventions).
