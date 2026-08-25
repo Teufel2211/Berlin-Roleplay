@@ -261,7 +261,11 @@ async function closeTicket(interaction, id, reason) {
       const messages = await channel.messages.fetch({ limit: 100 });
       const lines = [...messages.values()].reverse().map((m) => {
         const stamp = helpers.formatDateTime(m.createdAt.toISOString());
-        return `[${stamp}] ${m.author.tag}: ${m.content || '(Embed/Reaktion)'}`;
+        const text = (m.content || '(Embed/Reaktion)')
+          .replace(/<@&(\d+)>/g, (mm, id) => '@' + ((guild.roles.cache.get(id) && guild.roles.cache.get(id).name) || 'Rolle'))
+          .replace(/<@!?(\d+)>/g, (mm, id) => '@' + (((guild.members.cache.get(id) && guild.members.cache.get(id).user.username) || (guild.client.users.cache.get(id) && guild.client.users.cache.get(id).username)) || 'User'))
+          .replace(/<#(\d+)>/g, (mm, id) => '#' + ((guild.channels.cache.get(id) && guild.channels.cache.get(id).name) || 'kanal'));
+        return `[${stamp}] ${m.author.tag}: ${text}`;
       });
       transcriptText = lines.join('\n');
       transcript.push(...lines);
@@ -281,7 +285,7 @@ async function closeTicket(interaction, id, reason) {
 
   if ((await settingsService.get(gid, 'ticket_transcripts_enabled', 'true')) === 'true' && transcriptText) {
     await withRetry(() =>
-      getClient().from(TABLES.ticketTranscripts).insert({ ticket_id: row.id, content: transcriptText })
+      getClient().from(TABLES.ticketTranscripts).insert({ guild_id: gid, ticket_id: row.id, content: transcriptText })
     );
   }
 
