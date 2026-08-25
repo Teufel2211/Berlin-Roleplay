@@ -86,7 +86,11 @@ async function handleTypeSelect(interaction) {
       ephemeral: true,
     });
   }
-  return openTicket(interaction, type);
+  const result = await openTicket(interaction, type);
+  if (interaction.message && typeof interaction.message.edit === 'function') {
+    interaction.message.edit({ components: interaction.message.components }).catch(() => {});
+  }
+  return result;
 }
 
 async function openTicket(interaction, type) {
