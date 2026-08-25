@@ -17,7 +17,6 @@ const TABLES = {
   ticketPanels: 'eghr_ticket_panels',
   ticketQuestions: 'eghr_ticket_questions',
   ticketAnswers: 'eghr_ticket_answers',
-  ticketPriorities: 'eghr_ticket_priorities',
   ticketTags: 'eghr_ticket_tags',
   ticketEvents: 'eghr_ticket_events',
   ticketMessages: 'eghr_ticket_messages',

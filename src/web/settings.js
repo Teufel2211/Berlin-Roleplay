@@ -9,15 +9,15 @@ async function getApi(req, res) {
   try {
     const guildId = req.guildId;
     if (req.query.ticket === '1') {
-      const [ticketSettings, categories, priorities, tags, stats, tickets, transcripts] = await Promise.all([
-        ticketService.settings(guildId), ticketService.categories(guildId, true), ticketService.priorities(guildId), ticketService.tags(guildId),
-        ticketService.stats(guildId), ticketService.list(guildId, { status: req.query.status || '', categoryId: req.query.category || '', assigned: req.query.assigned || '', priorityId: req.query.priority || '', searchText: req.query.search || '', offset: Number(req.query.offset || 0) }),
+      const [ticketSettings, categories, tags, stats, tickets, transcripts] = await Promise.all([
+        ticketService.settings(guildId), ticketService.categories(guildId, true), ticketService.tags(guildId),
+        ticketService.stats(guildId), ticketService.list(guildId, { status: req.query.status || '', categoryId: req.query.category || '', assigned: req.query.assigned || '', searchText: req.query.search || '', offset: Number(req.query.offset || 0) }),
         ticketService.transcripts(guildId, { ticketId: req.query.ticketId || '', userId: req.query.userId || '' }),
       ]);
       const { data: events } = await withRetry(() => getClient().from(TABLES.ticketEvents).select('*').eq('guild_id', guildId).order('created_at', { ascending: false }).limit(100));
       const { data: panel } = await withRetry(() => getClient().from(TABLES.ticketPanels).select('*').eq('guild_id', guildId).order('id').limit(1).maybeSingle());
       const { data: questions } = await withRetry(() => getClient().from(TABLES.ticketQuestions).select('*').eq('guild_id', guildId).order('category_id').order('sort_order'));
-      return res.json({ settings: ticketSettings, categories, priorities, tags, stats, tickets, transcripts, events: events || [], panel: panel || null, questions: questions || [] });
+      return res.json({ settings: ticketSettings, categories, tags, stats, tickets, transcripts, events: events || [], panel: panel || null, questions: questions || [] });
     }
     res.json(await settingsService.getAll(guildId));
   } catch (err) { logger.error(`Settings-API fehlgeschlagen: ${err.stack || err.message}`); res.status(500).json({ error: 'Datenbank-Fehler' }); }
@@ -62,7 +62,6 @@ async function ticketAction(req, guildId, user) {
   if(a==='settings') await ticketService.saveSettings(guildId,{prefix:String(body.prefix||'ticket'),number_start:Number(body.number_start||1),default_ticket_limit:Number(body.default_ticket_limit||1),auto_close_hours:Number(body.auto_close_hours||72),auto_close_warning_hours:Number(body.auto_close_warning_hours||24),auto_delete_hours:Number(body.auto_delete_hours||24),transcript_channel_id:body.transcript_channel_id||null,log_channel_id:body.log_channel_id||null,auto_close_enabled:body.auto_close_enabled==='true',auto_delete_enabled:body.auto_delete_enabled==='true',transcript_enabled:body.transcript_enabled==='true',transcript_on_close:body.transcript_on_close==='true',transcript_on_delete:body.transcript_on_delete==='true',claim_single:body.claim_single==='true'});
   else if(a==='category_save') await ticketService.upsertCategory(guildId,body);
   else if(a==='category_delete') await ticketService.deleteCategory(guildId,Number(body.id));
-  else if(a==='priority_save'){const row={guild_id:guildId,name:String(body.name||'Priorität'),emoji:String(body.emoji||'🔵'),color:Number(body.color||5793266),sort_order:Number(body.sort_order||0),enabled:true};if(body.id)await withRetry(()=>getClient().from(TABLES.ticketPriorities).update(row).eq('guild_id',guildId).eq('id',Number(body.id)));else await withRetry(()=>getClient().from(TABLES.ticketPriorities).insert(row));}
   else if(a==='tag_save'){const row={guild_id:guildId,name:String(body.name||'Tag'),emoji:String(body.emoji||'🏷️'),color:Number(body.color||8421504),description:String(body.description||'')||null,enabled:true};if(body.id)await withRetry(()=>getClient().from(TABLES.ticketTags).update(row).eq('guild_id',guildId).eq('id',Number(body.id)));else await withRetry(()=>getClient().from(TABLES.ticketTags).insert(row));}
   else if(a==='question_save'){const row={guild_id:guildId,category_id:Number(body.category_id),question:String(body.question||'').slice(0,1000),type:['short','long','choice','boolean','number'].includes(body.type)?body.type:'short',options:String(body.options||'').split('\n').filter(Boolean),required:body.required!=='false',sort_order:Number(body.sort_order||0),enabled:true};if(body.id)await withRetry(()=>getClient().from(TABLES.ticketQuestions).update(row).eq('guild_id',guildId).eq('id',Number(body.id)));else await withRetry(()=>getClient().from(TABLES.ticketQuestions).insert(row));}
   else if(a==='question_delete') await withRetry(()=>getClient().from(TABLES.ticketQuestions).delete().eq('guild_id',guildId).eq('id',Number(body.id)));
