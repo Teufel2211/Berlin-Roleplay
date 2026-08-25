@@ -54,18 +54,21 @@ async function sendPanel(guildId, channelId, userTag) {
   const s = await ticketService.settings(guildId); const cats = await ticketService.categories(guildId); if (!cats.length) throw new Error('Keine Ticket-Kategorien aktiviert.');
   const { data: panel } = await withRetry(() => getClient().from(TABLES.ticketPanels).select('*').eq('guild_id', guildId).eq('enabled', true).order('id').limit(1).maybeSingle());
   const payload = { flags: 32768, components: panelComponents(panel, cats) };
-  const r = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, { method:'POST', headers:{ Authorization:`Bot ${config.discordToken}`, 'Content-Type':'application/json' }, body:JSON.stringify(payload) }); if(!r.ok) throw new Error(`Discord API ${r.status}: ${await r.text()}`); const msg=await r.json(); await withRetry(() => getClient().from(TABLES.ticketPanels).update({ message_id: String(msg.id), channel_id: String(channelId) }).eq('guild_id', guildId).eq('enabled', true)); await auditService.log(guildId,userTag,'ticket.panel.send',{channelId,messageId:msg.id}); return msg.id;
+  const r = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, { method:'POST', headers:{ Authorization:`Bot ${config.discordToken}`, 'Content-Type':'application/json' }, body:JSON.stringify(payload) }); if(!r.ok) throw new Error(`Discord API ${r.status}: ${await r.text()}`); const msg=await r.json(); await withRetry(() => getClient().from(TABLES.ticketPanels).update({ message_id: String(msg.id), channel_id: String(channelId) }).eq('id', panel.id)); await auditService.log(guildId,userTag,'ticket.panel.send',{channelId,messageId:msg.id}); return msg.id;
 }
 
 async function updatePanelMessage(guildId) {
   try {
-    const { data: panel } = await withRetry(() => getClient().from(TABLES.ticketPanels).select('*').eq('guild_id', guildId).eq('enabled', true).order('id').limit(1).maybeSingle());
-    if (!panel || !panel.message_id || !panel.channel_id) return;
+    const { data: panels } = await withRetry(() => getClient().from(TABLES.ticketPanels).select('*').eq('guild_id', guildId).eq('enabled', true));
+    if (!panels?.length) return;
     const cats = await ticketService.categories(guildId);
-    const payload = { flags: 32768, components: panelComponents(panel, cats) };
-    const r = await fetch(`https://discord.com/api/v10/channels/${panel.channel_id}/messages/${panel.message_id}`, { method: 'PATCH', headers: { Authorization: `Bot ${config.discordToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-    if (!r.ok) { const t = await r.text().catch(() => ''); logger.warn(`Panel-Update fehlgeschlagen: Discord API ${r.status} ${t}`); }
-    else logger.info(`Panel-Message ${panel.message_id} aktualisiert (${cats.length} Kategorien)`);
+    for (const panel of panels) {
+      if (!panel.message_id || !panel.channel_id) continue;
+      const payload = { flags: 32768, components: panelComponents(panel, cats) };
+      const r = await fetch(`https://discord.com/api/v10/channels/${panel.channel_id}/messages/${panel.message_id}`, { method: 'PATCH', headers: { Authorization: `Bot ${config.discordToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      if (!r.ok) { const t = await r.text().catch(() => ''); logger.warn(`Panel-Update fehlgeschlagen: Discord API ${r.status} ${t}`); }
+      else logger.info(`Panel-Message ${panel.message_id} aktualisiert (${cats.length} Kategorien)`);
+    }
   } catch (err) { logger.warn(`Panel-Update fehlgeschlagen: ${err.message}`); }
 }
 
