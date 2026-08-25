@@ -17,7 +17,22 @@ async function getApi(req, res) {
       const { data: events } = await withRetry(() => getClient().from(TABLES.ticketEvents).select('*').eq('guild_id', guildId).order('created_at', { ascending: false }).limit(100));
       const { data: panel } = await withRetry(() => getClient().from(TABLES.ticketPanels).select('*').eq('guild_id', guildId).order('id').limit(1).maybeSingle());
       const { data: questions } = await withRetry(() => getClient().from(TABLES.ticketQuestions).select('*').eq('guild_id', guildId).order('category_id').order('sort_order'));
-      return res.json({ settings: ticketSettings, categories, tags, stats, tickets, transcripts, events: events || [], panel: panel || null, questions: questions || [] });
+      const userNames = stats.userNames || {};
+      const ticketIds = [...new Set((tickets || []).flatMap(t => [t.owner_id, t.assigned_user_id].filter(Boolean)))].filter(id => !userNames[id]);
+      if (ticketIds.length) {
+        const { data: dbUsers2 } = await withRetry(() => getClient().from(TABLES.users).select('discord_id,username').eq('guild_id', guildId).in('discord_id', ticketIds));
+        for (const u of dbUsers2 || []) if (u.username) userNames[u.discord_id] = u.username;
+        for (const id of ticketIds) {
+          if (!userNames[id]) {
+            try {
+              const r = await fetch(`https://discord.com/api/v10/users/${id}`, { headers: { Authorization: `Bot ${config.discordToken}` } });
+              if (r.ok) { const u = await r.json(); if (u.username) userNames[id] = u.username; }
+            } catch {}
+          }
+        }
+      }
+      for (const id of ticketIds) if (!userNames[id]) userNames[id] = id;
+      return res.json({ settings: ticketSettings, categories, tags, stats, tickets, transcripts, events: events || [], panel: panel || null, questions: questions || [], userNames });
     }
     res.json(await settingsService.getAll(guildId));
   } catch (err) { logger.error(`Settings-API fehlgeschlagen: ${err.stack || err.message}`); res.status(500).json({ error: 'Datenbank-Fehler' }); }
