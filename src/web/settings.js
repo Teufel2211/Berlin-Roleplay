@@ -57,11 +57,22 @@ async function sendPanel(guildId, channelId, userTag) {
   const r = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, { method:'POST', headers:{ Authorization:`Bot ${config.discordToken}`, 'Content-Type':'application/json' }, body:JSON.stringify(payload) }); if(!r.ok) throw new Error(`Discord API ${r.status}: ${await r.text()}`); const msg=await r.json(); await auditService.log(guildId,userTag,'ticket.panel.send',{channelId,messageId:msg.id}); return msg.id;
 }
 
+async function updatePanelMessage(guildId) {
+  try {
+    const { data: panel } = await withRetry(() => getClient().from(TABLES.ticketPanels).select('*').eq('guild_id', guildId).eq('enabled', true).order('id').limit(1).maybeSingle());
+    if (!panel || !panel.message_id || !panel.channel_id) return;
+    const cats = await ticketService.categories(guildId);
+    const payload = { components: panelComponents(panel, cats) };
+    const r = await fetch(`https://discord.com/api/v10/channels/${panel.channel_id}/messages/${panel.message_id}`, { method: 'PATCH', headers: { Authorization: `Bot ${config.discordToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    if (!r.ok) logger.warn(`Panel-Update fehlgeschlagen: Discord API ${r.status}`);
+  } catch (err) { logger.warn(`Panel-Update fehlgeschlagen: ${err.message}`); }
+}
+
 async function ticketAction(req, guildId, user) {
   const a=req.body?.ticketAction; const body=req.body?.ticket||{}; if(!a)return false;
   if(a==='settings') await ticketService.saveSettings(guildId,{prefix:String(body.prefix||'ticket'),number_start:Number(body.number_start||1),default_ticket_limit:Number(body.default_ticket_limit||1),auto_close_hours:Number(body.auto_close_hours||72),auto_close_warning_hours:Number(body.auto_close_warning_hours||24),auto_delete_hours:Number(body.auto_delete_hours||24),transcript_channel_id:body.transcript_channel_id||null,log_channel_id:body.log_channel_id||null,auto_close_enabled:body.auto_close_enabled==='true',auto_delete_enabled:body.auto_delete_enabled==='true',transcript_enabled:body.transcript_enabled==='true',transcript_on_close:body.transcript_on_close==='true',transcript_on_delete:body.transcript_on_delete==='true',claim_single:body.claim_single==='true'});
-  else if(a==='category_save') await ticketService.upsertCategory(guildId,body);
-  else if(a==='category_delete') await ticketService.deleteCategory(guildId,Number(body.id));
+  else if(a==='category_save'){await ticketService.upsertCategory(guildId,body);await updatePanelMessage(guildId);}
+  else if(a==='category_delete'){await ticketService.deleteCategory(guildId,Number(body.id));await updatePanelMessage(guildId);}
   else if(a==='tag_save'){const row={guild_id:guildId,name:String(body.name||'Tag'),emoji:String(body.emoji||'🏷️'),color:Number(body.color||8421504),description:String(body.description||'')||null,enabled:true};if(body.id)await withRetry(()=>getClient().from(TABLES.ticketTags).update(row).eq('guild_id',guildId).eq('id',Number(body.id)));else await withRetry(()=>getClient().from(TABLES.ticketTags).insert(row));}
   else if(a==='question_save'){const row={guild_id:guildId,category_id:Number(body.category_id),question:String(body.question||'').slice(0,1000),type:['short','long','choice','boolean','number'].includes(body.type)?body.type:'short',options:String(body.options||'').split('\n').filter(Boolean),required:body.required!=='false',sort_order:Number(body.sort_order||0),enabled:true};if(body.id)await withRetry(()=>getClient().from(TABLES.ticketQuestions).update(row).eq('guild_id',guildId).eq('id',Number(body.id)));else await withRetry(()=>getClient().from(TABLES.ticketQuestions).insert(row));}
   else if(a==='question_delete') await withRetry(()=>getClient().from(TABLES.ticketQuestions).delete().eq('guild_id',guildId).eq('id',Number(body.id)));
