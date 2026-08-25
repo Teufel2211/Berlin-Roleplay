@@ -13,7 +13,8 @@ const DEFAULT_SETTINGS = {
 
 const config = {
   requiredSecrets: REQUIRED_SECRETS,
-  discordToken: process.env.DISCORD_TOKEN || '', clientId: process.env.CLIENT_ID || '', ownerUserId: process.env.OWNER_USER_ID || '1370372526001356972', discordClientSecret: process.env.DISCORD_CLIENT_SECRET || '', supabaseUrl: process.env.SUPABASE_URL || '', supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '', supabaseDbUrl: process.env.SUPABASE_DB_URL || '', webPort: parseInt(process.env.WEB_PORT || '3000', 10), webUrl: (process.env.WEB_URL || 'http://localhost:3000').replace(/\/+$/, ''), sessionSecret: process.env.SESSION_SECRET || 'notruf-hamburg-dev-secret', debug: process.env.DEBUG === '1', dataDir: path.join(__dirname, '..', 'data'), logDir: path.join(__dirname, '..', 'logs'), transcriptDir: path.join(__dirname, '..', 'data', 'transcripts'),
+  discordToken: process.env.DISCORD_TOKEN || '', clientId: process.env.CLIENT_ID || '', ownerUserId: process.env.OWNER_USER_ID || '1370372526001356972', discordClientSecret: process.env.DISCORD_CLIENT_SECRET || '', supabaseUrl: process.env.SUPABASE_URL || '', supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '', supabaseDbUrl: process.env.SUPABASE_DB_URL || '',   webPort: parseInt(process.env.WEB_PORT || '3000', 10), webUrl: (process.env.WEB_URL || 'http://localhost:3000').replace(/\/+$/, ''), sessionSecret: process.env.SESSION_SECRET || 'notruf-hamburg-dev-secret', debug: process.env.DEBUG === '1', dataDir: path.join(__dirname, '..', 'data'), logDir: path.join(__dirname, '..', 'logs'), transcriptDir: path.join(__dirname, '..', 'data', 'transcripts'),
+  selfUpdate: process.env.AUTO_UPDATE === 'true', selfUpdateIntervalMs: Math.max(30000, parseInt(process.env.AUTO_UPDATE_INTERVAL_MS || '120000', 10)),
 };
 
 module.exports = { config, DEFAULT_SETTINGS };

@@ -33,6 +33,7 @@ async function main() {
     await registerCommands();
 
     startWebServer();
+    require('./services/selfsync').init();
   } catch (err) {
     logger.error(`Start fehlgeschlagen: ${err.stack || err.message}`);
     process.exit(1);
