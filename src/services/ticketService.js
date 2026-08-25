@@ -142,19 +142,14 @@ async function openTicket(interaction, type) {
   }
 
   const title = type ? `${type.emoji || '🎫'} ${type.name}` : '🎫 Ticket erstellt';
+  const ping = (type && type.ping_role_id && guild.roles.cache.has(type.ping_role_id)) ? `\n\n<@&${type.ping_role_id}>` : '';
   const description = type
-    ? `**Nutzer:** <@${member.id}>\nDu hast ein **${type.name}**-Ticket eröffnet. Beschreibe hier dein Anliegen. Unser Team hilft dir gleich weiter.`
-    : `**Nutzer:** <@${member.id}>\nBeschreibe hier dein Anliegen. Unser Team hilft dir gleich weiter.`;
+    ? `**Nutzer:** <@${member.id}>\nDu hast ein **${type.name}**-Ticket eröffnet. Beschreibe hier dein Anliegen. Unser Team hilft dir gleich weiter.${ping}`
+    : `**Nutzer:** <@${member.id}>\nBeschreibe hier dein Anliegen. Unser Team hilft dir gleich weiter.${ping}`;
   await channel.send({
     embeds: [embeds.info(title, description, guild)],
     components: [helpers.row(helpers.primaryButton(`ticket_claim_${row.id}`, 'Übernehmen', '👤'), helpers.dangerButton(`ticket_close_${row.id}`, 'Ticket schließen', '🔒'))],
   });
-
-  if (type && type.ping_role_id && guild.roles.cache.has(type.ping_role_id)) {
-    try {
-      await channel.send({ content: `<@&${type.ping_role_id}>` });
-    } catch (err) { logger.warn(`Ticket-Ping fehlgeschlagen: ${err.message}`); }
-  }
 
   await auditService.log(gid, interaction.user.tag, 'ticket.open', { id: row.id, type_id: type ? type.id : null });
   return interaction.reply({ embeds: [embeds.success('Ticket erstellt', `Dein Ticket wurde geöffnet: <#${channel.id}>`, guild)], ephemeral: true });
