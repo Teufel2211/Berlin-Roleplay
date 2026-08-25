@@ -22,13 +22,13 @@ async function getApi(req, res) {
       if (ticketIds.length) {
         const { data: dbUsers2 } = await withRetry(() => getClient().from(TABLES.users).select('discord_id,username').eq('guild_id', guildId).in('discord_id', ticketIds));
         for (const u of dbUsers2 || []) if (u.username) userNames[u.discord_id] = u.username;
-        for (const id of ticketIds) {
-          if (!userNames[id]) {
-            try {
-              const r = await fetch(`https://discord.com/api/v10/users/${id}`, { headers: { Authorization: `Bot ${config.discordToken}` } });
-              if (r.ok) { const u = await r.json(); if (u.username) userNames[id] = u.username; }
-            } catch {}
-          }
+        const missing = ticketIds.filter(id => !userNames[id]);
+        if (missing.length) {
+          const results = await Promise.allSettled(missing.map(id =>
+            fetch(`https://discord.com/api/v10/users/${id}`, { headers: { Authorization: `Bot ${config.discordToken}` } })
+              .then(r => r.ok ? r.json() : null).then(u => u && u.username ? { id, name: u.username } : null)
+          ));
+          for (const r of results) if (r.status === 'fulfilled' && r.value) userNames[r.value.id] = r.value.name;
         }
       }
       for (const id of ticketIds) if (!userNames[id]) userNames[id] = id;
