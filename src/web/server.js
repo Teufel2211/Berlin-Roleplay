@@ -185,7 +185,7 @@ function createApp() {
     try {
       const moderationPanelService = require('../services/moderationPanelService');
       const msgId = await moderationPanelService.postPanel(req.guild, channelId, req.session.user.tag);
-      return res.redirect(`${redirect}?msg=${encodeURIComponent(`Panel gesendet (Nachricht ${msgId})`)}`);
+      return res.redirect(redirect);
     } catch (err) { return res.redirect(`${redirect}?msg=${encodeURIComponent(`Fehler: ${err.message}`)}`); }
   });
   app.post('/dashboard/servers/:guildId/feature/tickets/types', settingsLimiter, requireCanManage, auth.csrfCheck, ticketAdmin.handleTypes); app.post('/dashboard/servers/:guildId/feature/:feature/action', settingsLimiter, requireCanManage, auth.csrfCheck, managementAdmin.handleAction); app.post('/dashboard/servers/:guildId/feature/:feature', settingsLimiter, requireCanManage, auth.csrfCheck, webSettings.saveForm);

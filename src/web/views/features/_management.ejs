@@ -7,5 +7,19 @@
     <div class="table-wrap"><table class="data-table"><thead><tr><th>Aktion</th><th>Ziel</th><th>Moderator</th><th>Grund</th><th>Datum</th></tr></thead><tbody><% data.cases.forEach(function(c){ %><tr><td><strong><%= c.action %></strong></td><td><%= c.target_id %></td><td><%= c.moderator_id %></td><td><%= c.reason || '—' %></td><td><%= new Date(c.created_at).toLocaleString('de-DE') %></td></tr><% }) %></tbody></table></div>
   </div>
   <%- include('../partials/_sec_settings', { sectionId: 'panel', data, featureId: 'moderation', guildId }) %>
+  <div class="feature-section" id="sec-panel-send">
+    <h3 class="list-title">Panel senden</h3>
+    <p class="muted">Sende das Moderations-Panel in einen Kanal.</p>
+    <form method="post" action="/dashboard/servers/<%= guildId %>/feature/moderation/panel" class="question-add-form">
+      <input type="hidden" name="_csrf" value="<%= csrf %>">
+      <select name="channel_id" required>
+        <option value="">— Kanal wählen —</option>
+        <% (data.channelOptions || []).forEach(function(c){ %>
+          <option value="<%= c.id %>" <%= data.all && data.all.moderation_panel_channel_id === c.id ? 'selected' : '' %>><%= c.name %></option>
+        <% }) %>
+      </select>
+      <button class="btn primary">Panel senden</button>
+    </form>
+  </div>
   <%- include('../partials/_sec_settings', { sectionId: 'protokoll', data, featureId: 'moderation', guildId }) %>
 <% } %>
