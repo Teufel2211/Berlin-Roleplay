@@ -3,9 +3,7 @@
 <div class="feature-section" id="sec-uebersicht">
   <div class="stat-grid">
     <div class="stat-card"><div class="stat-value"><%= data.stats.tickets %></div><div class="stat-label"><%= t('overview.statTickets') %></div></div>
-    <div class="stat-card"><div class="stat-value"><%= data.stats.applications %></div><div class="stat-label"><%= t('overview.statApplications') %></div></div>
     <div class="stat-card"><div class="stat-value"><%= data.stats.giveaways %></div><div class="stat-label"><%= t('overview.statGiveaways') %></div></div>
-    <div class="stat-card"><div class="stat-value"><%= data.stats.team %></div><div class="stat-label"><%= t('overview.statTeam') %></div></div>
   </div>
   <div class="bot-status">
     <span class="status-dot <%= data.botInstalled ? 'online' : 'offline' %>"></span>

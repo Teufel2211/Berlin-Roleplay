@@ -93,7 +93,6 @@ const FEATURE_SECTIONS = {
     { id: 'verhalten', label: 'Verhalten', kind: 'settings' },
   ],
   moderation: [
-    { id: 'panel-send', label: 'Panel senden', kind: 'content' },
     { id: 'faelle', label: 'Fälle', kind: 'content' },
     { id: 'panel', label: 'Panel', kind: 'settings' },
     { id: 'protokoll', label: 'Protokoll', kind: 'settings' },
