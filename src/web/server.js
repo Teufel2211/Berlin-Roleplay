@@ -64,7 +64,7 @@ const FEATURES = [
   { id: 'audit', name: 'Audit-Log', icon: '📋' },
 ];
 
-const ALWAYS_VISIBLE = ['overview', 'audit'];
+const ALWAYS_VISIBLE = ['overview', 'audit', 'moderation'];
 
 function parseModuleList(raw) {
   if (raw === undefined || raw === null || raw === '') return null;
