@@ -70,4 +70,6 @@ function invalidate(guildId) {
   }
 }
 
-module.exports = { get, getAll, setMany };
+async function set(guildId, key, value) { return setMany(guildId, { [key]: value }); }
+
+module.exports = { get, getAll, setMany, set };
