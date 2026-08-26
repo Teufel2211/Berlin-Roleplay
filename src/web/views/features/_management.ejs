@@ -34,6 +34,7 @@
   <div class="feature-section" id="sec-faelle">
     <div class="table-wrap"><table class="data-table"><thead><tr><th>Aktion</th><th>Ziel</th><th>Moderator</th><th>Grund</th><th>Datum</th></tr></thead><tbody><% data.cases.forEach(function(c){ %><tr><td><strong><%= c.action %></strong></td><td><%= c.target_id %></td><td><%= c.moderator_id %></td><td><%= c.reason || '—' %></td><td><%= new Date(c.created_at).toLocaleString('de-DE') %></td></tr><% }) %></tbody></table></div>
   </div>
+  <%- include('../partials/_sec_settings', { sectionId: 'panel', data, featureId: 'moderation', guildId }) %>
   <%- include('../partials/_sec_settings', { sectionId: 'protokoll', data, featureId: 'moderation', guildId }) %>
 <% } else if (feature.id === 'welcome') { %>
   <p class="muted">Willkommens-Embed mit Live-Vorschau, automatischen Rollen und optionaler DM-Begrüßung.</p>
