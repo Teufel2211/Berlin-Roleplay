@@ -71,4 +71,8 @@ function warteraum(title, description, guild) {
   return v2({ color: COLORS.warteraum, title, description, guild });
 }
 
-module.exports = { COLORS, v2, footerText, info, success, error, warning, giveaway, warteraum };
+function ticket(title, description, guild, color) {
+  return v2({ color: color || COLORS.info, title, description, guild });
+}
+
+module.exports = { COLORS, v2, footerText, info, success, error, warning, giveaway, warteraum, ticket };

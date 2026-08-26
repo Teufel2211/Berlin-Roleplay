@@ -105,14 +105,20 @@ async function openTicket(interaction, type) {
   }
 
   const title = type ? `${type.emoji || '🎫'} ${type.name}` : '🎫 Ticket erstellt';
-  const ping = (type && type.ping_role_id && guild.roles.cache.has(type.ping_role_id)) ? `\n\n<@&${type.ping_role_id}>` : '';
+  const pingRoles = [];
+  if (type && type.ping_role_id && guild.roles.cache.has(type.ping_role_id)) pingRoles.push(type.ping_role_id);
+  for (const role of helpers.resolveRoles(guild, settings.staff_roles)) {
+    if (!pingRoles.includes(role.id)) pingRoles.push(role.id);
+  }
+  const ping = pingRoles.length ? '\n\n' + pingRoles.map((id) => `<@&${id}>`).join(' ') : '';
   const description = type
     ? `**Nutzer:** <@${member.id}>\nDu hast ein **${type.name}**-Ticket eröffnet. Beschreibe hier dein Anliegen. Unser Team hilft dir gleich weiter.${ping}`
     : `**Nutzer:** <@${member.id}>\nBeschreibe hier dein Anliegen. Unser Team hilft dir gleich weiter.${ping}`;
-  await channel.send({
+  const sentMsg = await channel.send({
     embeds: [embeds.info(title, description, guild)],
     components: [helpers.row(helpers.primaryButton(`ticket_claim_${row.id}`, 'Übernehmen', '👤'), helpers.dangerButton(`ticket_close_${row.id}`, 'Ticket schließen', '🔒'))],
   });
+  await withRetry(() => getClient().from(TABLES.tickets).update({ panel_message_id: String(sentMsg.id) }).eq('id', row.id));
 
   await auditService.log(gid, interaction.user.tag, 'ticket.open', { id: row.id, type_id: type ? type.id : null });
   return interaction.reply({ embeds: [embeds.success('Ticket erstellt', `Dein Ticket wurde geöffnet: <#${channel.id}>`, guild)], ephemeral: true });
@@ -137,6 +143,14 @@ async function claim(interaction) {
     return interaction.reply({ embeds: [embeds.error('Bereits geclaimt', `Das Ticket wird bereits von <@${row.claimed_by}> bearbeitet.`, guild)], ephemeral: true });
   }
   await withRetry(() => getClient().from(TABLES.tickets).update({ claimed_by: interaction.user.id }).eq('id', row.id));
+  if (row.panel_message_id) {
+    try {
+      const oldMsg = await interaction.channel.messages.fetch(row.panel_message_id).catch(() => null);
+      if (oldMsg && oldMsg.embeds[0]) {
+        await oldMsg.edit({ embeds: [Object.assign({}, oldMsg.embeds[0].toJSON(), { color: embeds.COLORS.success })] }).catch(() => {});
+      }
+    } catch (e) { /* ignorieren */ }
+  }
   await interaction.channel.send({ embeds: [embeds.info('🧑‍✈️ Claim', `<@${interaction.user.id}> hat das Ticket übernommen.`, guild)] });
   if (row.owner_id) {
     try {
@@ -225,6 +239,15 @@ async function closeTicket(interaction, id, reason) {
   await withRetry(() =>
     getClient().from(TABLES.tickets).update({ status: 'geschlossen', close_reason: reason, closed_by: interaction.user.tag }).eq('id', row.id)
   );
+
+  if (row.panel_message_id) {
+    try {
+      const oldMsg = channel ? await channel.messages.fetch(row.panel_message_id).catch(() => null) : null;
+      if (oldMsg && oldMsg.embeds[0]) {
+        await oldMsg.edit({ embeds: [Object.assign({}, oldMsg.embeds[0].toJSON(), { color: embeds.COLORS.error })] }).catch(() => {});
+      }
+    } catch (e) { /* ignorieren */ }
+  }
 
   const logChannelId = await settingsService.get(gid, 'ticket_log_channel_id');
   if (logChannelId) {
