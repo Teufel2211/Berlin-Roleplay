@@ -70,4 +70,4 @@ function invalidate(guildId) {
   }
 }
 
-module.exports = { get, getAll, setMany, invalidate, ensureGuildDefaults };
+module.exports = { get, getAll, setMany };

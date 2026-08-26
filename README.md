@@ -15,20 +15,18 @@ The project combines a Discord.js bot, Supabase/PostgreSQL persistence, and a we
 - Active giveaway selection with Discord autocomplete for `/giveaway end`
 
 ### Ticket System
-The current repository contains a production-oriented ticket foundation with:
-- Ticket categories
+- Ticket categories with dashboard configuration
 - Category selection panels
-- Ticket creation and channel permissions
+- Ticket creation with channel permissions
 - Ticket questions and modal forms
 - Claim / unclaim
 - Close / reopen / delete
-- Add / remove members
+- Add / remove members (via `/ticket` subcommands)
 - Rename tickets
-- Priorities
 - Tags
 - Ticket activity and event logging
 - Auto-close and auto-delete scheduling
-- HTML transcripts
+- HTML transcripts with dashboard viewer
 - Transcript message storage
 - Dashboard ticket statistics
 - Multi-guild ticket configuration
@@ -49,16 +47,11 @@ All ticket-related database tables use the required `eghr_` prefix.
 
 ## Technology
 
-The current implementation is based on the existing repository architecture:
-
 - Node.js 22+
 - Discord.js v14
-- Express
-- EJS
+- Express / EJS
 - Supabase / PostgreSQL
 - Discord OAuth2
-
-> Note: The repository currently uses the existing Express/EJS JavaScript dashboard architecture. It is not yet a Next.js/React/TypeScript rewrite.
 
 ## Requirements
 
@@ -71,38 +64,30 @@ The current implementation is based on the existing repository architecture:
 
 Create a `.env` file based on `.env.example`.
 
-Required values include:
-
 ```env
-DISCORD_TOKEN=
-CLIENT_ID=
-DISCORD_CLIENT_SECRET=
-OWNER_USER_ID=
-SUPABASE_URL=
-SUPABASE_SERVICE_ROLE_KEY=
+DISCORD_TOKEN=              # Bot token
+CLIENT_ID=                  # Application client ID
+DISCORD_CLIENT_SECRET=      # OAuth2 client secret for dashboard login
+OWNER_USER_ID=              # Dashboard full-access user ID
+SUPABASE_URL=               # Supabase project URL
+SUPABASE_SERVICE_ROLE_KEY=  # Service role key (server-side only)
+SUPABASE_DB_URL=            # Postgres connection string
 WEB_URL=http://localhost:3000
-SESSION_SECRET=change-me
+SESSION_SECRET=change-me    # Random string for express-session
 WEB_PORT=3000
 ```
 
 `SUPABASE_SERVICE_ROLE_KEY` is server-only and must never be exposed to browser-side code.
 
+Add the OAuth redirect URI `<WEB_URL>/dashboard/auth/discord/callback` in the Discord Developer Portal.
+
 ## Installation
 
 ```bash
 npm install
-```
-
-Run the database setup/migrations used by the repository:
-
-```bash
-npm run migrate
-```
-
-Start the application:
-
-```bash
-npm start
+npm run migrate   # Apply database migrations
+npm run deploy    # Register slash commands (optional, for /ticket and /giveaway)
+npm start         # Start bot + dashboard
 ```
 
 The repository also includes a file watcher that can restart the bot after a quiet period following file changes.
@@ -112,30 +97,11 @@ The repository also includes a file watcher that can restart the bot after a qui
 Useful scripts:
 
 ```bash
-npm start
-npm run bot
-npm run dev
-npm run migrate
-npm run setup
-npm run deploy
-npm run lint
+npm start         # Start bot + dashboard
+npm run migrate   # Apply database migrations
+npm run deploy    # Register slash commands
+npm run lint      # Syntax-check all JS/EJS/SQL files
 ```
-
-## Automatic Restart Watcher
-
-`watch-restart.js` uses Chokidar to watch the project and restart the bot only after **30 seconds with no further file changes**.
-
-Ignored paths include generated/runtime directories such as:
-
-```text
-node_modules/
-.git/
-logs/
-data/
-*.log
-```
-
-This prevents log writes and other runtime changes from continuously restarting the bot.
 
 ## Supabase Naming Rule
 
@@ -181,57 +147,51 @@ Important rules:
 
 ```text
 src/
-├── commands/
-├── discord/
-├── services/
-├── web/
-├── config.js
-├── supabase.js
-└── index.js
+├── commands/          # /giveaway, /ticket slash commands
+├── discord/           # client, deploy, embeds, helpers, events
+├── services/          # per-feature DB/domain logic
+├── web/               # Express server, auth, dashboard routes, EJS views
+├── config.js          # Env access, DEFAULT_SETTINGS, REQUIRED_SECRETS
+├── supabase.js        # Supabase client, TABLES map, withRetry
+└── index.js           # Entry point
 
 supabase/
-└── migrations/
+└── migrations/        # 001_init.sql (schema + defaults)
 
 scripts/
-└── ...
+└── migrate.js, setup.js, deploy.js, lint.js
 ```
-
-Important services currently include giveaway and professional ticket handling.
 
 ## Ticket Slash Commands
 
-The current professional ticket command provides:
-
 ```text
-/ticket setup
-/ticket create
-/ticket close
-/ticket reopen
-/ticket delete
-/ticket claim
-/ticket unclaim
-/ticket add
-/ticket remove
-/ticket rename
-/ticket priority
-/ticket tag
-/ticket transcript
-/ticket info
+/ticket setup       – Panel in Kanal senden
+/ticket create      – Ticket erstellen (Kategorie-ID)
+/ticket close       – Ticket schließen
+/ticket reopen      – Ticket wieder öffnen
+/ticket delete      – Ticket löschen
+/ticket claim       – Ticket übernehmen
+/ticket unclaim     – Ticket freigeben
+/ticket add         – Benutzer hinzufügen
+/ticket remove      – Benutzer entfernen
+/ticket rename      – Ticket umbenennen
+/ticket tag         – Tag hinzufügen
+/ticket transcript  – Transcript erstellen
+/ticket info        – Ticket-Info anzeigen
 ```
 
-Commands should still be registered through the repository's normal command deployment/startup flow.
+Commands are registered globally via `npm run deploy`.
 
 ## Production Notes
 
 Before running the bot in production:
 
-1. Configure all Discord and Supabase environment variables.
-2. Run the database migrations.
-3. Invite the bot with the permissions required for ticket channel management.
-4. Configure the server from the dashboard.
-5. Configure ticket categories, roles, channels, priorities, tags, and transcript settings.
-6. Post the ticket panel.
-7. Verify that transcript storage and audit logging work as expected.
+1. Configure all environment variables in `.env`
+2. Run `npm run migrate` to apply database migrations
+3. Invite the bot with the required permissions
+4. Configure the server from the dashboard (staff roles, channels, ticket categories, etc.)
+5. Post the ticket/verify panels
+6. Verify transcripts and audit logging work as expected
 
 ## Repository
 
@@ -239,4 +199,4 @@ Before running the bot in production:
 
 ## Status
 
-This repository is under active development. The ticket system and giveaway system are implemented on top of the existing bot/dashboard architecture, while some larger dashboard builder features remain candidates for future iterations.
+Under active development. Ticket system, giveaway system, verification, applications, interviews, and team management are implemented on the Express/EJS dashboard.
