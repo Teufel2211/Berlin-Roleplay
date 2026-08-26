@@ -1,8 +1,8 @@
 const { MessageFlags } = require('discord.js');
-const { getClient, TABLES } = require('../supabase');
+const { getClient, TABLES, withRetry } = require('../supabase');
 const embeds = require('../discord/embeds');
 const verifyService = require('./verifyService');
-const ticketService = require('./ticketService');
+const proTicketService = require('./proTicketService');
 const logger = require('../logger');
 
 async function handle(interaction) {
@@ -14,7 +14,7 @@ async function handle(interaction) {
   if(action==='none')return interaction.reply({embeds:[embeds.info('Button','Für diesen Button ist keine Aktion konfiguriert.',interaction.guild)],flags:MessageFlags.Ephemeral});
   if(action==='message')return interaction.reply({content:value||'Die konfigurierte Nachricht ist leer.',flags:MessageFlags.Ephemeral});
   if(action==='verify')return verifyService.handlePanelButton(interaction);
-  if(action==='ticket')return ticketService.handleOpen(interaction);
+  if(action==='ticket'){const cats=await proTicketService.categories(interaction.guild.id,true);if(!cats.length)return interaction.reply({embeds:[embeds.error('Keine Kategorien','Lege zuerst eine Ticket-Kategorie im Dashboard an.',interaction.guild)],flags:MessageFlags.Ephemeral});return proTicketService.open(interaction,cats[0].id);}
   if(action==='role_add'||action==='role_remove'){const role=interaction.guild.roles.cache.get(value);if(!role)return interaction.reply({embeds:[embeds.error('Rolle nicht gefunden','Die konfigurierte Rolle existiert nicht mehr.',interaction.guild)],flags:MessageFlags.Ephemeral});try{if(action==='role_add')await interaction.member.roles.add(role);else await interaction.member.roles.remove(role);}catch(err){logger.warn(`Embed-Rollenaktion fehlgeschlagen: ${err.message}`);return interaction.reply({embeds:[embeds.error('Rollenaktion fehlgeschlagen','Der Bot konnte die Rolle nicht ändern.',interaction.guild)],flags:MessageFlags.Ephemeral});}return interaction.reply({embeds:[embeds.success(action==='role_add'?'Rolle vergeben':'Rolle entfernt',`<@&${role.id}> wurde ${action==='role_add'?'gegeben':'entfernt'}.`,interaction.guild)],flags:MessageFlags.Ephemeral});}
   return interaction.reply({embeds:[embeds.error('Unbekannte Aktion',`Die Aktion \`${action}\` wird nicht unterstützt.`,interaction.guild)],flags:MessageFlags.Ephemeral});
 }

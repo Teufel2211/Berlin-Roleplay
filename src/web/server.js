@@ -191,7 +191,7 @@ function guildAccessCheck(req, res, next) {
   if (!guild || !discordAuth.canAccessGuild(guild)) return res.status(403).render('error', { title: res.locals.t('error.title'), user: req.session.user, csrf: auth.csrfToken(req), message: res.locals.t('error.noAccess') });
   req.guildId = req.params.guildId; req.guild = guild; res.locals.guildId = req.params.guildId; res.locals.guilds = discordAuth.accessibleGuilds(req.session.guilds); res.locals.activeGuild = guild; next();
 }
-async function requireCanManage(req, res, next) { try { if (!(await discordAuth.canManageGuild(req.session, req.guild))) return res.status(403).render('error', { title: res.locals.t('error.title'), user: req.session.user, csrf: auth.csrfToken(req), message: res.locals.t('error.staffOnly') }); } catch (_) {} next(); }
+async function requireCanManage(req, res, next) { try { if (!(await discordAuth.canManageGuild(req.session, req.guild))) return res.status(403).render('error', { title: res.locals.t('error.title'), user: req.session.user, csrf: auth.csrfToken(req), message: res.locals.t('error.staffOnly') }); } catch (_) { return res.status(403).render('error', { title: res.locals.t('error.title'), user: req.session.user, csrf: auth.csrfToken(req), message: res.locals.t('error.staffOnly') }); } next(); }
 async function syncSessionGuilds(req) {
   if (!req.session?.user) return;
   try {
@@ -248,6 +248,6 @@ function createApp() {
   return app;
 }
 function apiGuildMiddleware(req, res, next) { const guildId = String(req.query.guild || (req.body && req.body.guild) || ''); const guild = guildFromSession(req, guildId); if (!guild || !discordAuth.canAccessGuild(guild)) return res.status(403).json({ error: 'Kein Zugriff auf diesen Server.' }); req.guildId = guildId; req.guild = guild; next(); }
-function requireCanManageApi(req, res, next) { discordAuth.canManageGuild(req.session, req.guild).then((ok) => ok ? next() : res.status(403).json({ error: 'Nur Staff/Admin können Einstellungen ändern.' })).catch(() => next()); }
+function requireCanManageApi(req, res, next) { discordAuth.canManageGuild(req.session, req.guild).then((ok) => ok ? next() : res.status(403).json({ error: 'Nur Staff/Admin können Einstellungen ändern.' })).catch(() => res.status(403).json({ error: 'Berechtigungsprüfung fehlgeschlagen.' })); }
 function startWebServer() { const app = createApp(); const server = app.listen(config.webPort, () => logger.info(`HTTP-Server läuft auf Port ${config.webPort}`)); return server; }
 module.exports = { createApp, startWebServer };

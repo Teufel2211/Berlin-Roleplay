@@ -1,7 +1,7 @@
 const path = require('path');
 require('dotenv').config();
 
-const REQUIRED_SECRETS = ['DISCORD_TOKEN', 'CLIENT_ID', 'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'];
+const REQUIRED_SECRETS = ['DISCORD_TOKEN', 'CLIENT_ID', 'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'SESSION_SECRET'];
 
 const DEFAULT_SETTINGS = {
   language: 'de',

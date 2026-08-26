@@ -4,6 +4,7 @@ const { config } = require('../config');
 const logger = require('../logger');
 const auditService = require('../services/auditService');
 const discordApi = require('./discordApi');
+const { v2 } = require('../discord/embeds');
 
 const BUTTON_STYLES = { primary: 1, secondary: 2, success: 3, danger: 4, link: 5 };
 const DEFAULT_COLOR = 0xe8453c;
@@ -18,27 +19,9 @@ function parseColor(value) {
   const n = Number(value); return Number.isFinite(n) && n >= 0 ? n : DEFAULT_COLOR;
 }
 function buildEmbed(data) {
-  const children = [];
-  const texts = [];
-  if (data.title) texts.push(`## ${String(data.title).slice(0, 256)}`);
-  if (data.description) texts.push(String(data.description).slice(0, 4000));
-  if (texts.length) {
-    if (data.thumbnail) children.push({ type: 9, accessory: { type: 11, media: { url: String(data.thumbnail) }, description: 'Thumbnail' }, components: [{ type: 10, content: texts.join('\n\n') }] });
-    else children.push({ type: 10, content: texts.join('\n\n') });
-  }
-  for (const f of Array.isArray(data.fields) ? data.fields.slice(0, 25) : []) {
-    const name = String(f.name || ' ').slice(0, 256);
-    const value = String(f.value || ' ').slice(0, 1024);
-    children.push({ type: 10, content: `**${name}**\n${value}` });
-  }
-  if (data.image) children.push({ type: 12, items: [{ media: { url: String(data.image) } }] });
   let footer = String(data.footer || '');
-  if (footer && data.timestamp !== 'true') footer = footer;
-  else if (footer && data.timestamp === 'true') footer = `${footer} • ${new Date().toLocaleString('de-DE')}`;
-  else if (data.timestamp === 'true') footer = new Date().toLocaleString('de-DE');
-  children.push({ type: 14, divider: true, spacing: 1 });
-  children.push({ type: 10, content: `-# ${footer || 'Emergency Hamburg Roleplay'}` });
-  return { type: 17, accent_color: parseColor(data.color), components: children };
+  if (data.timestamp === 'true') footer = footer ? `${footer} • ${new Date().toLocaleString('de-DE')}` : new Date().toLocaleString('de-DE');
+  return v2({ color: parseColor(data.color), title: data.title || '', description: data.description || '', fields: Array.isArray(data.fields) ? data.fields : [], thumbnail: data.thumbnail || '', image: data.image || '', footer: footer || 'Emergency Hamburg Roleplay' });
 }
 function buildComponents(embedId, buttons) {
   if (!Array.isArray(buttons) || !buttons.length) return [];
