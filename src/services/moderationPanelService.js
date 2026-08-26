@@ -18,14 +18,22 @@ const BUTTON_ACTIONS = [
 
 const ACTION_LABELS = { ban: '🔨 Ban', kick: '👢 Kick', softban: '🌀 Softban', warn: '⚠️ Warn', unban: '✅ Unban', clear: '🗑️ Clear' };
 
+const SELECT_OPTIONS = [
+  { label: 'Ban', value: 'ban', description: 'Nutzer dauerhaft vom Server entfernen', emoji: { name: '🔨' } },
+  { label: 'Kick', value: 'kick', description: 'Nutzer vom Server kicken', emoji: { name: '👢' } },
+  { label: 'Softban', value: 'softban', description: 'Ban + letzte 7 Tage Nachrichten löschen', emoji: { name: '🌀' } },
+  { label: 'Warn', value: 'warn', description: 'Verwarnung mit Punkten erteilen', emoji: { name: '⚠️' } },
+  { label: 'Unban', value: 'unban', description: 'Ban eines Nutzers aufheben', emoji: { name: '✅' } },
+  { label: 'Clear', value: 'clear', description: 'Nachrichten aus dem Kanal löschen', emoji: { name: '🗑️' } },
+];
+
 function panelComponents() {
   const children = [];
-  children.push({ type: 10, content: '## 🛡️ Moderation\nKlicke auf eine Aktion, um sie durchzuführen.' });
+  children.push({ type: 10, content: '## 🛡️ Moderation-Panel' });
   children.push({ type: 14, divider: true, spacing: 1 });
-  const row1 = BUTTON_ACTIONS.slice(0, 3).map((a) => ({ type: 2, custom_id: `mod_panel:${a.id}`, label: a.label, style: a.style, emoji: { name: a.emoji } }));
-  const row2 = BUTTON_ACTIONS.slice(3).map((a) => ({ type: 2, custom_id: `mod_panel:${a.id}`, label: a.label, style: a.style, emoji: { name: a.emoji } }));
-  children.push({ type: 1, components: row1 });
-  children.push({ type: 1, components: row2 });
+  children.push({ type: 10, content: 'Wähle eine Aktion aus dem Dropdown-Menü aus, um sie durchzuführen.\n\n🔨 **Ban** — Nutzer dauerhaft entfernen\n👢 **Kick** — Nutzer vom Server kicken\n🌀 **Softban** — Ban + Nachrichten löschen\n⚠️ **Warn** — Verwarnung erteilen\n✅ **Unban** — Ban aufheben\n🗑️ **Clear** — Nachrichten löschen' });
+  children.push({ type: 14, divider: true, spacing: 1 });
+  children.push({ type: 1, components: [{ type: 3, custom_id: 'mod_panel:select', placeholder: 'Aktion wählen…', options: SELECT_OPTIONS, min_values: 1, max_values: 1 }] });
   children.push({ type: 14, divider: true, spacing: 1 });
   children.push({ type: 10, content: '-# Emergency Hamburg Roleplay' });
   return [{ type: 17, accent_color: 0x2B3A67, components: children }];
@@ -60,6 +68,13 @@ function buildModal(action) {
 async function handleButton(interaction) {
   const action = interaction.customId.split(':')[1];
   if (!BUTTON_ACTIONS.find((a) => a.id === action)) return;
+  const modal = buildModal(action);
+  await interaction.showModal(modal);
+}
+
+async function handleSelect(interaction) {
+  const action = interaction.values?.[0];
+  if (!action || !BUTTON_ACTIONS.find((a) => a.id === action)) return;
   const modal = buildModal(action);
   await interaction.showModal(modal);
 }
@@ -236,4 +251,4 @@ async function handleModal(interaction) {
   }
 }
 
-module.exports = { postPanel, panelComponents, handleButton, handleModal, BUTTON_ACTIONS, ACTION_LABELS };
+module.exports = { postPanel, panelComponents, handleButton, handleSelect, handleModal, BUTTON_ACTIONS, ACTION_LABELS };
