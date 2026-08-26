@@ -2,18 +2,10 @@
   <div class="feature-nav-group">
     <div class="feature-nav-label">Server</div>
     <nav class="feature-nav">
-      <% var overview = features.find(function (f) { return f.id === 'overview'; }); %>
-      <% var tickets = features.find(function (f) { return f.id === 'tickets'; }); %>
-      <% var giveaway = features.find(function (f) { return f.id === 'giveaway'; }); %>
-      <% if (overview) { %>
-      <a href="/dashboard/servers/<%= guildId %>/feature/overview" class="feature-link<%= activeFeature === 'overview' ? ' active' : '' %>"><span class="feature-icon"><%= overview.icon %></span><span><%= t('feat.overview.name', overview.name) %></span></a>
-      <% } %>
-      <% if (tickets) { %>
-      <a href="/dashboard/servers/<%= guildId %>/feature/tickets" class="feature-link<%= activeFeature === 'tickets' ? ' active' : '' %>"><span class="feature-icon"><%= tickets.icon %></span><span><%= t('feat.tickets.name', tickets.name) %></span></a>
-      <% } %>
-      <% if (giveaway) { %>
-      <a href="/dashboard/servers/<%= guildId %>/feature/giveaway" class="feature-link<%= activeFeature === 'giveaway' ? ' active' : '' %>"><span class="feature-icon"><%= giveaway.icon %></span><span><%= t('feat.giveaway.name', giveaway.name) %></span></a>
-      <% } %>
+      <% var order = ['overview', 'moderation', 'security', 'verification', 'welcome', 'warteraum', 'tickets', 'giveaway', 'bewerbung', 'interview', 'team', 'embeds', 'audit']; %>
+      <% order.forEach(function(id) { var f = features.find(function (x) { return x.id === id; }); if (!f) return; %>
+      <a href="/dashboard/servers/<%= guildId %>/feature/<%= f.id %>" class="feature-link<%= activeFeature === f.id ? ' active' : '' %>"><span class="feature-icon"><%= f.icon %></span><span><%= t('feat.' + f.id + '.name', f.name) %></span></a>
+      <% }); %>
     </nav>
   </div>
 </aside>
