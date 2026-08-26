@@ -93,6 +93,7 @@ const FEATURE_SECTIONS = {
     { id: 'verhalten', label: 'Verhalten', kind: 'settings' },
   ],
   moderation: [
+    { id: 'panel-send', label: 'Panel senden', kind: 'content' },
     { id: 'faelle', label: 'Fälle', kind: 'content' },
     { id: 'panel', label: 'Panel', kind: 'settings' },
     { id: 'protokoll', label: 'Protokoll', kind: 'settings' },
@@ -178,6 +179,15 @@ function createApp() {
     if (feature.id === 'moderation') return res.render('server', { ...base, data: { ...sdata, cases: await moderationService.getCases(gid) } });
     if (feature.id === 'audit') { const { data: entries } = await getClient().from(TABLES.auditLog).select('*').eq('guild_id', gid).order('created_at', { ascending: false }).limit(200); return res.render('server', { ...base, data: { ...sdata, entries: entries || [] } }); }
     return res.render('server', { ...base, data: sdata });
+  });
+  app.post('/dashboard/servers/:guildId/feature/moderation/panel', settingsLimiter, requireCanManage, auth.csrfCheck, async (req, res) => {
+    const gid = req.guildId; const channelId = String(req.body.channel_id || '').trim(); const redirect = `/dashboard/servers/${gid}/feature/moderation`;
+    if (!channelId) return res.redirect(`${redirect}?msg=${encodeURIComponent('Kein Kanal ausgewählt.')}`);
+    try {
+      const moderationPanelService = require('../services/moderationPanelService');
+      const msgId = await moderationPanelService.postPanel(req.guild, channelId, req.session.user.tag);
+      return res.redirect(`${redirect}?msg=${encodeURIComponent(`Panel gesendet (Nachricht ${msgId})`)}`);
+    } catch (err) { return res.redirect(`${redirect}?msg=${encodeURIComponent(`Fehler: ${err.message}`)}`); }
   });
   app.post('/dashboard/servers/:guildId/feature/tickets/types', settingsLimiter, requireCanManage, auth.csrfCheck, ticketAdmin.handleTypes); app.post('/dashboard/servers/:guildId/feature/:feature/action', settingsLimiter, requireCanManage, auth.csrfCheck, managementAdmin.handleAction); app.post('/dashboard/servers/:guildId/feature/:feature', settingsLimiter, requireCanManage, auth.csrfCheck, webSettings.saveForm);
   app.use('/api/settings', auth.requireAuthApi, apiGuildMiddleware, requireCanManageApi); app.use('/api/audit', auth.requireAuthApi, apiGuildMiddleware); app.get('/api/settings', webSettings.getApi); app.get('/api/settings/transcript/:id', webSettings.getTranscript); app.post('/api/settings', auth.csrfCheck, webSettings.saveApi); app.get('/api/audit', webAudit.getApi); app.use((req, res) => res.status(404).render('error', { title: res.locals.t('error.title'), user: req.session.user || null, csrf: auth.csrfToken(req), message: res.locals.t('error.notFound') })); app.use((err, req, res, next) => { logger.error(`Web-Fehler: ${err.stack || err.message}`); if (res.headersSent) return next(err); res.status(500).render('error', { title: res.locals.t('error.title'), user: req.session.user || null, csrf: auth.csrfToken(req), message: res.locals.t('error.internal') }); });
