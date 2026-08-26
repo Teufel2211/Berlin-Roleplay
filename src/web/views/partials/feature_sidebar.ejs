@@ -2,7 +2,7 @@
   <div class="feature-nav-group">
     <div class="feature-nav-label">Server</div>
     <nav class="feature-nav">
-      <% var order = ['overview', 'moderation', 'security', 'verification', 'welcome', 'warteraum', 'tickets', 'giveaway', 'bewerbung', 'interview', 'team', 'embeds', 'audit']; %>
+      <% var order = ['overview', 'moderation', 'tickets', 'giveaway', 'audit']; %>
       <% order.forEach(function(id) { var f = features.find(function (x) { return x.id === id; }); if (!f) return; %>
       <a href="/dashboard/servers/<%= guildId %>/feature/<%= f.id %>" class="feature-link<%= activeFeature === f.id ? ' active' : '' %>"><span class="feature-icon"><%= f.icon %></span><span><%= t('feat.' + f.id + '.name', f.name) %></span></a>
       <% }); %>
