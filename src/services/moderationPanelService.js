@@ -48,8 +48,7 @@ async function postPanel(guild, channelId, userTag) {
   });
   if (!r.ok) throw new Error(`Discord API ${r.status}: ${await r.text()}`);
   const msg = await r.json();
-  await settingsService.set(guild.id, 'moderation_panel_message_id', String(msg.id));
-  await settingsService.set(guild.id, 'moderation_panel_channel_id', String(channelId));
+  await settingsService.setMany(guild.id, { moderation_panel_message_id: String(msg.id), moderation_panel_channel_id: String(channelId) });
   await auditService.log(guild.id, userTag, 'moderation.panel.send', { channelId, messageId: msg.id });
   return msg.id;
 }
