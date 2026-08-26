@@ -41,6 +41,24 @@ function panelComponents() {
 
 async function postPanel(guild, channelId, userTag) {
   const payload = { flags: 32768, components: panelComponents() };
+  const oldMsgId = await settingsService.get(guild.id, 'moderation_panel_message_id');
+  const oldChannelId = await settingsService.get(guild.id, 'moderation_panel_channel_id');
+  let msgId;
+  if (oldMsgId && oldChannelId) {
+    const r = await fetch(`https://discord.com/api/v10/channels/${oldChannelId}/messages/${oldMsgId}`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bot ${process.env.DISCORD_TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (r.ok) {
+      msgId = oldMsgId;
+      if (oldChannelId !== channelId) {
+        await settingsService.setMany(guild.id, { moderation_panel_channel_id: String(channelId) });
+      }
+      await auditService.log(guild.id, userTag, 'moderation.panel.update', { channelId, messageId: msgId });
+      return msgId;
+    }
+  }
   const r = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
     method: 'POST',
     headers: { Authorization: `Bot ${process.env.DISCORD_TOKEN}`, 'Content-Type': 'application/json' },
@@ -48,9 +66,10 @@ async function postPanel(guild, channelId, userTag) {
   });
   if (!r.ok) throw new Error(`Discord API ${r.status}: ${await r.text()}`);
   const msg = await r.json();
-  await settingsService.setMany(guild.id, { moderation_panel_message_id: String(msg.id), moderation_panel_channel_id: String(channelId) });
-  await auditService.log(guild.id, userTag, 'moderation.panel.send', { channelId, messageId: msg.id });
-  return msg.id;
+  msgId = msg.id;
+  await settingsService.setMany(guild.id, { moderation_panel_message_id: String(msgId), moderation_panel_channel_id: String(channelId) });
+  await auditService.log(guild.id, userTag, 'moderation.panel.send', { channelId, messageId: msgId });
+  return msgId;
 }
 
 function buildModal(action) {
