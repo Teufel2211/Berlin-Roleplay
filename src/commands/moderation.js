@@ -122,6 +122,11 @@ const data = new SlashCommandBuilder()
     .setName('case')
     .setDescription('Zeigt Details eines bestimmten Falls')
     .addIntegerOption((o) => o.setName('id').setDescription('Fall-ID').setRequired(true))
+  )
+  .addSubcommand((s) => s
+    .setName('panel')
+    .setDescription('Postet das Moderations-Panel in einen Kanal')
+    .addChannelOption((o) => o.setName('kanal').setDescription('Ziel-Kanal').setRequired(true))
   );
 
 async function execute(interaction) {
@@ -377,6 +382,17 @@ async function execute(interaction) {
           embeds: [embeds.info(`🛡️ Fall #${c.id}`, fields.join('\n'), guild)],
           ephemeral: true,
         });
+      }
+
+      case 'panel': {
+        const channel = interaction.options.getChannel('kanal');
+        if (!channel.isTextBased()) {
+          return interaction.reply({ embeds: [embeds.error('Fehler', 'Der Kanal muss ein Textkanal sein.', guild)], flags: 64 });
+        }
+        await interaction.deferReply({ ephemeral: true });
+        const moderationPanelService = require('../services/moderationPanelService');
+        const msgId = await moderationPanelService.postPanel(guild, channel.id, interaction.user.tag);
+        return interaction.editReply({ embeds: [embeds.success('🛡️ Panel gesendet', `Panel wurde in <#${channel.id}> gesendet.\nNachricht: \`${msgId}\``, guild)] });
       }
 
       default:

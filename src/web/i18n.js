@@ -76,6 +76,7 @@ const de = {
   'sec.team.termine': 'Termine',
   'sec.team.protokoll': 'Protokoll',
   'sec.moderation.faelle': 'Fälle',
+  'sec.moderation.panel': 'Panel',
   'sec.moderation.protokoll': 'Protokoll',
   'sec.security.uebersicht': 'Übersicht',
   'sec.welcome.willkommen': 'Willkommen',
@@ -100,6 +101,7 @@ const de = {
   'label.warteraum_target_channel_id': 'Ziel-Voice',
   'label.interview_channel_id': 'Interview-Kanal',
   'label.moderation_log_channel_id': 'Moderations-Log',
+  'label.moderation_panel_channel_id': 'Moderations-Panel-Kanal',
   'label.team_log_channel_id': 'Team-Log',
   'label.interview_pass_threshold': 'Bestanden ab (Prozent)',
   'label.verify_dm': 'DM nach Verifizierung',
@@ -186,6 +188,7 @@ const de = {
   'sub.rollen': 'Rollen',
   'sub.verhalten': 'Verhalten',
   'sub.bewertung': 'Bewertung',
+  'sub.panel': 'Panel',
   'sub.protokoll': 'Protokoll',
 };
 
@@ -267,6 +270,7 @@ const en = {
   'sec.team.termine': 'Events',
   'sec.team.protokoll': 'Log',
   'sec.moderation.faelle': 'Cases',
+  'sec.moderation.panel': 'Panel',
   'sec.moderation.protokoll': 'Log',
   'sec.security.uebersicht': 'Overview',
   'sec.welcome.willkommen': 'Welcome',
@@ -291,6 +295,7 @@ const en = {
   'label.warteraum_target_channel_id': 'Target voice',
   'label.interview_channel_id': 'Interview channel',
   'label.moderation_log_channel_id': 'Moderation log',
+  'label.moderation_panel_channel_id': 'Moderation panel channel',
   'label.team_log_channel_id': 'Team log',
   'label.interview_pass_threshold': 'Pass from (percent)',
   'label.verify_dm': 'DM after verification',
@@ -377,6 +382,7 @@ const en = {
   'sub.rollen': 'Roles',
   'sub.verhalten': 'Behavior',
   'sub.bewertung': 'Rating',
+  'sub.panel': 'Panel',
   'sub.protokoll': 'Log',
 };
 

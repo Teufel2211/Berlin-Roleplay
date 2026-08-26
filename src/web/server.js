@@ -31,7 +31,7 @@ const settingsLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 100 });
 const CHANNEL_KEYS = [
   'verify_channel_id', 'verify_rules_channel_id', 'verify_log_channel_id', 'ticket_category_id', 'ticket_panel_channel_id', 'ticket_log_channel_id',
   'application_category_id', 'giveaway_channel_id', 'giveaway_announce_channel_id', 'warteraum_voice_channel_id',
-  'warteraum_target_channel_id', 'interview_channel_id', 'moderation_log_channel_id', 'team_log_channel_id',
+  'warteraum_target_channel_id', 'interview_channel_id', 'moderation_log_channel_id', 'moderation_panel_channel_id', 'team_log_channel_id',
 ];
 const ROLE_KEYS = ['staff_roles', 'admin_roles', 'verified_roles', 'warteraum_roles', 'giveaway_required_roles'];
 
@@ -41,7 +41,7 @@ const LABELS = {
   ticket_category_id: 'Ticket-Kategorie', ticket_panel_channel_id: 'Ticket-Panel', ticket_log_channel_id: 'Ticket-Log',
   application_category_id: 'Bewerbungs-Kategorie', giveaway_channel_id: 'Giveaway-Kanal', giveaway_announce_channel_id: 'Gewinner-Kanal',
   warteraum_voice_channel_id: 'Warteraum-Voice', warteraum_target_channel_id: 'Ziel-Voice', interview_channel_id: 'Interview-Kanal',
-  moderation_log_channel_id: 'Moderations-Log', team_log_channel_id: 'Team-Log',
+  moderation_log_channel_id: 'Moderations-Log', moderation_panel_channel_id: 'Moderations-Panel', team_log_channel_id: 'Team-Log',
   interview_pass_threshold: 'Bestanden ab (Prozent)', verify_dm: 'DM nach Verifizierung',
   verify_min_account_age_days: 'Mindestalter des Discord-Accounts (Tage)',
   giveaway_default_winners: 'Standard-Gewinneranzahl', giveaway_max_tickets: 'Max. Lose pro User',
@@ -96,6 +96,7 @@ const SETTING_GROUPS = [
   { feature: 'interview', id: 'kanale', subgroup: 'Kanäle', keys: ['interview_channel_id'] },
   { feature: 'interview', id: 'bewertung', subgroup: 'Bewertung', keys: ['interview_pass_threshold'] },
   { feature: 'team', id: 'protokoll', subgroup: 'Protokoll', keys: ['team_log_channel_id'] },
+  { feature: 'moderation', id: 'panel', subgroup: 'Panel', keys: ['moderation_panel_channel_id'] },
   { feature: 'moderation', id: 'protokoll', subgroup: 'Protokoll', keys: ['moderation_log_channel_id'] },
 ];
 
@@ -150,6 +151,7 @@ const FEATURE_SECTIONS = {
   ],
   moderation: [
     { id: 'faelle', label: 'Fälle', kind: 'content' },
+    { id: 'panel', label: 'Panel', kind: 'settings' },
     { id: 'protokoll', label: 'Protokoll', kind: 'settings' },
   ],
   security: [{ id: 'uebersicht', label: 'Übersicht', kind: 'content' }],
