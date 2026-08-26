@@ -13,8 +13,6 @@ const DEFAULT_QUESTIONS = {
   Eventteam: ['Wie alt bist du?', 'Welche Event-Ideen hast du?', 'Wie viel Zeit hast du täglich?', 'Hast du Erfahrung mit Eventplanung?'],
 };
 
-const APPLICATION_TYPES = Object.keys(DEFAULT_QUESTIONS);
-
 const sessions = new Map();
 
 async function getQuestions(guildId, type) {
@@ -39,41 +37,6 @@ function buildReviewEmbed(guild, type, user, questions, answers, status) {
     fields: questions.map((q, i) => ({ name: `${i + 1}. ${q.slice(0, 200)}`, value: (answers[i] || '—').slice(0, 1024) })),
     guild,
   });
-}
-
-async function startDmFlow(interaction, type) {
-  const guild = interaction.guild;
-  const gid = guild.id;
-  const cooldownDays = parseInt(await settingsService.get(gid, 'application_cooldown_days', '30'), 10);
-
-  if (cooldownDays > 0) {
-    const cutoff = new Date(Date.now() - cooldownDays * 86400000).toISOString();
-    const { data: last } = await withRetry(() =>
-      getClient()
-        .from(TABLES.applications)
-        .select('created_at')
-        .eq('guild_id', gid)
-        .eq('discord_id', interaction.user.id)
-        .eq('type', type)
-        .gte('created_at', cutoff)
-        .order('created_at', { ascending: false })
-        .limit(1)
-    );
-    if (last && last.length) {
-      const expireAt = new Date(new Date(last[0].created_at).getTime() + cooldownDays * 86400000);
-      const remaining = expireAt.getTime() - Date.now();
-      return interaction.reply({
-        embeds: [embeds.error('Cooldown aktiv', `Du kannst dich erst wieder als **${type}** bewerben, wenn der Cooldown vorbei ist (noch **${helpers.formatRemaining(remaining)}**).`, guild)],
-        ephemeral: true,
-      });
-    }
-  }
-
-  const questions = await getQuestions(gid, type);
-  const dm = await interaction.user.send({ embeds: [embeds.info('📝 Bewerbung gestartet', `Deine Bewerbung als **${type}** beginnt jetzt. Ich stelle dir **${questions.length} Fragen** per Privatnachricht.\n\n**Frage 1/${questions.length}:**\n${questions[0]}`, guild)] });
-  sessions.set(interaction.user.id, { guildId: gid, type, questions, answers: [], step: 0, dm });
-
-  return interaction.reply({ embeds: [embeds.success('Bewerbung gestartet', `Deine Bewerbung als **${type}** wurde gestartet. Beantworte die Fragen in deinen **Privatnachrichten**. Du kannst jederzeit **\`abbrechen\`** schreiben.`, guild)], ephemeral: true });
 }
 
 async function handleDmMessage(message) {
@@ -264,36 +227,4 @@ async function handleInterviewButton(interaction) {
   return interviewService.startInterview(interaction, member.user, null, row.id);
 }
 
-async function close(interaction, channelId) {
-  const guild = interaction.guild;
-  const gid = guild.id;
-  const { data: row } = await withRetry(() =>
-    getClient().from(TABLES.applications).select('*').eq('channel_id', channelId).maybeSingle()
-  );
-  if (row && row.guild_id === gid && row.status === 'offen') {
-    await withRetry(() => getClient().from(TABLES.applications).update({ status: 'abgelehnt' }).eq('id', row.id));
-    await auditService.log(gid, interaction.user.tag, 'application.close', { id: row.id, type: row.type });
-  }
-  const channel = guild.channels.cache.get(channelId);
-  if (channel) {
-    await channel.permissionOverwrites.set([{ id: guild.id, deny: [PermissionFlagsBits.ViewChannel] }]);
-  }
-  return interaction.reply({ embeds: [embeds.success('Bewerbung geschlossen', 'Der Kanal wurde archiviert.', guild)], ephemeral: true });
-}
-
-async function list(interaction) {
-  const guild = interaction.guild;
-  const gid = guild.id;
-  const { data } = await withRetry(() =>
-    getClient().from(TABLES.applications).select('*').eq('guild_id', gid).eq('status', 'offen').order('created_at', { ascending: false }).limit(20)
-  );
-  if (!data || data.length === 0) {
-    return interaction.reply({ embeds: [embeds.info('📝 Offene Bewerbungen', 'Aktuell keine offenen Bewerbungen.', guild)], ephemeral: true });
-  }
-  const lines = data.map(
-    (a) => `**ID ${a.id}** — ${a.type} · <@${a.discord_id}> · ${helpers.formatDateTime(a.created_at)}`
-  );
-  return interaction.reply({ embeds: [embeds.info('📝 Offene Bewerbungen', lines.join('\n'), guild)], ephemeral: true });
-}
-
-module.exports = { APPLICATION_TYPES, startDmFlow, handleDmMessage, handleDecisionButton, handleInterviewButton, close, list, getQuestions, buildReviewEmbed };
+module.exports = { handleDmMessage, handleDecisionButton, handleInterviewButton };

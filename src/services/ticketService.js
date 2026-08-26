@@ -1,6 +1,6 @@
 const fs = require('fs').promises;
 const path = require('path');
-const { ChannelType, PermissionFlagsBits, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
+const { ChannelType, PermissionFlagsBits, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
 const { getClient, TABLES, withRetry } = require('../supabase');
 const settingsService = require('./settingsService');
 const auditService = require('./auditService');
@@ -34,43 +34,6 @@ async function openOverwrites(guild, member) {
     if (!overwrites.some((o) => o.id === role.id)) overwrites.push({ id: role.id, ...viewAllow });
   }
   return overwrites;
-}
-
-async function postPanel(interaction) {
-  const guild = interaction.guild;
-  const gid = guild.id;
-  const channelId = await settingsService.get(gid, 'ticket_panel_channel_id');
-  if (!channelId) {
-    return interaction.reply({
-      embeds: [embeds.error('Kein Panel-Kanal', 'Setze `ticket_panel_channel_id` im Dashboard, bevor du das Panel postest.', guild)],
-      ephemeral: true,
-    });
-  }
-  const channel = guild.channels.cache.get(channelId);
-  if (!channel) {
-    return interaction.reply({ embeds: [embeds.error('Kanal nicht gefunden', 'Der konfigurierte Panel-Kanal existiert nicht mehr.', guild)], ephemeral: true });
-  }
-  const panel = embeds.info('🎫 Support-Ticket', 'Klicke auf **Ticket öffnen**, um ein Support-Ticket zu erstellen.', guild);
-  const types = await ticketTypeService.list(gid);
-  const components = [];
-  if (types.length) {
-    const select = new StringSelectMenuBuilder()
-      .setCustomId('ticket_type_select')
-      .setPlaceholder('Ticket öffnen')
-      .addOptions(types.map((t) => ({
-        label: t.name,
-        value: String(t.id),
-        description: `Max. ${t.max_open} offen`,
-        emoji: t.emoji || '🎫',
-      })));
-    components.push(helpers.row(select));
-  } else {
-    components.push(helpers.row(helpers.primaryButton('ticket_panel', 'Ticket öffnen', '🎫')));
-  }
-  const msg = await channel.send({ embeds: [panel], components });
-  await settingsService.setMany(gid, { ticket_panel_message_id: msg.id });
-  await auditService.log(gid, interaction.user.tag, 'ticket.panel', { channel: channel.id, types: types.length });
-  return interaction.reply({ embeds: [embeds.success('Panel gepostet', `Das Ticket-Panel steht in <#${channel.id}>.`, guild)], ephemeral: true });
 }
 
 async function handleOpen(interaction) {
@@ -185,22 +148,6 @@ async function claim(interaction) {
   return interaction.reply({ embeds: [embeds.success('Ticket übernommen', `Du bearbeitest jetzt <#${row.channel_id}>.`, guild)], ephemeral: true });
 }
 
-async function unclaim(interaction) {
-  const guild = interaction.guild;
-  const gid = guild.id;
-  const row = await findByChannel(interaction);
-  if (!row) {
-    return interaction.reply({ embeds: [embeds.error('Kein Ticket', 'Dieser Kanal ist kein Ticket.', guild)], ephemeral: true });
-  }
-  if (row.claimed_by && row.claimed_by !== interaction.user.id) {
-    return interaction.reply({ embeds: [embeds.error('Nicht geclaimt', 'Dieses Ticket ist von dir nicht geclaimt.', guild)], ephemeral: true });
-  }
-  await withRetry(() => getClient().from(TABLES.tickets).update({ claimed_by: null }).eq('id', row.id));
-  await interaction.channel.send({ embeds: [embeds.info('🎫 Unclaim', `Das Ticket ist wieder frei.`, guild)] });
-  await auditService.log(gid, interaction.user.tag, 'ticket.unclaim', { id: row.id });
-  return interaction.reply({ embeds: [embeds.success('Ticket freigegeben', 'Das Ticket wurde freigegeben.', guild)], ephemeral: true });
-}
-
 function findTicketByCustomId(interaction) {
   return Number(interaction.customId.split('_').pop());
 }
@@ -222,15 +169,6 @@ async function handleCloseModal(interaction) {
   const id = findTicketByCustomId(interaction);
   const reason = interaction.components[0].components[0].value;
   await closeTicket(interaction, id, reason || 'Kein Grund angegeben');
-}
-
-async function closeCommand(interaction) {
-  const guild = interaction.guild;
-  const row = await findByChannel(interaction);
-  if (!row) {
-    return interaction.reply({ embeds: [embeds.error('Kein Ticket', 'Dieser Kanal ist kein Ticket.', guild)], ephemeral: true });
-  }
-  await closeTicket(interaction, row.id, 'von Staff geschlossen');
 }
 
 async function closeTicket(interaction, id, reason) {
@@ -312,28 +250,4 @@ async function closeTicket(interaction, id, reason) {
   await interaction.editReply({ embeds: [embeds.success('Ticket geschlossen', 'Das Ticket wurde geschlossen.', guild)] });
 }
 
-async function addUser(interaction, user) {
-  const guild = interaction.guild;
-  const row = await findByChannel(interaction);
-  if (!row) {
-    return interaction.reply({ embeds: [embeds.error('Kein Ticket', 'Dieser Kanal ist kein Ticket.', guild)], ephemeral: true });
-  }
-  const channel = guild.channels.cache.get(row.channel_id);
-  if (!channel) {
-    return interaction.reply({ embeds: [embeds.error('Kanal fehlt', 'Der Ticket-Kanal existiert nicht mehr.', guild)], ephemeral: true });
-  }
-  const member = guild.members.cache.get(user.id);
-  if (!member) {
-    return interaction.reply({ embeds: [embeds.error('Nicht im Server', 'Der Benutzer ist nicht im Server.', guild)], ephemeral: true });
-  }
-  await channel.permissionOverwrites.create(member, {
-    ViewChannel: true,
-    SendMessages: true,
-    ReadMessageHistory: true,
-  });
-  await channel.send({ embeds: [embeds.info('👤 Benutzer hinzugefügt', `<@${member.id}> wurde von <@${interaction.user.id}> zum Ticket hinzugefügt.`, guild)] });
-  await auditService.log(guild.id, interaction.user.tag, 'ticket.add_user', { id: row.id, added: member.id });
-  return interaction.reply({ embeds: [embeds.success('Benutzer hinzugefügt', `<@${member.id}> kann jetzt im Ticket schreiben.`, guild)], ephemeral: true });
-}
-
-module.exports = { postPanel, handleOpen, handleTypeSelect, claim, unclaim, showCloseModal, handleCloseModal, closeCommand, addUser };
+module.exports = { handleOpen, handleTypeSelect, claim, showCloseModal, handleCloseModal };

@@ -14,41 +14,6 @@ function getAccountAgeDays(user) {
   return Math.floor((Date.now() - user.createdTimestamp) / 86400000);
 }
 
-async function postPanel(interaction) {
-  const guild = interaction.guild;
-  const gid = guild.id;
-  const verifyChannelId = await settingsService.get(gid, 'verify_channel_id');
-  if (!verifyChannelId) {
-    return interaction.reply({
-      embeds: [embeds.error('Kein Verifizierungs-Kanal', 'Setze unter Einstellungen (Dashboard) die `verify_channel_id` und poste das Panel erneut.', guild)],
-      ephemeral: true,
-    });
-  }
-  const channel = guild.channels.cache.get(verifyChannelId);
-  if (!channel) {
-    return interaction.reply({
-      embeds: [embeds.error('Kanal nicht gefunden', 'Der konfigurierte Verifizierungs-Kanal existiert nicht mehr.', guild)],
-      ephemeral: true,
-    });
-  }
-  const panel = embeds.info('Verifizierung', 'Klicke auf **Verifizieren**, um dich als Mitglied zu verifizieren.', guild);
-  const row = helpers.row(helpers.primaryButton('verify_panel', 'Verifizieren'));
-
-  let message = null;
-  const existingId = await settingsService.get(gid, 'verify_panel_message_id');
-  if (existingId) {
-    try {
-      const old = await channel.messages.fetch(existingId);
-      message = await old.edit({ embeds: [panel], components: [row] });
-    } catch (_) { message = null; }
-  }
-  if (!message) message = await channel.send({ embeds: [panel], components: [row] });
-
-  await settingsService.setMany(gid, { verify_panel_message_id: message.id });
-  await auditService.log(gid, interaction.user.tag, 'verify.panel', { channel: channel.id });
-  return interaction.reply({ embeds: [embeds.success('Panel gepostet', `Das Verifizierungs-Panel steht in <#${channel.id}>.`, guild)], ephemeral: true });
-}
-
 async function writeVerifyLog(guild, title, description) {
   const logChannelId = await settingsService.get(guild.id, 'verify_log_channel_id');
   if (!logChannelId) return;
@@ -160,32 +125,4 @@ async function handleAcceptRules(interaction) {
   return grantVerification(interaction);
 }
 
-async function status(interaction) {
-  const guild = interaction.guild;
-  const gid = guild.id;
-  const member = interaction.member;
-  const roles = helpers.resolveRoles(guild, await settingsService.get(gid, 'verified_roles'));
-  const verified = roles.some((r) => member.roles.cache.has(r.id));
-  if (verified) {
-    const { data } = await withRetry(() => getClient().from(TABLES.users).select('verified_at').eq('guild_id', gid).eq('discord_id', member.id).maybeSingle());
-    const since = data && data.verified_at ? helpers.formatDateTime(data.verified_at) : 'unbekannt';
-    return interaction.reply({ embeds: [embeds.success('Verifiziert', `Du bist verifiziert seit **${since}**.`, guild)], ephemeral: true });
-  }
-  return interaction.reply({ embeds: [embeds.info('Nicht verifiziert', 'Du bist noch nicht verifiziert. Klicke im Verifizierungs-Panel auf **Verifizieren**.', guild)], ephemeral: true });
-}
-
-async function remove(interaction, target) {
-  const guild = interaction.guild;
-  const gid = guild.id;
-  const roles = helpers.resolveRoles(guild, await settingsService.get(gid, 'verified_roles'));
-  const toRemove = roles.filter((r) => target.roles.cache.has(r.id));
-  if (toRemove.length) {
-    try { await target.roles.remove(toRemove); } catch (err) { logger.warn(`Rolle konnte nicht entfernt werden: ${err.message}`); }
-  }
-  await withRetry(() => getClient().from(TABLES.users).update({ left_at: new Date().toISOString() }).eq('guild_id', gid).eq('discord_id', target.id));
-  await auditService.log(gid, interaction.user.tag, 'verify.remove', { discord_id: target.id });
-  await writeVerifyLog(guild, 'Verifizierung entfernt', `<@${target.id}> wurde von <@${interaction.user.id}> entverifiziert.`);
-  return interaction.reply({ embeds: [embeds.success('Verifizierung entfernt', `Die Verifizierung von <@${target.id}> wurde entfernt.`, guild)], ephemeral: true });
-}
-
-module.exports = { postPanel, handlePanelButton, handleAcceptRules, status, remove };
+module.exports = { handlePanelButton, handleAcceptRules };
