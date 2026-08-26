@@ -5,6 +5,51 @@ const ticketService = require('../services/proTicketService');
 const { getClient, TABLES, withRetry } = require('../supabase');
 const { config } = require('../config');
 
+const userCache = new Map();
+const CACHE_TTL = 5 * 60 * 1000;
+
+async function resolveUsernames(guildId, ids) {
+  const result = {};
+  const missing = [];
+  const now = Date.now();
+  for (const id of ids) {
+    const cached = userCache.get(id);
+    if (cached && now - cached.ts < CACHE_TTL) { result[id] = cached.name; }
+    else { missing.push(id); }
+  }
+  if (missing.length) {
+    try {
+      const { data: dbUsers } = await withRetry(() => getClient().from(TABLES.users).select('discord_id,username').eq('guild_id', guildId).in('discord_id', missing));
+      for (const u of dbUsers || []) if (u.username) { result[u.discord_id] = u.username; userCache.set(u.discord_id, { name: u.username, ts: now }); }
+    } catch {}
+    const stillMissing = missing.filter(id => !result[id]);
+    if (stillMissing.length) {
+      const results = await Promise.allSettled(stillMissing.map(id =>
+        fetch(`https://discord.com/api/v10/users/${id}`, { headers: { Authorization: `Bot ${config.discordToken}` } })
+          .then(r => r.ok ? r.json() : null).then(u => u && u.username ? { id, name: u.username } : null)
+      ));
+      for (const r of results) {
+        if (r.status === 'fulfilled' && r.value) {
+          result[r.value.id] = r.value.name;
+          userCache.set(r.value.id, { name: r.value.name, ts: now });
+        }
+      }
+      // persist to DB for next time
+      const toPersist = stillMissing.filter(id => result[id]);
+      if (toPersist.length) {
+        try {
+          await withRetry(() => getClient().from(TABLES.users).upsert(
+            toPersist.map(id => ({ guild_id: guildId, discord_id: id, username: result[id] })),
+            { onConflict: 'guild_id,discord_id', ignoreDuplicates: true }
+          ));
+        } catch {}
+      }
+    }
+  }
+  for (const id of ids) if (!result[id]) result[id] = id;
+  return result;
+}
+
 async function getApi(req, res) {
   try {
     const guildId = req.guildId;
@@ -17,21 +62,8 @@ async function getApi(req, res) {
       const { data: events } = await withRetry(() => getClient().from(TABLES.ticketEvents).select('*').eq('guild_id', guildId).order('created_at', { ascending: false }).limit(100));
       const { data: panel } = await withRetry(() => getClient().from(TABLES.ticketPanels).select('*').eq('guild_id', guildId).order('id').limit(1).maybeSingle());
       const { data: questions } = await withRetry(() => getClient().from(TABLES.ticketQuestions).select('*').eq('guild_id', guildId).order('category_id').order('sort_order'));
-      const userNames = stats.userNames || {};
-      const ticketIds = [...new Set((tickets || []).flatMap(t => [t.owner_id, t.assigned_user_id].filter(Boolean)))].filter(id => !userNames[id]);
-      if (ticketIds.length) {
-        const { data: dbUsers2 } = await withRetry(() => getClient().from(TABLES.users).select('discord_id,username').eq('guild_id', guildId).in('discord_id', ticketIds));
-        for (const u of dbUsers2 || []) if (u.username) userNames[u.discord_id] = u.username;
-        const missing = ticketIds.filter(id => !userNames[id]);
-        if (missing.length) {
-          const results = await Promise.allSettled(missing.map(id =>
-            fetch(`https://discord.com/api/v10/users/${id}`, { headers: { Authorization: `Bot ${config.discordToken}` } })
-              .then(r => r.ok ? r.json() : null).then(u => u && u.username ? { id, name: u.username } : null)
-          ));
-          for (const r of results) if (r.status === 'fulfilled' && r.value) userNames[r.value.id] = r.value.name;
-        }
-      }
-      for (const id of ticketIds) if (!userNames[id]) userNames[id] = id;
+      const allIds = [...new Set([...Object.keys(stats.ticketsPerEmployee || {}), stats.activeSupporterId, ...(tickets || []).flatMap(t => [t.owner_id, t.assigned_user_id])].filter(Boolean))];
+      const userNames = await resolveUsernames(guildId, allIds);
       return res.json({ settings: ticketSettings, categories, tags, stats, tickets, transcripts, events: events || [], panel: panel || null, questions: questions || [], userNames });
     }
     res.json(await settingsService.getAll(guildId));
