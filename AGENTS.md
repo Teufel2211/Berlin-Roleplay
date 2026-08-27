@@ -86,6 +86,14 @@ Setup order: fill `.env` → `npm run migrate` → `npm run deploy` → `npm sta
 
 ---
 
+# Wo bearbeiten (lokal vs. GitHub)
+
+- Wenn ein Projekt **lokal auf meinem PC liegt** (z.B. `C:\Users\Steven\Downloads\Roblox`), dann **bearbeite ich es lokal** und pushe die Änderungen anschließend per `git push` zu GitHub (selfsync zieht sie dann auf den Bot-Server).
+- Wenn ein Projekt **nur auf GitHub existiert** (kein lokaler Clone), dann **bearbeite ich es nur auf GitHub** (z.B. über `gh`/Web-Edit) und lege keinen lokalen Clone an — außer der Nutzer verlangt ausdrücklich einen lokalen Checkout.
+- Vor dem Bearbeiten immer prüfen, ob ein lokaler Ordner existiert (`Test-Path` bzw. lokale Suche), bevor auf GitHub editiert wird.
+
+---
+
 # Notes
 
 - Supabase project: `hfreshlzwukfaeyveddv` (https://hfreshlzwukfaeyveddv.supabase.co).
