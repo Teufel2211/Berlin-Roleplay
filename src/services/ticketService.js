@@ -10,6 +10,24 @@ const helpers = require('../discord/helpers');
 const logger = require('../logger');
 const { config } = require('../config');
 
+async function recolorMessage(channelId, messageId, color) {
+  if (!channelId || !messageId) return;
+  const h = { Authorization: `Bot ${config.discordToken}`, 'Content-Type': 'application/json' };
+  let msg;
+  try {
+    const r = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages/${messageId}`, { headers: h });
+    if (!r.ok) return;
+    msg = await r.json();
+  } catch (e) { return; }
+  const comps = Array.isArray(msg.components) ? msg.components : [];
+  let changed = false;
+  const next = comps.map((c) => {
+    if (c && c.type === 17) { changed = true; return Object.assign({}, c, { accent_color: Number(color) || 0 }); }
+    return c;
+  });
+  if (changed) try { await fetch(`https://discord.com/api/v10/channels/${channelId}/messages/${messageId}`, { method: 'PATCH', headers: h, body: JSON.stringify({ components: next, flags: 32768 }) }); } catch (e) {}
+}
+
 function channelNameFor(user) {
   const safe = user.username.replace(/[^a-z0-9_-]/gi, '').slice(0, 16) || 'nutzer';
   return `ticket-${safe}-${Date.now().toString(36)}`;
@@ -145,10 +163,7 @@ async function claim(interaction) {
   await withRetry(() => getClient().from(TABLES.tickets).update({ claimed_by: interaction.user.id }).eq('id', row.id));
   if (row.panel_message_id) {
     try {
-      const oldMsg = await interaction.channel.messages.fetch(row.panel_message_id).catch(() => null);
-      if (oldMsg && oldMsg.embeds[0]) {
-        await oldMsg.edit({ embeds: [Object.assign({}, oldMsg.embeds[0].toJSON(), { color: embeds.COLORS.success })] }).catch(() => {});
-      }
+      await recolorMessage(interaction.channel.id, row.panel_message_id, embeds.COLORS.success);
     } catch (e) { /* ignorieren */ }
   }
   await interaction.channel.send({ embeds: [embeds.info('🧑‍✈️ Claim', `<@${interaction.user.id}> hat das Ticket übernommen.`, guild)] });
@@ -242,10 +257,7 @@ async function closeTicket(interaction, id, reason) {
 
   if (row.panel_message_id) {
     try {
-      const oldMsg = channel ? await channel.messages.fetch(row.panel_message_id).catch(() => null) : null;
-      if (oldMsg && oldMsg.embeds[0]) {
-        await oldMsg.edit({ embeds: [Object.assign({}, oldMsg.embeds[0].toJSON(), { color: embeds.COLORS.error })] }).catch(() => {});
-      }
+      await recolorMessage(channel ? channel.id : null, row.panel_message_id, embeds.COLORS.error);
     } catch (e) { /* ignorieren */ }
   }
 
