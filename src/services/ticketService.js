@@ -277,9 +277,8 @@ async function closeTicket(interaction, id, reason) {
 
   if (channel) {
     try {
-      await channel.send({ embeds: [embeds.info('🔒 Ticket geschlossen', 'Dieses Ticket wird in wenigen Sekunden gelöscht.', guild)] });
+      await channel.send({ embeds: [embeds.info('🔒 Ticket geschlossen', 'Das Ticket ist geschlossen. Es kann im Admin-Bereich wieder geöffnet oder gelöscht werden.', guild)] });
     } catch (err) { /* ignorieren */ }
-    setTimeout(() => channel.delete().catch(() => null), 10 * 1000);
   }
 
   await interaction.editReply({ embeds: [embeds.success('Ticket geschlossen', 'Das Ticket wurde geschlossen.', guild)] });
