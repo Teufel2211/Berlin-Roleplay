@@ -262,18 +262,6 @@ create table if not exists public.eghr_verification_attempts (
   created_at timestamptz default now()
 );
 
-create table if not exists public.eghr_ticket_types (
-  id bigint generated always as identity primary key,
-  guild_id text not null,
-  name text not null,
-  emoji text default '🎫',
-  category_id text,
-  max_open integer default 1,
-  ping_role_id text,
-  sort integer default 0,
-  created_at timestamptz default now()
-);
-
 -- RLS aktivieren (Service-Role-Key umgeht RLS; keine Policies -> anon/authenticated haben keinen Zugriff)
 alter table public.eghr_warteraum enable row level security;
 alter table public.eghr_users enable row level security;
@@ -298,4 +286,3 @@ alter table public.eghr_moderation_cases enable row level security;
 alter table public.eghr_moderation_warnings enable row level security;
 alter table public.eghr_welcome_messages enable row level security;
 alter table public.eghr_verification_attempts enable row level security;
-alter table public.eghr_ticket_types enable row level security;

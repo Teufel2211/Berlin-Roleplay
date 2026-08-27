@@ -15,8 +15,6 @@ const discordAuth = require('./discordAuth');
 const webSettings = require('./settings');
 const webAudit = require('./audit');
 const managementAdmin = require('./managementAdmin');
-const ticketAdmin = require('./ticketAdmin');
-const ticketTypeService = require('../services/ticketTypeService');
 const SupabaseSessionStore = require('./sessionStore');
 const discordApi = require('./discordApi');
 const i18n = require('./i18n');
@@ -24,7 +22,6 @@ const i18n = require('./i18n');
 const settingsLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 100 });
 
 const CHANNEL_KEYS = [
-  'ticket_category_id', 'ticket_panel_channel_id', 'ticket_log_channel_id',
   'giveaway_channel_id', 'giveaway_announce_channel_id',
   'moderation_log_channel_id', 'moderation_panel_channel_id',
 ];
@@ -33,11 +30,9 @@ const ROLE_KEYS = ['staff_roles', 'admin_roles', 'giveaway_required_roles'];
 const LABELS = {
   staff_roles: 'Staff-Rollen', admin_roles: 'Admin-Rollen',
   giveaway_required_roles: 'Pflicht-Rollen (Giveaway)',
-  ticket_category_id: 'Ticket-Kategorie', ticket_panel_channel_id: 'Ticket-Panel', ticket_log_channel_id: 'Ticket-Log',
   giveaway_channel_id: 'Giveaway-Kanal', giveaway_announce_channel_id: 'Gewinner-Kanal',
   moderation_log_channel_id: 'Moderations-Log', moderation_panel_channel_id: 'Moderations-Panel',
   giveaway_default_winners: 'Standard-Gewinneranzahl', giveaway_max_tickets: 'Max. Lose pro User',
-  max_open_tickets: 'Max. gleichzeitig offene Tickets', ticket_transcripts_enabled: 'Ticket-Transkripte aktivieren',
 };
 
 const FEATURES = [
@@ -67,8 +62,6 @@ const SETTING_GROUPS = [
   { feature: 'giveaway', id: 'kanale', subgroup: 'Kanäle', keys: ['giveaway_channel_id', 'giveaway_announce_channel_id'] },
   { feature: 'giveaway', id: 'rollen', subgroup: 'Rollen', keys: ['giveaway_required_roles'] },
   { feature: 'giveaway', id: 'verhalten', subgroup: 'Verhalten', keys: ['giveaway_default_winners', 'giveaway_max_tickets'] },
-  { feature: 'tickets', id: 'kanale', subgroup: 'Kanäle', keys: ['ticket_category_id', 'ticket_panel_channel_id', 'ticket_log_channel_id'] },
-  { feature: 'tickets', id: 'verhalten', subgroup: 'Verhalten', keys: ['max_open_tickets', 'ticket_transcripts_enabled'] },
   { feature: 'moderation', id: 'panel', subgroup: 'Panel', keys: ['moderation_panel_channel_id'] },
   { feature: 'moderation', id: 'protokoll', subgroup: 'Protokoll', keys: ['moderation_log_channel_id'] },
 ];
@@ -80,7 +73,7 @@ const FEATURE_SECTIONS = {
   ],
   tickets: [
     { id: 'liste', label: 'Offene Tickets', kind: 'content' },
-    { id: 'typen', label: 'Kategorien', kind: 'content' },
+    { id: 'kategorien', label: 'Kategorien', kind: 'content' },
     { id: 'panel', label: 'Panel', kind: 'content' },
     { id: 'tickets', label: 'Tickets', kind: 'content' },
     { id: 'transcripts', label: 'Transcripts', kind: 'content' },
@@ -172,8 +165,8 @@ function createApp() {
   app.get('/dashboard/servers/:guildId', (req, res) => res.redirect(`/dashboard/servers/${req.guildId}/feature/overview`));
   app.get('/dashboard/servers/:guildId/feature/:feature', async (req, res, next) => {
     const feature = featureById(req.params.feature); if (!feature) return next(); const gid = req.guildId; const all = await settingsService.getAll(gid).catch(() => ({})); applyLocale(res, i18n.isSupported(all.language) ? all.language : langFromReq(req)); const t = res.locals.t; let discordOk = true; const channelOptions = await discordApi.fetchChannels(gid).catch(() => { discordOk = false; return []; }); const roleOptions = await discordApi.fetchRoles(gid).catch(() => { discordOk = false; return []; }); const visibleFeatures = enabledFeaturesFor(all); const base = { title: `${t('feat.' + feature.id + '.name', feature.name)} — ${req.guild.name}`, user: req.session.user, csrf: auth.csrfToken(req), features: visibleFeatures, activeFeature: feature.id, feature, guildId: gid, lang: res.locals.lang, theme: all.theme === 'light' ? 'light' : 'dark' }; const allGroups = settingsGroupsFor(feature.id, all, t); const sdata = { sections: (FEATURE_SECTIONS[feature.id] || []).map((s) => s.kind === 'settings' ? { ...s, label: t('sec.' + feature.id + '.' + s.id, s.label), groups: allGroups.filter((g) => g.id === s.id) } : { ...s, label: t('sec.' + feature.id + '.' + s.id, s.label) }), channelOptions, roleOptions, all, discordOk, flash: String(req.query.msg || '') };
-    if (feature.id === 'overview') { const [tickets, giveaways] = await Promise.all([getClient().from(TABLES.tickets).select('id', { count: 'exact' }).eq('guild_id', gid).eq('status', 'offen'), getClient().from(TABLES.giveaways).select('id', { count: 'exact' }).eq('guild_id', gid).eq('ended', false)]); const { client: discordClient } = require('../discord/client'); const botInstalled = discordClient?.isReady() ? discordClient.guilds.cache.has(gid) : true; return res.render('server', { ...base, data: { ...sdata, stats: { tickets: tickets.count || 0, giveaways: giveaways.count || 0 }, botInstalled } }); }
-    if (feature.id === 'tickets') { const { data: records } = await getClient().from(TABLES.tickets).select('*').eq('guild_id', gid).order('created_at', { ascending: false }).limit(200); const ticketTypes = await ticketTypeService.list(gid); return res.render('server', { ...base, data: { ...sdata, records: records || [], ticketTypes } }); }
+    if (feature.id === 'overview') { const [tickets, giveaways] = await Promise.all([getClient().from(TABLES.tickets).select('id', { count: 'exact' }).eq('guild_id', gid).in('status', ['open', 'offen']), getClient().from(TABLES.giveaways).select('id', { count: 'exact' }).eq('guild_id', gid).eq('ended', false)]); const { client: discordClient } = require('../discord/client'); const botInstalled = discordClient?.isReady() ? discordClient.guilds.cache.has(gid) : true; return res.render('server', { ...base, data: { ...sdata, stats: { tickets: tickets.count || 0, giveaways: giveaways.count || 0 }, botInstalled } }); }
+    if (feature.id === 'tickets') return res.render('server', { ...base, data: sdata });
     if (feature.id === 'giveaway') { const { data: giveaways } = await getClient().from(TABLES.giveaways).select('*').eq('guild_id', gid).eq('ended', false).order('ends_at', { ascending: true }).limit(50); return res.render('server', { ...base, data: { ...sdata, giveaways: giveaways || [] } }); }
     if (feature.id === 'moderation') return res.render('server', { ...base, data: { ...sdata, cases: await moderationService.getCases(gid) } });
     if (feature.id === 'audit') { const { data: entries } = await getClient().from(TABLES.auditLog).select('*').eq('guild_id', gid).order('created_at', { ascending: false }).limit(200); return res.render('server', { ...base, data: { ...sdata, entries: entries || [] } }); }
@@ -188,7 +181,7 @@ function createApp() {
       return res.redirect(redirect);
     } catch (err) { return res.redirect(`${redirect}?msg=${encodeURIComponent(`Fehler: ${err.message}`)}`); }
   });
-  app.post('/dashboard/servers/:guildId/feature/tickets/types', settingsLimiter, requireCanManage, auth.csrfCheck, ticketAdmin.handleTypes); app.post('/dashboard/servers/:guildId/feature/:feature/action', settingsLimiter, requireCanManage, auth.csrfCheck, managementAdmin.handleAction); app.post('/dashboard/servers/:guildId/feature/:feature', settingsLimiter, requireCanManage, auth.csrfCheck, webSettings.saveForm);
+  app.post('/dashboard/servers/:guildId/feature/:feature/action', settingsLimiter, requireCanManage, auth.csrfCheck, managementAdmin.handleAction); app.post('/dashboard/servers/:guildId/feature/:feature', settingsLimiter, requireCanManage, auth.csrfCheck, webSettings.saveForm);
   app.use('/api/settings', auth.requireAuthApi, apiGuildMiddleware, requireCanManageApi); app.use('/api/audit', auth.requireAuthApi, apiGuildMiddleware); app.get('/api/settings', webSettings.getApi); app.get('/api/settings/transcript/:id', webSettings.getTranscript); app.post('/api/settings', auth.csrfCheck, webSettings.saveApi); app.get('/api/audit', webAudit.getApi); app.use((req, res) => res.status(404).render('error', { title: res.locals.t('error.title'), user: req.session.user || null, csrf: auth.csrfToken(req), message: res.locals.t('error.notFound') })); app.use((err, req, res, next) => { logger.error(`Web-Fehler: ${err.stack || err.message}`); if (res.headersSent) return next(err); res.status(500).render('error', { title: res.locals.t('error.title'), user: req.session.user || null, csrf: auth.csrfToken(req), message: res.locals.t('error.internal') }); });
   return app;
 }

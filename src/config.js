@@ -7,8 +7,7 @@ const DEFAULT_SETTINGS = {
   language: 'de',
   theme: 'dark',
   enabled_modules: '["giveaway","tickets"]',
-  giveaway_channel_id: '', giveaway_announce_channel_id: '', giveaway_log_channel_id: '', giveaway_required_roles: '', giveaway_excluded_roles: '', giveaway_bonus_role_weights: '', giveaway_default_winners: '1', giveaway_max_tickets: '5', giveaway_min_account_age_days: '0', giveaway_min_server_age_days: '0', giveaway_reroll_keep_winners: 'true', giveaway_announce_winners: 'true', giveaway_winner_dm: 'true',
-  ticket_log_channel_id: '', ticket_panel_channel_id: '', ticket_panel_message_id: '', ticket_category_id: '', max_open_tickets: '1', ticket_transcripts_enabled: 'true', ticket_transcripts_on_close: 'true', ticket_transcripts_on_delete: 'true', ticket_auto_close_hours: '72', ticket_auto_delete_hours: '24',
+  giveaway_channel_id: '', giveaway_announce_channel_id: '', giveaway_log_channel_id: '', giveaway_required_roles: '', giveaway_excluded_roles: '', giveaway_bonus_role_weights: '', giveaway_default_winners: '1', giveaway_max_tickets: '5', giveaway_min_account_age_days: '0',   giveaway_min_server_age_days: '0', giveaway_reroll_keep_winners: 'true', giveaway_announce_winners: 'true', giveaway_winner_dm: 'true',
   moderation_panel_channel_id: '', moderation_panel_message_id: '',
 };
 
