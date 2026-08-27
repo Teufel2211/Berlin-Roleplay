@@ -21,10 +21,10 @@ One Node.js process (`discord.js` v14, CommonJS) runs both the Discord bot and a
 │   ├── supabase.js           # Supabase client, TABLES map (eghr_ prefix), withRetry
 │   ├── discord/              # client, deploy, embeds, helpers, events
 │   ├── commands/             # giveaway, ticket (only registered slash commands)
-│   ├── services/             # per-feature DB/domain logic (proTicket, ticket, verify, warteraum, giveaway, application, interview, team, moderation, welcome, settings, audit, embedInteraction, proTicketAutomation, proTicketChannelSync, selfsync)
+│   ├── services/             # per-feature DB/domain logic (proTicketService, proTicketAutomation, proTicketChannelSync, giveawayService, moderationService, moderationPanelService, settingsService, auditService, selfsync)
 │   └── web/                  # server, auth, settings/audit routes, views (EJS), public/css
 ├── scripts/                  # migrate.js, setup.js, deploy.js, lint.js
-├── supabase/migrations/      # 001_init.sql (schema + default settings)
+├── supabase/migrations/      # 001_init.sql (schema + defaults) + numbered migrations (002–011)
 ├── .env.example              # Template; copy to .env and fill secrets
 └── MASTERPROMPT.md           # Original spec (German), single source of truth for behavior
 ```
@@ -46,7 +46,7 @@ npm start         # Starts bot + dashboard (reads .env)
 # Conventions
 
 - All embeds and bot messages are **German**; footer: `Emergency Hamburg Roleplay • <Server-Name>`.
-- Registered slash commands: `/giveaway` (`create`, `end`, `reroll`) and `/ticket` (`setup`, `create`, `close`, `reopen`, `delete`, `claim`, `unclaim`, `add`, `remove`, `rename`, `tag`, `transcript`, `info`). All other flows (verify, applications, interviews, legacy ticket panels) run through buttons/modals handled in `src/discord/events.js`.
+- Registered slash commands: `/giveaway` (`create`, `end`, `reroll`) and `/ticket` (`setup`, `create`, `close`, `reopen`, `delete`, `claim`, `unclaim`, `add`, `remove`, `rename`, `tag`, `transcript`, `info`). The ticket system is **Pro-only** (single system); all other flows (verify, applications, interviews) run through buttons/modals handled in `src/discord/events.js`.
 - Roles are configurable via settings keys (`staff_role`, `admin_role`, `warteraum_role`, ...); Staff = moderator, Admin = admin.
 - All tables/queries use the `eghr_` prefix (defined once in `src/supabase.js`).
 - `MASTERPROMPT.md` is the behavioral source of truth. If spec and code diverge, ask before changing either. Note: its `/verify`, `/warteraum`, `/bewerbung`, and `/interview` command chapters are outdated — those flows are now panel/button-driven (see Conventions).

@@ -15,6 +15,7 @@ The project combines a Discord.js bot, Supabase/PostgreSQL persistence, and a we
 - Active giveaway selection with Discord autocomplete for `/giveaway end`
 
 ### Ticket System
+The ticket system is a single **Pro** system (replaces the removed legacy ticket system) with:
 - Ticket categories with dashboard configuration
 - Category selection panels
 - Ticket creation with channel permissions
@@ -156,7 +157,7 @@ src/
 └── index.js           # Entry point
 
 supabase/
-└── migrations/        # 001_init.sql (schema + defaults)
+└── migrations/        # 001_init.sql (schema + defaults) + numbered migrations (002–011)
 
 scripts/
 └── migrate.js, setup.js, deploy.js, lint.js
