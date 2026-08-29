@@ -103,12 +103,17 @@ async function resetPanelSelect(guild) {
   const panelMsgId = await settingsService.get(guild.id, 'moderation_panel_message_id');
   const panelChannelId = await settingsService.get(guild.id, 'moderation_panel_channel_id');
   if (!panelMsgId || !panelChannelId) return;
-  const r = await fetch(`https://discord.com/api/v10/channels/${panelChannelId}/messages/${panelMsgId}`, {
-    method: 'PATCH',
-    headers: { Authorization: `Bot ${process.env.DISCORD_TOKEN}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ components: panelComponents() }),
-  });
-  if (!r.ok) logger.warn(`Moderation-Panel-Reset fehlgeschlagen: ${r.status}`);
+  const url = `https://discord.com/api/v10/channels/${panelChannelId}/messages/${panelMsgId}`;
+  const headers = { Authorization: `Bot ${process.env.DISCORD_TOKEN}`, 'Content-Type': 'application/json' };
+  const patch = (components) => fetch(url, { method: 'PATCH', headers, body: JSON.stringify({ components }) });
+  const disabled = panelComponents();
+  const row = disabled[0].components.find((c) => c.type === 1);
+  const select = row && row.components.find((c) => c.type === 3);
+  if (select) select.disabled = true;
+  const ok = await patch(disabled).then((r) => r.ok);
+  await new Promise((resolve) => setTimeout(resolve, 600));
+  const ok2 = await patch(panelComponents()).then((r) => r.ok);
+  if (!ok || !ok2) logger.warn(`Moderation-Panel-Reset fehlgeschlagen (disable=${ok}, restore=${ok2})`);
 }
 
 async function logModeration(guild, moderator, action, target, reason, extra = {}) {
