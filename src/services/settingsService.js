@@ -3,6 +3,7 @@ const { DEFAULT_SETTINGS } = require('../config');
 const logger = require('../logger');
 
 const guildCache = new Map();
+const SETTINGS_TTL = 60 * 1000;
 
 async function ensureGuildDefaults(guildId) {
   const entries = Object.entries(DEFAULT_SETTINGS).map(([key, value]) => ({
@@ -16,10 +17,10 @@ async function ensureGuildDefaults(guildId) {
 
 async function ensureGuildLoaded(guildId, force = false) {
   if (!guildCache.has(guildId)) {
-    guildCache.set(guildId, { loaded: false, cache: new Map() });
+    guildCache.set(guildId, { loaded: false, cache: new Map(), expiresAt: 0 });
   }
   const entry = guildCache.get(guildId);
-  if (entry.loaded && !force) return entry.cache;
+  if (entry.loaded && !force && entry.expiresAt > Date.now()) return entry.cache;
 
   const { data, error } = await getClient()
     .from(TABLES.settings)
@@ -37,6 +38,7 @@ async function ensureGuildLoaded(guildId, force = false) {
     .eq('guild_id', guildId);
   entry.cache = new Map((reloaded || []).map((r) => [r.key, String(r.value)]));
   entry.loaded = true;
+  entry.expiresAt = Date.now() + SETTINGS_TTL;
   return entry.cache;
 }
 
