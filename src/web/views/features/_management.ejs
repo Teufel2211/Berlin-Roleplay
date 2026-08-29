@@ -15,7 +15,7 @@
       <select name="channel_id" required>
         <option value="">— Kanal wählen —</option>
         <% (data.channelOptions || []).forEach(function(c){ %>
-          <option value="<%= c.id %>" <%= data.all && data.all.moderation_panel_channel_id === c.id ? 'selected' : '' %>><%= c.name %></option>
+          <option value="<%= c.id %>"><%= c.name %></option>
         <% }) %>
       </select>
       <button class="btn primary">Panel senden</button>
