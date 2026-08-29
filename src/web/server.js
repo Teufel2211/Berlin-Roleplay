@@ -95,21 +95,32 @@ const FEATURE_SECTIONS = {
 
 function featureById(id) { return FEATURES.find((f) => f.id === id); }
 function guildFromSession(req, guildId) { return (req.session?.guilds || []).find((g) => g.id === guildId) || null; }
-function userDisplayName(u) { return u.nickname || u.globalName || u.username || String(u.id || ''); }
+function userDisplayName(u) { return u.nickname || u.globalName || u.global_name || u.username || String(u.id || ''); }
 async function resolveUserNames(guild, ids) {
   const unique = [...new Set((ids || []).filter(Boolean))];
   if (!unique.length) return {};
   const names = {};
-  const pending = [];
-  for (const id of unique) {
-    const m = guild.members.cache.get(id);
-    if (m && m.user) names[id] = userDisplayName(m);
-    else pending.push(id);
+  let pending = unique;
+  if (guild && guild.members && guild.members.cache) {
+    const local = [];
+    for (const id of unique) {
+      const m = guild.members.cache.get(id);
+      if (m && m.user) names[id] = userDisplayName(m);
+      else local.push(id);
+    }
+    pending = local;
   }
   if (pending.length && client && client.isReady()) {
     try {
       const fetched = await client.users.fetch(pending);
       for (const [id, u] of fetched) if (!names[id]) names[id] = userDisplayName(u);
+    } catch (_) {}
+  }
+  pending = pending.filter((id) => !names[id]);
+  if (pending.length) {
+    try {
+      const rest = await discordApi.fetchUsers(pending);
+      for (const [id, u] of Object.entries(rest)) if (!names[id]) names[id] = userDisplayName(u);
     } catch (_) {}
   }
   return names;

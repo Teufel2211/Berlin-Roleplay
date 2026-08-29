@@ -157,9 +157,34 @@ async function sendDirectMessage(userId, content) {
   if (!msg.ok) throw new Error(`DM-Sendung fehlgeschlagen (${msg.status})`);
 }
 
+async function fetchUsers(ids) {
+  const unique = [...new Set((ids || []).filter(Boolean))].slice(0, 25);
+  const map = {};
+  const missing = [];
+  for (const id of unique) {
+    const hit = cached(`user:${id}`);
+    if (hit) { map[id] = hit; continue; }
+    missing.push(id);
+  }
+  if (missing.length) {
+    const results = await Promise.all(missing.map((id) =>
+      dedupe(`user:req:${id}`, async () => {
+        const res = await discordFetch(`${OAUTH_BASE}/users/${id}`);
+        if (!res.ok) return null;
+        const u = await res.json().catch(() => null);
+        if (u && u.id) store(`user:${id}`, u);
+        return u;
+      })
+    ));
+    for (const u of results) if (u && u.id) map[u.id] = u;
+  }
+  return map;
+}
+
 module.exports = {
   fetchChannels,
   fetchRoles,
+  fetchUsers,
   invalidateGuild,
   clearCache,
   sendDirectMessage,
