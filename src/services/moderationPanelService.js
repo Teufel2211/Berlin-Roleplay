@@ -72,12 +72,32 @@ async function postPanel(guild, channelId, userTag) {
   return msgId;
 }
 
+function isSnowflakeId(value) { return /^\d{15,25}$/.test(value); }
+async function resolveTargetId(raw, guild) {
+  const input = String(raw || '').trim().replace(/^<@!?(\d+)>$/, '$1');
+  if (!input || isSnowflakeId(input)) return input || null;
+  const query = input.replace(/^@/, '');
+  const members = await guild.members.fetch({ query, limit: 25 }).catch(() => null);
+  if (members && members.size) {
+    const exact = members.find((m) => m.user.username.toLowerCase() === query.toLowerCase() || String(m.nickname || '').toLowerCase() === query.toLowerCase());
+    if (exact) return exact.id;
+    return members.first().id;
+  }
+  const bans = await guild.bans.fetch().catch(() => null);
+  if (bans && bans.size) {
+    const matches = [...bans.values()].filter((b) => b.user.username.toLowerCase().includes(query.toLowerCase()) || String(b.user.globalName || '').toLowerCase().includes(query.toLowerCase()));
+    const pick = matches.find((b) => b.user.username.toLowerCase() === query.toLowerCase()) || matches[0];
+    if (pick) return pick.user.id;
+  }
+  return null;
+}
+
 function buildModal(action) {
   const isUnban = action === 'unban';
   const isClear = action === 'clear';
   const title = `${ACTION_LABELS[action]} — Aktion`;
   const modal = new ModalBuilder().setCustomId(`mod_modal:${action}`).setTitle(title);
-  const userIdInput = new TextInputBuilder().setCustomId('user_id').setLabel(isUnban ? 'User-ID' : isClear ? 'User-ID (optional)' : 'User-ID').setPlaceholder('123456789012345678').setStyle(TextInputStyle.Short).setRequired(!isClear);
+  const userIdInput = new TextInputBuilder().setCustomId('user_id').setLabel(isUnban ? 'User-ID oder Username' : isClear ? 'User-ID oder Username (optional)' : 'User-ID oder Username').setPlaceholder('123456789012345678 oder @Username').setStyle(TextInputStyle.Short).setRequired(!isClear);
   const reasonInput = new TextInputBuilder().setCustomId('reason').setLabel('Grund').setPlaceholder('Grund angeben...').setStyle(TextInputStyle.Paragraph).setRequired(action !== 'clear');
   modal.addComponents(new ActionRowBuilder().addComponents(userIdInput), new ActionRowBuilder().addComponents(reasonInput));
   return modal;
@@ -162,7 +182,7 @@ async function handleModal(interaction) {
   const action = interaction.customId.split(':')[1];
   if (!BUTTON_ACTIONS.find((a) => a.id === action)) return;
 
-  const userId = interaction.fields.getTextInputValue('user_id')?.trim();
+  const rawTarget = interaction.fields.getTextInputValue('user_id')?.trim() || '';
   const reason = interaction.fields.getTextInputValue('reason')?.trim() || 'Kein Grund angegeben';
   const guild = interaction.guild;
   const member = interaction.member;
@@ -174,6 +194,11 @@ async function handleModal(interaction) {
   }
 
   await interaction.deferReply();
+
+  const userId = rawTarget ? await resolveTargetId(rawTarget, guild) : '';
+  if (rawTarget && !userId) {
+    return interaction.editReply({ embeds: [embeds.error('Nicht gefunden', `Kein Nutzer für „${rawTarget}" gefunden.\nNutze eine User-ID (Zahl) oder einen Usernamen.`, guild)] });
+  }
 
   try {
     switch (action) {
