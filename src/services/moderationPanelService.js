@@ -97,6 +97,18 @@ async function handleSelect(interaction) {
   await interaction.showModal(modal);
 }
 
+async function resetPanelSelect(guild) {
+  const panelMsgId = await settingsService.get(guild.id, 'moderation_panel_message_id');
+  const panelChannelId = await settingsService.get(guild.id, 'moderation_panel_channel_id');
+  if (!panelMsgId || !panelChannelId) return;
+  const r = await fetch(`https://discord.com/api/v10/channels/${panelChannelId}/messages/${panelMsgId}`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bot ${process.env.DISCORD_TOKEN}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ components: panelComponents() }),
+  });
+  if (!r.ok) logger.warn(`Moderation-Panel-Reset fehlgeschlagen: ${r.status}`);
+}
+
 async function logModeration(guild, moderator, action, target, reason, extra = {}) {
   try {
     await moderationService.logCase(guild.id, target.id || target, moderator.id, action, reason, extra.duration || null);
@@ -266,6 +278,8 @@ async function handleModal(interaction) {
   } catch (err) {
     logger.error(`Moderations-Panel fehlgeschlagen: ${err.message}`);
     return interaction.editReply({ embeds: [embeds.error('Fehler', `Aktion fehlgeschlagen: ${err.message}`, guild)] });
+  } finally {
+    await resetPanelSelect(guild).catch((e) => logger.warn(`Moderation-Panel-Reset: ${e.message}`));
   }
 }
 
