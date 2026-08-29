@@ -88,6 +88,7 @@ async function handleButton(interaction) {
   if (!BUTTON_ACTIONS.find((a) => a.id === action)) return;
   const modal = buildModal(action);
   await interaction.showModal(modal);
+  await resetPanelSelect(interaction.guild).catch((e) => logger.warn(`Moderation-Panel-Reset: ${e.message}`));
 }
 
 async function handleSelect(interaction) {
@@ -95,6 +96,7 @@ async function handleSelect(interaction) {
   if (!action || !BUTTON_ACTIONS.find((a) => a.id === action)) return;
   const modal = buildModal(action);
   await interaction.showModal(modal);
+  await resetPanelSelect(interaction.guild).catch((e) => logger.warn(`Moderation-Panel-Reset: ${e.message}`));
 }
 
 async function resetPanelSelect(guild) {
