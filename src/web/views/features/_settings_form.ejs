@@ -59,6 +59,11 @@
             <option value="false"<%= f.value === 'false' ? ' selected' : '' %>>Nein</option>
           </select>
         </label>
+        <% } else if (f.textarea) { %>
+        <label class="field">
+          <span class="field-label"><%= f.label %></span>
+          <textarea name="settings[<%= f.key %>]" rows="4"><%= f.value %></textarea>
+        </label>
         <% } else { %>
         <label class="field">
           <span class="field-label"><%= f.label %></span>

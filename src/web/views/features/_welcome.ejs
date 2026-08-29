@@ -1,0 +1,5 @@
+<h2 class="feature-title">Willkommen</h2>
+<% if (data.flash) { %><div class="alert"><%= data.flash %></div><% } %>
+<p class="muted">Begrüßt neue Mitglieder automatisch im konfigurierten Kanal. Platzhalter im Text: <code>{user}</code> = Erwähnung des Mitglieds, <code>{server}</code> = Servername.</p>
+<%- include('../partials/_sec_settings', { sectionId: 'kanal', data, featureId, guildId }) %>
+<%- include('../partials/_sec_settings', { sectionId: 'text', data, featureId, guildId }) %>

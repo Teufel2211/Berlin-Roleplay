@@ -1,0 +1,14 @@
+<h2 class="feature-title">Verifizierung</h2>
+<% if (data.flash) { %><div class="alert"><%= data.flash %></div><% } %>
+<p class="muted">Mitglieder bestätigen sich selbst über ein Button-Panel und erhalten danach die konfigurierte Verifiziert-Rolle.</p>
+<div class="feature-section" id="sec-panel">
+  <%- include('../partials/_sec_settings', { sectionId: 'panel', data, featureId, guildId, wrap: false }) %>
+  <h3 class="list-title">Panel senden</h3>
+  <% var panelChannel = (data.channelOptions || []).find(function(c){ return String(c.id) === String(data.all && data.all.verification_panel_channel_id); }); %>
+  <p class="muted">Sendet das Verifizierungs-Panel in den konfigurierten Kanal: <%= panelChannel ? ('#' + panelChannel.name) : '— kein Kanal konfiguriert —' %></p>
+  <form method="post" action="/dashboard/servers/<%= guildId %>/feature/verification/panel" class="question-add-form">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <button class="btn primary">Panel senden</button>
+  </form>
+</div>
+<%- include('../partials/_sec_settings', { sectionId: 'zugriff', data, featureId, guildId }) %>

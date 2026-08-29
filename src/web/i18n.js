@@ -18,11 +18,15 @@ const de = {
   'feat.moderation.name': 'Moderation',
   'feat.tickets.name': 'Tickets',
   'feat.giveaway.name': 'Giveaway',
+  'feat.welcome.name': 'Willkommen',
+  'feat.verification.name': 'Verifizierung',
   'feat.audit.name': 'Audit-Log',
 
   'feat.giveaway.desc': 'Gewinnspiele mit Button-Teilnahme, konfigurierbaren Gewinnern und optionalen Bonus-Losen für bestimmte Rollen.',
   'feat.tickets.desc': 'Support-Tickets über ein Panel. Konfiguriere, welche Ticket-Typen Nutzer öffnen können, mit Limit und eigener Kategorie.',
   'feat.moderation.desc': 'Moderationsfälle und Verwarnungshistorie.',
+  'feat.welcome.desc': 'Begrüßt neue Mitglieder automatisch mit einer frei anpassbaren Nachricht.',
+  'feat.verification.desc': 'Mitglieder verifizieren sich selbst über ein Button-Panel und erhalten eine Rolle.',
   'feat.audit.desc': 'Alle Änderungen und Aktionen werden pro Server protokolliert und sind hier einsehbar.',
   'feat.overview.desc': 'Übersicht über alle aktiven Systeme und Statistiken deines Servers.',
 
@@ -45,6 +49,10 @@ const de = {
   'sec.moderation.panel': 'Panel',
   'sec.moderation.zugriff': 'Zugriff',
   'sec.moderation.protokoll': 'Protokoll',
+  'sec.welcome.kanal': 'Kanal',
+  'sec.welcome.text': 'Text',
+  'sec.verification.panel': 'Panel',
+  'sec.verification.zugriff': 'Zugriff',
   'sec.audit.eintraege': 'Einträge',
 
   'label.staff_roles': 'Staff-Rollen',
@@ -57,6 +65,10 @@ const de = {
   'label.moderation_panel_channel_id': 'Moderations-Panel-Kanal',
   'label.giveaway_default_winners': 'Standard-Gewinneranzahl',
   'label.giveaway_max_tickets': 'Max. Lose pro User',
+  'label.welcome_channel_id': 'Willkommens-Kanal',
+  'label.welcome_message': 'Willkommens-Nachricht',
+  'label.verification_role': 'Verifiziert-Rollen',
+  'label.verification_panel_channel_id': 'Verifizierungs-Panel-Kanal',
 
   'giveaway.prize': 'Preis',
   'giveaway.winners': 'Gewinner',

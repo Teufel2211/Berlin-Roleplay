@@ -24,15 +24,18 @@ const settingsLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 100 });
 const CHANNEL_KEYS = [
   'giveaway_channel_id', 'giveaway_announce_channel_id',
   'moderation_log_channel_id', 'moderation_panel_channel_id',
+  'welcome_channel_id', 'verification_panel_channel_id',
 ];
-const ROLE_KEYS = ['staff_roles', 'admin_roles', 'giveaway_required_roles', 'moderation_allowed_roles'];
+const ROLE_KEYS = ['staff_roles', 'admin_roles', 'giveaway_required_roles', 'moderation_allowed_roles', 'verification_role'];
 
 const LABELS = {
   staff_roles: 'Staff-Rollen', admin_roles: 'Admin-Rollen',
   giveaway_required_roles: 'Pflicht-Rollen (Giveaway)',
   moderation_allowed_roles: 'Mod-Befehle erlaubt für',
+  verification_role: 'Verifiziert-Rollen',
   giveaway_channel_id: 'Giveaway-Kanal', giveaway_announce_channel_id: 'Gewinner-Kanal',
   moderation_log_channel_id: 'Moderations-Log', moderation_panel_channel_id: 'Moderations-Panel',
+  welcome_channel_id: 'Willkommens-Kanal', welcome_message: 'Willkommens-Nachricht', verification_panel_channel_id: 'Verifizierungs-Panel-Kanal',
   giveaway_default_winners: 'Standard-Gewinneranzahl', giveaway_max_tickets: 'Max. Lose pro User',
 };
 
@@ -41,6 +44,8 @@ const FEATURES = [
   { id: 'moderation', name: 'Moderation', icon: '🛡️' },
   { id: 'tickets', name: 'Tickets', icon: '🎫' },
   { id: 'giveaway', name: 'Giveaway', icon: '🎉' },
+  { id: 'welcome', name: 'Willkommen', icon: '👋' },
+  { id: 'verification', name: 'Verifizierung', icon: '✅' },
   { id: 'audit', name: 'Audit-Log', icon: '📋' },
 ];
 
@@ -66,6 +71,10 @@ const SETTING_GROUPS = [
   { feature: 'moderation', id: 'panel', subgroup: 'Panel', keys: ['moderation_panel_channel_id'] },
   { feature: 'moderation', id: 'zugriff', subgroup: 'Zugriff', keys: ['moderation_allowed_roles'] },
   { feature: 'moderation', id: 'protokoll', subgroup: 'Protokoll', keys: ['moderation_log_channel_id'] },
+  { feature: 'welcome', id: 'kanal', subgroup: 'Kanal', keys: ['welcome_channel_id'] },
+  { feature: 'welcome', id: 'text', subgroup: 'Text', keys: ['welcome_message'] },
+  { feature: 'verification', id: 'panel', subgroup: 'Panel', keys: ['verification_panel_channel_id'] },
+  { feature: 'verification', id: 'zugriff', subgroup: 'Zugriff', keys: ['verification_role'] },
 ];
 
 const FEATURE_SECTIONS = {
@@ -92,6 +101,14 @@ const FEATURE_SECTIONS = {
     { id: 'panel', label: 'Panel', kind: 'settings' },
     { id: 'zugriff', label: 'Zugriff', kind: 'settings' },
     { id: 'protokoll', label: 'Protokoll', kind: 'settings' },
+  ],
+  welcome: [
+    { id: 'kanal', label: 'Kanal', kind: 'settings' },
+    { id: 'text', label: 'Text', kind: 'settings' },
+  ],
+  verification: [
+    { id: 'panel', label: 'Panel', kind: 'settings' },
+    { id: 'zugriff', label: 'Zugriff', kind: 'settings' },
   ],
   audit: [{ id: 'eintraege', label: 'Einträge', kind: 'content' }],
 };
@@ -137,6 +154,7 @@ function settingsGroupsFor(featureId, all, t) {
       const field = { key, label: t ? t('label.' + key, LABELS[key] || key) : LABELS[key] || key, value: all[key] || '', boolean: isBooleanValue(key, all[key]), type: CHANNEL_KEYS.includes(key) ? 'channel' : ROLE_KEYS.includes(key) ? 'roles' : 'text' };
       if (key === 'theme') { field.type = 'select'; field.options = [{ value: 'dark', label: t ? t('theme.dark') : 'Dark' }, { value: 'light', label: t ? t('theme.light') : 'Light' }]; }
       if (key === 'enabled_modules') { field.type = 'modules'; field.options = FEATURES.filter((f) => !ALWAYS_VISIBLE.includes(f.id)).map((f) => ({ value: f.id, label: t ? t('feat.' + f.id + '.name', f.name) : f.name })); const parsed = parseModuleList(all[key]); field.selected = parsed === null ? field.options.map((o) => o.value) : parsed; }
+      if (key === 'welcome_message') { field.textarea = true; }
       return field;
     }),
   }));
@@ -206,6 +224,16 @@ function createApp() {
     try {
       const moderationPanelService = require('../services/moderationPanelService');
       const msgId = await moderationPanelService.postPanel(req.guild, channelId, req.session.user.tag);
+      return res.redirect(redirect);
+    } catch (err) { return res.redirect(`${redirect}?msg=${encodeURIComponent(`Fehler: ${err.message}`)}`); }
+  });
+  app.post('/dashboard/servers/:guildId/feature/verification/panel', settingsLimiter, requireCanManage, auth.csrfCheck, async (req, res) => {
+    const gid = req.guildId; const redirect = `/dashboard/servers/${gid}/feature/verification`;
+    const channelId = String((await settingsService.get(gid, 'verification_panel_channel_id')) || '').trim();
+    if (!channelId) return res.redirect(`${redirect}?msg=${encodeURIComponent('Kein Verifizierungs-Panel-Kanal konfiguriert.')}`);
+    try {
+      const verificationService = require('../services/verificationService');
+      const msgId = await verificationService.postPanel(req.guild, channelId, req.session.user.tag);
       return res.redirect(redirect);
     } catch (err) { return res.redirect(`${redirect}?msg=${encodeURIComponent(`Fehler: ${err.message}`)}`); }
   });

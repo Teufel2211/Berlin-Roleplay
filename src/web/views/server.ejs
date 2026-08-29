@@ -20,8 +20,10 @@
       <% } %>
       <% if (feature.id === 'overview') { %>
         <%- include('features/_overview', { data, guildId, csrf, t }) %>
+      <% } else if (feature.id === 'welcome') { %>
+        <%- include('features/_welcome', { data, guildId, csrf, featureId: 'welcome' }) %>
       <% } else if (feature.id === 'verification') { %>
-        <%- include('features/_verification', { data }) %>
+        <%- include('features/_verification', { data, guildId, csrf, featureId: 'verification' }) %>
       <% } else if (feature.id === 'warteraum') { %>
         <%- include('features/_settings_only', { data, featureId: 'warteraum', guildId }) %>
       <% } else if (feature.id === 'tickets') { %>
@@ -36,7 +38,7 @@
         <%- include('features/_embeds', { data, guildId }) %>
       <% } else if (feature.id === 'audit') { %>
         <%- include('features/_audit', { data, guildId }) %>
-      <% } else if (['team','moderation','security','welcome'].includes(feature.id)) { %>
+      <% } else if (['team','moderation','security'].includes(feature.id)) { %>
         <%- include('features/_management', { data, guildId, feature, csrf }) %>
       <% } %>
     </div>
