@@ -62,7 +62,6 @@ const de = {
   'giveaway.ends': 'Endet am',
   'giveaway.none': 'Keine aktiven Giveaways.',
 
-  'label.language': 'Sprache',
   'label.theme': 'Theme',
   'label.enabled_modules': 'Aktive Module',
   'theme.dark': 'Dunkel',
@@ -129,138 +128,7 @@ const de = {
   'sub.protokoll': 'Protokoll',
 };
 
-const en = {
-  'topbar.home': 'Home',
-  'topbar.systems': 'Systems',
-  'topbar.dashboard': 'Dashboard',
-  'topbar.login': 'Login',
-  'topbar.logout': 'Logout',
-  'topbar.chooseServer': 'Choose server',
-  'topbar.switchServer': 'Switch server',
-
-  'landing.eyebrow': 'Bot online · Dashboard active',
-  'landing.subtitle': 'The central bot for your server: tickets, giveaways and more.',
-  'landing.loginCta': 'Login with Discord',
-  'landing.dashboardCta': 'Go to Dashboard',
-  'landing.systemsTitle': 'Systems',
-  'landing.systemsSubtitle': 'All systems at a glance – every feature can be configured via the dashboard.',
-
-  'feat.overview.name': 'Overview',
-  'feat.moderation.name': 'Moderation',
-  'feat.tickets.name': 'Tickets',
-  'feat.giveaway.name': 'Giveaway',
-  'feat.audit.name': 'Audit Log',
-
-  'feat.giveaway.desc': 'Giveaways with button participation, configurable winners and optional bonus entries for certain roles.',
-  'feat.tickets.desc': 'Support tickets via a panel. Configure which ticket types users can open, with a limit and a dedicated category.',
-  'feat.moderation.desc': 'Moderation cases and warning history.',
-  'feat.audit.desc': 'All changes and actions are logged per server and can be viewed here.',
-  'feat.overview.desc': 'Overview of all active systems and statistics for your server.',
-
-  'group.overview': 'Overview',
-  'group.community': 'Community',
-  'group.engagement': 'Engagement',
-  'group.support': 'Support',
-  'group.admin': 'Administration',
-  'group.system': 'System',
-  'group.other': 'More',
-
-  'sec.overview.uebersicht': 'Overview',
-  'sec.tickets.liste': 'Open Tickets',
-  'sec.tickets.kategorien': 'Categories',
-  'sec.giveaway.liste': 'Active Giveaways',
-  'sec.giveaway.kanale': 'Channels',
-  'sec.giveaway.rollen': 'Roles',
-  'sec.giveaway.verhalten': 'Behavior',
-  'sec.moderation.faelle': 'Cases',
-  'sec.moderation.panel': 'Panel',
-  'sec.moderation.protokoll': 'Log',
-  'sec.audit.eintraege': 'Entries',
-
-  'label.staff_roles': 'Staff roles',
-  'label.admin_roles': 'Admin roles',
-  'label.giveaway_required_roles': 'Required roles (Giveaway)',
-  'label.giveaway_channel_id': 'Giveaway channel',
-  'label.giveaway_announce_channel_id': 'Winner channel',
-  'label.moderation_log_channel_id': 'Moderation log',
-  'label.moderation_panel_channel_id': 'Moderation panel channel',
-  'label.giveaway_default_winners': 'Default winner count',
-  'label.giveaway_max_tickets': 'Max tickets per user',
-
-  'giveaway.prize': 'Prize',
-  'giveaway.winners': 'Winners',
-  'giveaway.lose': 'Tickets',
-  'giveaway.ends': 'Ends',
-  'giveaway.none': 'No active giveaways.',
-
-  'label.language': 'Language',
-  'label.theme': 'Theme',
-  'label.enabled_modules': 'Enabled modules',
-  'theme.dark': 'Dark',
-  'theme.light': 'Light',
-  'sec.overview.home': 'Settings',
-  'overview.statTickets': 'Open tickets',
-  'overview.statGiveaways': 'Active giveaways',
-  'overview.botInstalled': 'Bot is installed on this server',
-  'overview.botNotInstalled': 'Bot is not installed on this server',
-  'overview.moduleHelp': 'Disabled modules are hidden from the sidebar and bot commands.',
-
-  'common.save': 'Save',
-  'common.yes': 'Yes',
-  'common.no': 'No',
-  'common.delete': 'Delete',
-  'common.add': 'Add',
-  'common.edit': 'Edit',
-  'common.close': 'Close',
-  'common.none': 'None',
-  'common.keiner': '— None —',
-  'common.back': 'Back',
-  'common.botOffline': 'The bot is unreachable on this server (maybe not installed or offline). Channel and role lists cannot be loaded – you can enter the IDs manually.',
-  'guilds.title': 'Choose server',
-  'guilds.syncStatus': 'Server list is automatically synchronized with Discord.',
-  'guilds.syncing': 'Updating server list…',
-  'guilds.empty': 'You are not managing any server yet. Invite the bot to your server and manage it here.',
-  'guilds.invite': 'Invite bot',
-  'guilds.add': 'Add bot',
-  'guilds.botOnline': 'Bot online',
-  'guilds.botOffline': 'Bot offline',
-  'guilds.botNotInvited': 'Bot not invited',
-  'guilds.ownerKicker': 'Global Bot Owner',
-  'guilds.ownerTitle': 'Owner Dashboard',
-  'guilds.ownerDesc': 'Full access to all Discord servers where the bot is installed.',
-  'guilds.botServers': 'Bot servers',
-  'guilds.fullAccess': 'Full access',
-  'guilds.serverSettings': 'Server settings',
-  'guilds.live': 'Live',
-  'guilds.listSynced': 'Server list synced',
-  'guilds.search': 'Search servers…',
-  'guilds.autoRefresh': 'Updates automatically.',
-  'guilds.refreshing': 'Updating server list…',
-  'guilds.lastUpdated': 'Last updated: ',
-  'guilds.refreshFailed': 'Update failed.',
-  'guilds.installed': 'Bot installed · Owner access',
-  'guilds.manageSettings': '⚙️ Manage settings',
-  'guilds.noBots': 'The bot is currently not installed on any server.',
-  'login.title': 'Sign in',
-  'login.desc': 'Sign in with your Discord account. You will then see all servers where you have administrator rights (Manage Server) or own the server.',
-  'login.button': 'Sign in with Discord',
-  'error.backToDashboard': 'Back to Dashboard',
-  'error.title': 'Error',
-  'error.csrf': 'Invalid request (CSRF protection)',
-  'error.noAccess': 'No access to this server.',
-  'error.staffOnly': 'Only staff/admin can change settings.',
-  'error.oauthNotConfigured': 'Discord OAuth2 is not configured.',
-  'error.notFound': 'Page not found',
-  'error.internal': 'Internal error',
-
-  'sub.kanäle': 'Channels',
-  'sub.rollen': 'Roles',
-  'sub.verhalten': 'Behavior',
-  'sub.panel': 'Panel',
-  'sub.protokoll': 'Log',
-};
-
-const dicts = { de, en };
+const dicts = { de };
 
 function makeT(lang) {
   const d = dicts[lang] || de;
@@ -272,7 +140,7 @@ function makeT(lang) {
 }
 
 function isSupported(lang) {
-  return lang === 'de' || lang === 'en';
+  return lang === 'de';
 }
 
-module.exports = { makeT, isSupported, languages: ['de', 'en'] };
+module.exports = { makeT, isSupported, languages: ['de'] };

@@ -58,7 +58,7 @@ function enabledFeaturesFor(all) {
 }
 
 const SETTING_GROUPS = [
-  { feature: 'overview', id: 'home', subgroup: 'Home', keys: ['language', 'theme', 'enabled_modules'] },
+  { feature: 'overview', id: 'home', subgroup: 'Home', keys: ['theme', 'enabled_modules'] },
   { feature: 'giveaway', id: 'kanale', subgroup: 'Kanäle', keys: ['giveaway_channel_id', 'giveaway_announce_channel_id'] },
   { feature: 'giveaway', id: 'rollen', subgroup: 'Rollen', keys: ['giveaway_required_roles'] },
   { feature: 'giveaway', id: 'verhalten', subgroup: 'Verhalten', keys: ['giveaway_default_winners', 'giveaway_max_tickets'] },
@@ -102,18 +102,13 @@ function settingsGroupsFor(featureId, all, t) {
     subgroup: t ? t('sub.' + g.subgroup.toLowerCase(), g.subgroup) : g.subgroup,
     fields: g.keys.map((key) => {
       const field = { key, label: t ? t('label.' + key, LABELS[key] || key) : LABELS[key] || key, value: all[key] || '', boolean: isBooleanValue(key, all[key]), type: CHANNEL_KEYS.includes(key) ? 'channel' : ROLE_KEYS.includes(key) ? 'roles' : 'text' };
-      if (key === 'language') { field.type = 'select'; field.options = [{ value: 'de', label: 'Deutsch' }, { value: 'en', label: 'English' }]; }
       if (key === 'theme') { field.type = 'select'; field.options = [{ value: 'dark', label: t ? t('theme.dark') : 'Dark' }, { value: 'light', label: t ? t('theme.light') : 'Light' }]; }
       if (key === 'enabled_modules') { field.type = 'modules'; field.options = FEATURES.filter((f) => !ALWAYS_VISIBLE.includes(f.id)).map((f) => ({ value: f.id, label: t ? t('feat.' + f.id + '.name', f.name) : f.name })); const parsed = parseModuleList(all[key]); field.selected = parsed === null ? field.options.map((o) => o.value) : parsed; }
       return field;
     }),
   }));
 }
-function langFromReq(req) {
-  const q = req.query.lang;
-  if (i18n.isSupported(q)) return q;
-  const cookie = req.cookies && req.cookies.lang;
-  if (i18n.isSupported(cookie)) return cookie;
+function langFromReq() {
   return 'de';
 }
 function applyLocale(res, lang) {
@@ -152,7 +147,6 @@ function createApp() {
   app.use('/dashboard', rateLimit({ windowMs: 15 * 60 * 1000, limit: 300 })); app.use(express.static(path.join(__dirname, 'public')));
   app.get('/', (req, res) => {
     const lang = langFromReq(req);
-    if (i18n.isSupported(req.query.lang)) res.cookie('lang', req.query.lang, { httpOnly: true, sameSite: 'lax', maxAge: 365 * 24 * 60 * 60 * 1000 });
     applyLocale(res, lang);
     const t = res.locals.t;
     res.render('landing', { title: t('topbar.home') + ' — Emergency Hamburg Roleplay', user: req.session.user || null, csrf: auth.csrfToken(req), loggedIn: Boolean(req.session?.user), features: landingFeatures(t), featureName: (id) => t('feat.' + id + '.name', id) });
@@ -164,7 +158,7 @@ function createApp() {
   app.use('/dashboard/servers/:guildId', guildAccessCheck);
   app.get('/dashboard/servers/:guildId', (req, res) => res.redirect(`/dashboard/servers/${req.guildId}/feature/overview`));
   app.get('/dashboard/servers/:guildId/feature/:feature', async (req, res, next) => {
-    const feature = featureById(req.params.feature); if (!feature) return next(); const gid = req.guildId; const all = await settingsService.getAll(gid).catch(() => ({})); applyLocale(res, i18n.isSupported(all.language) ? all.language : langFromReq(req)); const t = res.locals.t; let discordOk = true; const channelOptions = await discordApi.fetchChannels(gid).catch(() => { discordOk = false; return []; }); const roleOptions = await discordApi.fetchRoles(gid).catch(() => { discordOk = false; return []; }); const visibleFeatures = enabledFeaturesFor(all); const base = { title: `${t('feat.' + feature.id + '.name', feature.name)} — ${req.guild.name}`, user: req.session.user, csrf: auth.csrfToken(req), features: visibleFeatures, activeFeature: feature.id, feature, guildId: gid, lang: res.locals.lang, theme: all.theme === 'light' ? 'light' : 'dark' }; const allGroups = settingsGroupsFor(feature.id, all, t); const sdata = { sections: (FEATURE_SECTIONS[feature.id] || []).map((s) => s.kind === 'settings' ? { ...s, label: t('sec.' + feature.id + '.' + s.id, s.label), groups: allGroups.filter((g) => g.id === s.id) } : { ...s, label: t('sec.' + feature.id + '.' + s.id, s.label) }), channelOptions, roleOptions, all, discordOk, flash: String(req.query.msg || '') };
+    const feature = featureById(req.params.feature); if (!feature) return next(); const gid = req.guildId; const all = await settingsService.getAll(gid).catch(() => ({})); applyLocale(res, 'de'); const t = res.locals.t; let discordOk = true; const channelOptions = await discordApi.fetchChannels(gid).catch(() => { discordOk = false; return []; }); const roleOptions = await discordApi.fetchRoles(gid).catch(() => { discordOk = false; return []; }); const visibleFeatures = enabledFeaturesFor(all); const base = { title: `${t('feat.' + feature.id + '.name', feature.name)} — ${req.guild.name}`, user: req.session.user, csrf: auth.csrfToken(req), features: visibleFeatures, activeFeature: feature.id, feature, guildId: gid, lang: res.locals.lang, theme: all.theme === 'light' ? 'light' : 'dark' }; const allGroups = settingsGroupsFor(feature.id, all, t); const sdata = { sections: (FEATURE_SECTIONS[feature.id] || []).map((s) => s.kind === 'settings' ? { ...s, label: t('sec.' + feature.id + '.' + s.id, s.label), groups: allGroups.filter((g) => g.id === s.id) } : { ...s, label: t('sec.' + feature.id + '.' + s.id, s.label) }), channelOptions, roleOptions, all, discordOk, flash: String(req.query.msg || '') };
     if (feature.id === 'overview') { const [tickets, giveaways] = await Promise.all([getClient().from(TABLES.tickets).select('id', { count: 'exact' }).eq('guild_id', gid).in('status', ['open', 'offen']), getClient().from(TABLES.giveaways).select('id', { count: 'exact' }).eq('guild_id', gid).eq('ended', false)]); const { client: discordClient } = require('../discord/client'); const botInstalled = discordClient?.isReady() ? discordClient.guilds.cache.has(gid) : true; return res.render('server', { ...base, data: { ...sdata, stats: { tickets: tickets.count || 0, giveaways: giveaways.count || 0 }, botInstalled } }); }
     if (feature.id === 'tickets') return res.render('server', { ...base, data: sdata });
     if (feature.id === 'giveaway') { const { data: giveaways } = await getClient().from(TABLES.giveaways).select('*').eq('guild_id', gid).eq('ended', false).order('ends_at', { ascending: true }).limit(50); return res.render('server', { ...base, data: { ...sdata, giveaways: giveaways || [] } }); }

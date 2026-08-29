@@ -21,20 +21,6 @@
       <a href="/#systeme" class="topnav-link"><%= t('topbar.systems') %></a>
       <a href="/dashboard" class="topnav-link cta"><%= t('topbar.dashboard') %></a>
     </nav>
-    <span class="lang-switch">
-      <% if (locals.guildId) { %>
-      <form method="post" action="/dashboard/servers/<%= guildId %>/feature/<%= locals.activeFeature || 'overview' %>" class="inline">
-        <input type="hidden" name="_csrf" value="<%= locals.csrf %>">
-        <button class="lang-btn<%= lang === 'de' ? ' active' : '' %>" name="settings[language]" value="de">DE</button>
-        <span class="lang-sep">·</span>
-        <button class="lang-btn<%= lang === 'en' ? ' active' : '' %>" name="settings[language]" value="en">EN</button>
-      </form>
-      <% } else { %>
-      <a href="?lang=de" class="lang-btn<%= lang === 'de' ? ' active' : '' %>">DE</a>
-      <span class="lang-sep">·</span>
-      <a href="?lang=en" class="lang-btn<%= lang === 'en' ? ' active' : '' %>">EN</a>
-      <% } %>
-    </span>
     <% if (locals.user) { %>
     <span class="user-chip">
       <% if (user.avatar) { %><img src="https://cdn.discordapp.com/avatars/<%= user.id %>/<%= user.avatar %>.png?size=64" alt="" class="user-avatar"><% } %>
