@@ -10,7 +10,7 @@ const ticketChannelSync = require('../services/proTicketChannelSync');
 const settingsService = require('../services/settingsService');
 const moderationPanelService = require('../services/moderationPanelService');
 
-const COMMAND_MODULES = { giveaway: 'giveaway', ticket: 'tickets', moderation: 'moderation' };
+const COMMAND_MODULES = { giveaway: 'giveaway', ticket: 'tickets', moderation: 'moderation', unwarn: 'moderation' };
 async function parseModuleList(raw) { if (raw === undefined || raw === null || raw === '') return null; try { const arr = JSON.parse(raw); return Array.isArray(arr) ? arr.map(String).filter(Boolean) : null; } catch (_) { return null; } }
 async function isModuleEnabled(guildId, moduleId) { const all = await settingsService.getAll(guildId).catch(() => ({})); const list = await parseModuleList(all.enabled_modules); return list === null || list.includes(moduleId); }
 async function replyError(interaction, err) { logger.error(`Interaktion fehlgeschlagen: ${err.stack || err.message}`); if (!interaction.replied && !interaction.deferred) { try { await interaction.reply({ embeds: [embeds.error('Fehler', 'Beim Ausführen ist ein Fehler aufgetreten.', interaction.guild)], flags: MessageFlags.Ephemeral }); } catch (_) {} } }

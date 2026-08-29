@@ -95,6 +95,25 @@ const FEATURE_SECTIONS = {
 
 function featureById(id) { return FEATURES.find((f) => f.id === id); }
 function guildFromSession(req, guildId) { return (req.session?.guilds || []).find((g) => g.id === guildId) || null; }
+function userDisplayName(u) { return u.nickname || u.globalName || u.username || String(u.id || ''); }
+async function resolveUserNames(guild, ids) {
+  const unique = [...new Set((ids || []).filter(Boolean))];
+  if (!unique.length) return {};
+  const names = {};
+  const pending = [];
+  for (const id of unique) {
+    const m = guild.members.cache.get(id);
+    if (m && m.user) names[id] = userDisplayName(m);
+    else pending.push(id);
+  }
+  if (pending.length && client && client.isReady()) {
+    try {
+      const fetched = await client.users.fetch(pending);
+      for (const [id, u] of fetched) if (!names[id]) names[id] = userDisplayName(u);
+    } catch (_) {}
+  }
+  return names;
+}
 function isBooleanValue(key, value) { return value === 'true' || value === 'false'; }
 function settingsGroupsFor(featureId, all, t) {
   return SETTING_GROUPS.filter((g) => g.feature === featureId).map((g) => ({
@@ -162,7 +181,7 @@ function createApp() {
     if (feature.id === 'overview') { const [tickets, giveaways] = await Promise.all([getClient().from(TABLES.tickets).select('id', { count: 'exact' }).eq('guild_id', gid).in('status', ['open', 'offen']), getClient().from(TABLES.giveaways).select('id', { count: 'exact' }).eq('guild_id', gid).eq('ended', false)]); const { client: discordClient } = require('../discord/client'); const botInstalled = discordClient?.isReady() ? discordClient.guilds.cache.has(gid) : true; return res.render('server', { ...base, data: { ...sdata, stats: { tickets: tickets.count || 0, giveaways: giveaways.count || 0 }, botInstalled } }); }
     if (feature.id === 'tickets') return res.render('server', { ...base, data: sdata });
     if (feature.id === 'giveaway') { const { data: giveaways } = await getClient().from(TABLES.giveaways).select('*').eq('guild_id', gid).eq('ended', false).order('ends_at', { ascending: true }).limit(50); return res.render('server', { ...base, data: { ...sdata, giveaways: giveaways || [] } }); }
-    if (feature.id === 'moderation') return res.render('server', { ...base, data: { ...sdata, cases: await moderationService.getCases(gid) } });
+    if (feature.id === 'moderation') { const cases = await moderationService.getCases(gid); const ids = cases.flatMap((c) => [c.target_id, c.moderator_id]); const names = await resolveUserNames(req.guild, ids); return res.render('server', { ...base, data: { ...sdata, cases: cases.map((c) => ({ ...c, target_name: names[c.target_id] || c.target_id, moderator_name: names[c.moderator_id] || c.moderator_id })) } }); }
     if (feature.id === 'audit') { const { data: entries } = await getClient().from(TABLES.auditLog).select('*').eq('guild_id', gid).order('created_at', { ascending: false }).limit(200); return res.render('server', { ...base, data: { ...sdata, entries: entries || [] } }); }
     return res.render('server', { ...base, data: sdata });
   });
