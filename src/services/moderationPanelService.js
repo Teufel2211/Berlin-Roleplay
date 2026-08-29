@@ -12,17 +12,19 @@ const BUTTON_ACTIONS = [
   { id: 'kick', label: 'Kick', emoji: '👢', style: 1 },
   { id: 'softban', label: 'Softban', emoji: '🌀', style: 1 },
   { id: 'warn', label: 'Warn', emoji: '⚠️', style: 2 },
+  { id: 'unwarn', label: 'Unwarn', emoji: '🧹', style: 1 },
   { id: 'unban', label: 'Unban', emoji: '✅', style: 3 },
   { id: 'clear', label: 'Clear', emoji: '🗑️', style: 1 },
 ];
 
-const ACTION_LABELS = { ban: '🔨 Ban', kick: '👢 Kick', softban: '🌀 Softban', warn: '⚠️ Warn', unban: '✅ Unban', clear: '🗑️ Clear' };
+const ACTION_LABELS = { ban: '🔨 Ban', kick: '👢 Kick', softban: '🌀 Softban', warn: '⚠️ Warn', unwarn: '🧹 Unwarn', unban: '✅ Unban', clear: '🗑️ Clear' };
 
 const SELECT_OPTIONS = [
   { label: 'Ban', value: 'ban', description: 'Nutzer dauerhaft vom Server entfernen', emoji: { name: '🔨' } },
   { label: 'Kick', value: 'kick', description: 'Nutzer vom Server kicken', emoji: { name: '👢' } },
   { label: 'Softban', value: 'softban', description: 'Ban + letzte 7 Tage Nachrichten löschen', emoji: { name: '🌀' } },
   { label: 'Warn', value: 'warn', description: 'Verwarnung mit Punkten erteilen', emoji: { name: '⚠️' } },
+  { label: 'Unwarn', value: 'unwarn', description: 'Letzte Verwarnung des Nutzers entfernen', emoji: { name: '🧹' } },
   { label: 'Unban', value: 'unban', description: 'Ban eines Nutzers aufheben', emoji: { name: '✅' } },
   { label: 'Clear', value: 'clear', description: 'Nachrichten aus dem Kanal löschen', emoji: { name: '🗑️' } },
 ];
@@ -31,7 +33,7 @@ function panelComponents() {
   const children = [];
   children.push({ type: 10, content: '## 🛡️ Moderation-Panel' });
   children.push({ type: 14, divider: true, spacing: 1 });
-  children.push({ type: 10, content: 'Wähle eine Aktion aus dem Dropdown-Menü aus, um sie durchzuführen.\n\n🔨 **Ban** — Nutzer dauerhaft entfernen\n👢 **Kick** — Nutzer vom Server kicken\n🌀 **Softban** — Ban + Nachrichten löschen\n⚠️ **Warn** — Verwarnung erteilen\n✅ **Unban** — Ban aufheben\n🗑️ **Clear** — Nachrichten löschen' });
+  children.push({ type: 10, content: 'Wähle eine Aktion aus dem Dropdown-Menü aus, um sie durchzuführen.\n\n🔨 **Ban** — Nutzer dauerhaft entfernen\n👢 **Kick** — Nutzer vom Server kicken\n🌀 **Softban** — Ban + Nachrichten löschen\n⚠️ **Warn** — Verwarnung erteilen\n🧹 **Unwarn** — Letzte Verwarnung entfernen\n✅ **Unban** — Ban aufheben\n🗑️ **Clear** — Nachrichten löschen' });
   children.push({ type: 14, divider: true, spacing: 1 });
   children.push({ type: 1, components: [{ type: 3, custom_id: 'mod_panel:select', placeholder: 'Aktion wählen…', options: SELECT_OPTIONS, min_values: 1, max_values: 1 }] });
   children.push({ type: 14, divider: true, spacing: 1 });
@@ -143,7 +145,7 @@ async function logModeration(guild, moderator, action, target, reason, extra = {
     if (!logChannelId) return;
     const logChannel = guild.channels.cache.get(logChannelId);
     if (!logChannel) return;
-    const emoji = { ban: '🔨', unban: '✅', kick: '👢', softban: '🌀', warn: '⚠️', clear: '🗑️' }[action] || '🛡️';
+    const emoji = { ban: '🔨', unban: '✅', kick: '👢', softban: '🌀', warn: '⚠️', unwarn: '🧹', clear: '🗑️' }[action] || '🛡️';
     const targetId = target.id || target;
     const fields = [
       `**Nutzer:** <@${targetId}>`,
@@ -270,6 +272,21 @@ async function handleModal(interaction) {
           await targetMember?.user?.send({ embeds: [embeds.warning('⚠️ Verwarnung', `Du wurdest auf **${guild.name}** verwarnet.\n**Grund:** ${reason}\n**Gesamtpunkte:** ${totalPoints}`, guild)] }).catch(() => {});
         } catch (_) {}
         return interaction.editReply({ embeds: [embeds.success('⚠️ Verwarnung', `<@${userId}> wurde verwarnet.\n**Grund:** ${reason}\n**Gesamtpunkte:** ${totalPoints}`, guild)] });
+      }
+      case 'unwarn': {
+        if (!userId) {
+          return interaction.editReply({ embeds: [embeds.error('Fehler', 'User-ID ist erforderlich.', guild)] });
+        }
+        const warnings = await moderationService.getWarnings(gid, userId);
+        if (!warnings.length) {
+          return interaction.editReply({ embeds: [embeds.info('Keine Verwarnungen', `<@${userId}> hat keine Verwarnungen.`, guild)] });
+        }
+        const latest = warnings[0];
+        const removedPoints = latest.points || 1;
+        await moderationService.deleteWarning(gid, latest.id);
+        const remaining = await moderationService.getWarningCount(gid, userId);
+        await logModeration(guild, interaction.user, 'unwarn', { id: userId }, reason);
+        return interaction.editReply({ embeds: [embeds.success('🧹 Unwarn', `<@${userId}>: Verwarnung #${latest.id} entfernt.\n**Grund:** ${reason}\n**Entfernte Punkte:** -${removedPoints}\n**Verbleibende Punkte:** ${remaining}`, guild)] });
       }
       case 'unban': {
         try {

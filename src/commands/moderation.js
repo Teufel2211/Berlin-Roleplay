@@ -60,7 +60,7 @@ function formatDuration(seconds) {
 }
 
 const data = new SlashCommandBuilder()
-  .setName('mod')
+  .setName('moderation')
   .setDescription('Moderations-Befehle')
   .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
   .addSubcommand((s) => s
