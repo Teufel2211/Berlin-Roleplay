@@ -35,6 +35,14 @@ async function getWarnings(guildId, targetId) {
   return data || [];
 }
 
+async function getWarningById(guildId, warningId) {
+  const { data, error } = await withRetry(() =>
+    getClient().from(TABLES.moderationWarnings).select('*').eq('id', warningId).eq('guild_id', guildId).maybeSingle()
+  );
+  if (error) throw error;
+  return data || null;
+}
+
 async function getCases(guildId, limit = 100) {
   const { data, error } = await withRetry(() =>
     getClient().from(TABLES.moderationCases).select('*').eq('guild_id', guildId).order('created_at', { ascending: false }).limit(limit)
@@ -72,4 +80,4 @@ async function clearMessages(channel, limit) {
   return deleted;
 }
 
-module.exports = { logCase, warn, getWarnings, getCases, deleteWarning, getWarningCount, clearMessages };
+module.exports = { logCase, warn, getWarnings, getWarningById, getCases, deleteWarning, getWarningCount, clearMessages };
