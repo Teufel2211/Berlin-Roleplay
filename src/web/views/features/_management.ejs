@@ -9,15 +9,10 @@
   <div class="feature-section" id="sec-panel">
     <%- include('../partials/_sec_settings', { sectionId: 'panel', data, featureId: 'moderation', guildId, wrap: false }) %>
     <h3 class="list-title">Panel senden</h3>
-    <p class="muted">Sende das Moderations-Panel in einen Kanal.</p>
+    <% var panelChannel = (data.channelOptions || []).find(function(c){ return String(c.id) === String(data.all && data.all.moderation_panel_channel_id); }); %>
+    <p class="muted">Sendet das Moderations-Panel in den konfigurierten Kanal: <%= panelChannel ? ('#' + panelChannel.name) : '— kein Kanal konfiguriert —' %></p>
     <form method="post" action="/dashboard/servers/<%= guildId %>/feature/moderation/panel" class="question-add-form">
       <input type="hidden" name="_csrf" value="<%= csrf %>">
-      <select name="channel_id" required>
-        <option value="">— Kanal wählen —</option>
-        <% (data.channelOptions || []).forEach(function(c){ %>
-          <option value="<%= c.id %>" <%= data.all && data.all.moderation_panel_channel_id === c.id ? 'selected' : '' %>><%= c.name %></option>
-        <% }) %>
-      </select>
       <button class="btn primary">Panel senden</button>
     </form>
   </div>

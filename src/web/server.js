@@ -167,8 +167,9 @@ function createApp() {
     return res.render('server', { ...base, data: sdata });
   });
   app.post('/dashboard/servers/:guildId/feature/moderation/panel', settingsLimiter, requireCanManage, auth.csrfCheck, async (req, res) => {
-    const gid = req.guildId; const channelId = String(req.body.channel_id || '').trim(); const redirect = `/dashboard/servers/${gid}/feature/moderation`;
-    if (!channelId) return res.redirect(`${redirect}?msg=${encodeURIComponent('Kein Kanal ausgewählt.')}`);
+    const gid = req.guildId; const redirect = `/dashboard/servers/${gid}/feature/moderation`;
+    const channelId = String((await settingsService.get(gid, 'moderation_panel_channel_id')) || '').trim();
+    if (!channelId) return res.redirect(`${redirect}?msg=${encodeURIComponent('Kein Moderations-Panel-Kanal konfiguriert.')}`);
     try {
       const moderationPanelService = require('../services/moderationPanelService');
       const msgId = await moderationPanelService.postPanel(req.guild, channelId, req.session.user.tag);
