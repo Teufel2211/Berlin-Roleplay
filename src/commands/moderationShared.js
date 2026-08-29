@@ -5,7 +5,7 @@ const helpers = require('../discord/helpers');
 const logger = require('../logger');
 
 function hasModeratorAccess(member, settings) {
-  return helpers.isGuildAdmin(member, settings) || helpers.isGuildModerator(member, settings);
+  return helpers.hasModeratorAccess(member, settings);
 }
 
 async function logModeration(guild, moderator, action, target, reason, extra = {}) {

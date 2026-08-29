@@ -111,6 +111,15 @@ function isGuildAdmin(member, settings) {
   return Boolean(settings.admin_roles && memberHasAnyRoleSetting(member, settings.admin_roles));
 }
 
+function hasModeratorAccess(member, settings) {
+  const allowed = String((settings && settings.moderation_allowed_roles) || '').trim();
+  if (allowed && allowed !== '[]') {
+    const roles = parseRoleSetting(allowed);
+    if (roles.length) return isGuildAdmin(member, settings) || memberHasAnyRole(member, roles);
+  }
+  return isGuildAdmin(member, settings) || isGuildModerator(member, settings);
+}
+
 module.exports = {
   parseRoleSetting,
   resolveRoles,
@@ -129,4 +138,5 @@ module.exports = {
   row,
   isGuildModerator,
   isGuildAdmin,
+  hasModeratorAccess,
 };

@@ -25,11 +25,12 @@ const CHANNEL_KEYS = [
   'giveaway_channel_id', 'giveaway_announce_channel_id',
   'moderation_log_channel_id', 'moderation_panel_channel_id',
 ];
-const ROLE_KEYS = ['staff_roles', 'admin_roles', 'giveaway_required_roles'];
+const ROLE_KEYS = ['staff_roles', 'admin_roles', 'giveaway_required_roles', 'moderation_allowed_roles'];
 
 const LABELS = {
   staff_roles: 'Staff-Rollen', admin_roles: 'Admin-Rollen',
   giveaway_required_roles: 'Pflicht-Rollen (Giveaway)',
+  moderation_allowed_roles: 'Mod-Befehle erlaubt für',
   giveaway_channel_id: 'Giveaway-Kanal', giveaway_announce_channel_id: 'Gewinner-Kanal',
   moderation_log_channel_id: 'Moderations-Log', moderation_panel_channel_id: 'Moderations-Panel',
   giveaway_default_winners: 'Standard-Gewinneranzahl', giveaway_max_tickets: 'Max. Lose pro User',
@@ -63,6 +64,7 @@ const SETTING_GROUPS = [
   { feature: 'giveaway', id: 'rollen', subgroup: 'Rollen', keys: ['giveaway_required_roles'] },
   { feature: 'giveaway', id: 'verhalten', subgroup: 'Verhalten', keys: ['giveaway_default_winners', 'giveaway_max_tickets'] },
   { feature: 'moderation', id: 'panel', subgroup: 'Panel', keys: ['moderation_panel_channel_id'] },
+  { feature: 'moderation', id: 'zugriff', subgroup: 'Zugriff', keys: ['moderation_allowed_roles'] },
   { feature: 'moderation', id: 'protokoll', subgroup: 'Protokoll', keys: ['moderation_log_channel_id'] },
 ];
 
@@ -88,6 +90,7 @@ const FEATURE_SECTIONS = {
   moderation: [
     { id: 'faelle', label: 'Fälle', kind: 'content' },
     { id: 'panel', label: 'Panel', kind: 'settings' },
+    { id: 'zugriff', label: 'Zugriff', kind: 'settings' },
     { id: 'protokoll', label: 'Protokoll', kind: 'settings' },
   ],
   audit: [{ id: 'eintraege', label: 'Einträge', kind: 'content' }],

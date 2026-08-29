@@ -191,7 +191,7 @@ async function handleModal(interaction) {
   const gid = guild.id;
 
   const settings = await settingsService.getAll(gid);
-  if (!helpers.isGuildAdmin(member, settings) && !helpers.isGuildModerator(member, settings)) {
+  if (!helpers.hasModeratorAccess(member, settings)) {
     return interaction.reply({ embeds: [embeds.error('Keine Berechtigung', 'Du hast keine Berechtigung.', guild)], flags: 64 });
   }
 

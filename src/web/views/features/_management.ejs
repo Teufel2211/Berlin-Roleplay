@@ -16,5 +16,6 @@
       <button class="btn primary">Panel senden</button>
     </form>
   </div>
+  <%- include('../partials/_sec_settings', { sectionId: 'zugriff', data, featureId: 'moderation', guildId }) %>
   <%- include('../partials/_sec_settings', { sectionId: 'protokoll', data, featureId: 'moderation', guildId }) %>
 <% } %>

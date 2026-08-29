@@ -42,7 +42,7 @@ async function execute(interaction) {
   const settings = await settingsService.getAll(gid);
   const member = interaction.member;
 
-  if (!helpers.isGuildAdmin(member, settings) && !helpers.isGuildModerator(member, settings)) {
+  if (!helpers.hasModeratorAccess(member, settings)) {
     return interaction.reply({ embeds: [embeds.error('Keine Berechtigung', 'Du hast keine Berechtigung, diesen Befehl zu verwenden.', guild)], flags: 64 });
   }
 

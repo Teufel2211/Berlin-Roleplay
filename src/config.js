@@ -8,7 +8,7 @@ const DEFAULT_SETTINGS = {
   theme: 'dark',
   enabled_modules: '["giveaway","tickets"]',
   giveaway_channel_id: '', giveaway_announce_channel_id: '', giveaway_log_channel_id: '', giveaway_required_roles: '', giveaway_excluded_roles: '', giveaway_bonus_role_weights: '', giveaway_default_winners: '1', giveaway_max_tickets: '5', giveaway_min_account_age_days: '0',   giveaway_min_server_age_days: '0', giveaway_reroll_keep_winners: 'true', giveaway_announce_winners: 'true', giveaway_winner_dm: 'true',
-  moderation_panel_channel_id: '', moderation_panel_message_id: '',
+  moderation_panel_channel_id: '', moderation_panel_message_id: '', moderation_allowed_roles: '',
 };
 
 const config = {
