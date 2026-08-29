@@ -51,12 +51,32 @@ async function fetchMyGuilds(accessToken) {
   return res.json();
 }
 
+const BOT_GUILDS_TTL = 60 * 1000;
+let botGuildsCache = null;
+let botGuildsInflight = null;
+
 async function fetchBotGuilds() {
   if (!config.discordToken) throw new Error('DISCORD_TOKEN fehlt.');
-  const res = await fetch(`${OAUTH_BASE}/users/@me/guilds`, { headers: { Authorization: `Bot ${config.discordToken}` } });
-  if (!res.ok) throw new Error(`Bot-Serverliste fehlgeschlagen (${res.status})`);
-  const guilds = await res.json();
-  return Array.isArray(guilds) ? guilds : [];
+  if (botGuildsCache && botGuildsCache.expiresAt > Date.now()) return botGuildsCache.data;
+  if (botGuildsInflight) return botGuildsInflight;
+
+  const task = (async () => {
+    try {
+      const res = await fetch(`${OAUTH_BASE}/users/@me/guilds`, { headers: { Authorization: `Bot ${config.discordToken}` } });
+      if (!res.ok) {
+        if (botGuildsCache) return botGuildsCache.data;
+        throw new Error(`Bot-Serverliste fehlgeschlagen (${res.status})`);
+      }
+      const guilds = await res.json();
+      if (!Array.isArray(guilds)) throw new Error('Bot-Serverliste ungültig');
+      botGuildsCache = { data: guilds, expiresAt: Date.now() + BOT_GUILDS_TTL };
+      return guilds;
+    } finally {
+      if (botGuildsInflight === task) botGuildsInflight = null;
+    }
+  })();
+  botGuildsInflight = task;
+  return task;
 }
 
 async function fetchGuild(guildId) {
