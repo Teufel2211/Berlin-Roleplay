@@ -8,6 +8,22 @@ const logger = require('../logger');
 const OAUTH_BASE = 'https://discord.com/api';
 const STATE_COOKIE = 'oauth_state';
 const MANAGE_GUILD = 32n;
+const FETCH_TTL = 60 * 1000;
+const guildRolesCache = new Map();
+const guildMemberCache = new Map();
+
+function cachedGet(map, key) {
+  const entry = map.get(key);
+  if (!entry || entry.expiresAt < Date.now()) {
+    if (entry) map.delete(key);
+    return undefined;
+  }
+  return entry.data;
+}
+
+function cachedSet(map, key, value) {
+  map.set(key, { data: value, expiresAt: Date.now() + FETCH_TTL });
+}
 
 function redirectUri() {
   return new URL('/dashboard/auth/discord/callback', config.webUrl).href;
@@ -96,27 +112,41 @@ function isOwner(session) { return Boolean(session && session.user && session.us
 async function canManageGuild(session, guild) {
   if (isOwner(session)) return true;
   if (!canAccessGuild(guild)) return false;
-  const member = await fetchGuildMember(session.user.id, guild.id);
-  if (!member) return canAccessGuild(guild);
-  const settings = await settingsService.getAll(guild.id);
+  const [member, settings, guildRoles] = await Promise.all([
+    fetchGuildMember(session.user.id, guild.id),
+    settingsService.getAll(guild.id),
+    fetchGuildRoles(guild.id),
+  ]);
+  if (!member || !guildRoles) return canAccessGuild(guild);
   const roleNames = new Set([...parseRoleSetting(settings.staff_roles), ...parseRoleSetting(settings.admin_roles)]);
   if (!roleNames.size) return true;
-  const guildRoles = await fetchGuildRoles(guild.id);
   const allowedIds = new Set(guildRoles.filter((r) => roleNames.has(r.name)).map((r) => r.id));
   return (member.roles || []).some((id) => allowedIds.has(id));
 }
 
 async function fetchGuildRoles(guildId) {
+  const cached = cachedGet(guildRolesCache, guildId);
+  if (cached !== undefined) return cached;
   const res = await fetch(`${OAUTH_BASE}/guilds/${guildId}/roles`, { headers: { Authorization: `Bot ${config.discordToken}` } });
   if (!res.ok) throw new Error(`Rollenabruf fehlgeschlagen (${res.status})`);
-  return res.json();
+  const roles = await res.json();
+  cachedSet(guildRolesCache, guildId, roles);
+  return roles;
 }
 
 async function fetchGuildMember(userId, guildId) {
+  const key = `${guildId}|${userId}`;
+  const cached = cachedGet(guildMemberCache, key);
+  if (cached !== undefined) return cached;
   const res = await fetch(`${OAUTH_BASE}/guilds/${guildId}/members/${userId}`, { headers: { Authorization: `Bot ${config.discordToken}` } });
-  if (res.status === 404) return null;
+  if (res.status === 404) {
+    cachedSet(guildMemberCache, key, null);
+    return null;
+  }
   if (!res.ok) throw new Error(`Member-Abruf fehlgeschlagen (${res.status})`);
-  return res.json();
+  const member = await res.json();
+  cachedSet(guildMemberCache, key, member);
+  return member;
 }
 
 function discordAuthStart(req, res) {
@@ -134,9 +164,9 @@ async function discordAuthCallback(req, res) {
   res.clearCookie(STATE_COOKIE, clearCookieOptions());
   try {
     const token = await exchangeCode(code);
-    const user = await fetchDiscordUser(token.access_token);
+    const [user, myGuilds] = await Promise.all([fetchDiscordUser(token.access_token), fetchMyGuilds(token.access_token)]);
     const ownerLogin = user.id === config.ownerUserId;
-    const guilds = ownerLogin ? (await fetchBotGuilds()).map((guild) => ({ ...guild, ownerAccess: true, botInstalled: true })) : await fetchMyGuilds(token.access_token);
+    const guilds = ownerLogin ? (await fetchBotGuilds()).map((guild) => ({ ...guild, ownerAccess: true, botInstalled: true })) : myGuilds;
     req.session.regenerate((err) => {
       if (err) logger.error(`Session-Regeneration fehlgeschlagen: ${err.message}`);
       req.session.user = { id: user.id, tag: user.global_name || user.username, avatar: user.avatar || null, isOwner: ownerLogin };
