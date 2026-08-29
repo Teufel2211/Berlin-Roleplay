@@ -280,7 +280,7 @@ async function execute(interaction) {
         const totalPoints = warnings.reduce((sum, w) => sum + (w.points || 1), 0);
 
         if (!warnings.length) {
-          return interaction.reply({ embeds: [embeds.info('Keine Verwarnungen', `<@${target.id}> hat keine Verwarnungen.`, guild)], ephemeral: true });
+          return interaction.reply({ embeds: [embeds.info('Keine Verwarnungen', `<@${target.id}> hat keine Verwarnungen.`, guild)], flags: 64 });
         }
 
         const lines = warnings.slice(0, 15).map((w, i) => {
@@ -291,7 +291,7 @@ async function execute(interaction) {
         const more = warnings.length > 15 ? `\n\n... und ${warnings.length - 15} weitere` : '';
         return interaction.reply({
           embeds: [embeds.info(`⚠️ Verwarnungen: ${target.tag}`, `**Gesamtpunkte:** ${totalPoints}\n**Anzahl:** ${warnings.length}\n\n${lines.join('\n\n')}${more}`, guild)],
-          ephemeral: true,
+          flags: 64,
         });
       }
 
@@ -305,7 +305,7 @@ async function execute(interaction) {
         }
 
         await moderationService.deleteWarning(gid, id);
-        return interaction.reply({ embeds: [embeds.success('Verwarnung gelöscht', `Verwarnung #${id} wurde gelöscht.`, guild)], ephemeral: true });
+        return interaction.reply({ embeds: [embeds.success('Verwarnung gelöscht', `Verwarnung #${id} wurde gelöscht.`, guild)], flags: 64 });
       }
 
       case 'clear': {
@@ -316,7 +316,7 @@ async function execute(interaction) {
           return interaction.reply({ embeds: [embeds.error('Fehler', 'Dieser Befehl kann nur in Textkanälen verwendet werden.', guild)], flags: 64 });
         }
 
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: 64 });
 
         let deleted = 0;
         if (targetUser) {
@@ -345,7 +345,7 @@ async function execute(interaction) {
         const cases = await moderationService.getCases(gid, limit);
 
         if (!cases.length) {
-          return interaction.reply({ embeds: [embeds.info('Keine Fälle', 'Es gibt keine Moderations-Fälle.', guild)], ephemeral: true });
+          return interaction.reply({ embeds: [embeds.info('Keine Fälle', 'Es gibt keine Moderations-Fälle.', guild)], flags: 64 });
         }
 
         const lines = cases.map((c) => {
@@ -355,7 +355,7 @@ async function execute(interaction) {
 
         return interaction.reply({
           embeds: [embeds.info('🛡️ Moderations-Fälle', lines.join('\n'), guild)],
-          ephemeral: true,
+          flags: 64,
         });
       }
 
@@ -380,7 +380,7 @@ async function execute(interaction) {
 
         return interaction.reply({
           embeds: [embeds.info(`🛡️ Fall #${c.id}`, fields.join('\n'), guild)],
-          ephemeral: true,
+          flags: 64,
         });
       }
 
@@ -389,7 +389,7 @@ async function execute(interaction) {
         if (!channel.isTextBased()) {
           return interaction.reply({ embeds: [embeds.error('Fehler', 'Der Kanal muss ein Textkanal sein.', guild)], flags: 64 });
         }
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: 64 });
         const moderationPanelService = require('../services/moderationPanelService');
         const msgId = await moderationPanelService.postPanel(guild, channel.id, interaction.user.tag);
         return interaction.editReply({ embeds: [embeds.success('🛡️ Panel gesendet', `Panel wurde in <#${channel.id}> gesendet.\nNachricht: \`${msgId}\``, guild)] });

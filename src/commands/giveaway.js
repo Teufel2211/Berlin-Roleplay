@@ -57,7 +57,7 @@ module.exports = {
     return interaction.respond(choices);
   },
   async execute(interaction) {
-    if (!interaction.guild) return interaction.reply({ embeds: [embeds.error('Nur auf einem Server', 'Dieser Command funktioniert nur auf einem Discord-Server.', interaction.guild)], ephemeral: true });
+    if (!interaction.guild) return interaction.reply({ embeds: [embeds.error('Nur auf einem Server', 'Dieser Command funktioniert nur auf einem Discord-Server.', interaction.guild)], flags: 64 });
     const sub = interaction.options.getSubcommand();
     if (sub === 'create') return giveawayService.createGiveaway(interaction, {
       name: interaction.options.getString('name'),
