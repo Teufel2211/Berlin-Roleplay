@@ -26,7 +26,7 @@ const CHANNEL_KEYS = [
   'moderation_log_channel_id', 'moderation_panel_channel_id',
   'welcome_channel_id', 'verification_panel_channel_id',
 ];
-const ROLE_KEYS = ['staff_roles', 'admin_roles', 'giveaway_required_roles', 'moderation_allowed_roles', 'verification_role'];
+const ROLE_KEYS = ['staff_roles', 'admin_roles', 'giveaway_required_roles', 'moderation_allowed_roles', 'verification_role', 'welcome_role'];
 
 const LABELS = {
   staff_roles: 'Staff-Rollen', admin_roles: 'Admin-Rollen',
@@ -35,7 +35,7 @@ const LABELS = {
   verification_role: 'Verifiziert-Rollen',
   giveaway_channel_id: 'Giveaway-Kanal', giveaway_announce_channel_id: 'Gewinner-Kanal',
   moderation_log_channel_id: 'Moderations-Log', moderation_panel_channel_id: 'Moderations-Panel',
-  welcome_channel_id: 'Willkommens-Kanal', welcome_message: 'Willkommens-Nachricht', verification_panel_channel_id: 'Verifizierungs-Panel-Kanal',
+  welcome_channel_id: 'Willkommens-Kanal', welcome_role: 'Automatische Rollen', welcome_message: 'Willkommens-Nachricht', verification_panel_channel_id: 'Verifizierungs-Panel-Kanal',
   giveaway_default_winners: 'Standard-Gewinneranzahl', giveaway_max_tickets: 'Max. Lose pro User',
 };
 
@@ -72,6 +72,7 @@ const SETTING_GROUPS = [
   { feature: 'moderation', id: 'zugriff', subgroup: 'Zugriff', keys: ['moderation_allowed_roles'] },
   { feature: 'moderation', id: 'protokoll', subgroup: 'Protokoll', keys: ['moderation_log_channel_id'] },
   { feature: 'welcome', id: 'kanal', subgroup: 'Kanal', keys: ['welcome_channel_id'] },
+  { feature: 'welcome', id: 'rolle', subgroup: 'Rolle', keys: ['welcome_role'] },
   { feature: 'welcome', id: 'text', subgroup: 'Text', keys: ['welcome_message'] },
   { feature: 'verification', id: 'panel', subgroup: 'Panel', keys: ['verification_panel_channel_id'] },
   { feature: 'verification', id: 'zugriff', subgroup: 'Zugriff', keys: ['verification_role'] },
@@ -104,6 +105,7 @@ const FEATURE_SECTIONS = {
   ],
   welcome: [
     { id: 'kanal', label: 'Kanal', kind: 'settings' },
+    { id: 'rolle', label: 'Rolle', kind: 'settings' },
     { id: 'text', label: 'Text', kind: 'settings' },
   ],
   verification: [

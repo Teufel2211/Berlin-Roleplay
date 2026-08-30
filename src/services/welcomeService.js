@@ -15,12 +15,31 @@ function renderMessage(message, member) {
     .replace(/\{server\}/g, member.guild.name);
 }
 
+function parseRoleIds(raw) {
+  if (raw === undefined || raw === null || raw === '') return [];
+  const trimmed = String(raw).trim();
+  if (!trimmed.startsWith('[')) return trimmed ? [trimmed] : [];
+  try { const arr = JSON.parse(trimmed); return Array.isArray(arr) ? arr.map(String).filter(Boolean) : []; } catch (_) { return []; }
+}
+
+async function assignWelcomeRoles(member, all) {
+  const roleIds = parseRoleIds(all.welcome_role);
+  if (!roleIds.length || !member.roles || typeof member.roles.add !== 'function') return;
+  try {
+    await member.roles.add(roleIds);
+    logger.info(`Willkommen: Rollen ${roleIds.join(', ')} an ${member.user.tag} vergeben (${member.guild.name})`);
+  } catch (err) {
+    logger.warn(`Willkommen: Rollen ${roleIds.join(', ')} konnten ${member.user.tag} nicht vergeben werden (${err.message})`);
+  }
+}
+
 async function handleMemberAdd(member) {
   try {
     if (!member || !member.guild) return;
     const all = await settingsService.getAll(member.guild.id).catch(() => ({}));
     const list = parseModuleList(all.enabled_modules);
     if (list !== null && !list.includes('welcome')) return;
+    await assignWelcomeRoles(member, all);
     const channelId = String(all.welcome_channel_id || '').trim();
     if (!channelId) return;
     const channel = await member.guild.channels.fetch(channelId).catch(() => null);

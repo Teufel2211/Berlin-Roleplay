@@ -50,6 +50,7 @@ const de = {
   'sec.moderation.zugriff': 'Zugriff',
   'sec.moderation.protokoll': 'Protokoll',
   'sec.welcome.kanal': 'Kanal',
+  'sec.welcome.rolle': 'Rolle',
   'sec.welcome.text': 'Text',
   'sec.verification.panel': 'Panel',
   'sec.verification.zugriff': 'Zugriff',
@@ -66,6 +67,7 @@ const de = {
   'label.giveaway_default_winners': 'Standard-Gewinneranzahl',
   'label.giveaway_max_tickets': 'Max. Lose pro User',
   'label.welcome_channel_id': 'Willkommens-Kanal',
+  'label.welcome_role': 'Automatische Rollen',
   'label.welcome_message': 'Willkommens-Nachricht',
   'label.verification_role': 'Verifiziert-Rollen',
   'label.verification_panel_channel_id': 'Verifizierungs-Panel-Kanal',
@@ -137,6 +139,7 @@ const de = {
 
   'sub.kanäle': 'Kanäle',
   'sub.rollen': 'Rollen',
+  'sub.rolle': 'Rolle',
   'sub.verhalten': 'Verhalten',
   'sub.panel': 'Panel',
   'sub.protokoll': 'Protokoll',
