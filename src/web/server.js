@@ -182,7 +182,7 @@ async function syncSessionGuilds(req) {
 }
 
 function landingFeatures(t) {
-  const ids = ['tickets', 'giveaway'];
+  const ids = ['tickets', 'giveaway', 'welcome', 'verification'];
   return ids.map((id) => {
     const f = FEATURES.find((x) => x.id === id);
     return { id, name: t('feat.' + id + '.name', f.name), icon: f.icon, desc: t('feat.' + id + '.desc', '') };
