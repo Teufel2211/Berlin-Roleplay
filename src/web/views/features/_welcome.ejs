@@ -3,8 +3,13 @@
 <p class="muted">Begrüßt neue Mitglieder automatisch im konfigurierten Kanal und vergibt optional eine Rolle. Platzhalter im Text: <code>{user}</code> = Erwähnung des Mitglieds, <code>{server}</code> = Servername.</p>
 <%- include('../partials/_sec_settings', { sectionId: 'kanal', data, featureId, guildId }) %>
 <%- include('../partials/_sec_settings', { sectionId: 'rolle', data, featureId, guildId }) %>
-<%- include('../partials/_sec_settings', { sectionId: 'text', data, featureId, guildId, wrap: false }) %>
+<%
+  var textSec = null;
+  (data.sections || []).forEach(function (s) { if (s.id === 'text') textSec = s; });
+  var textFormData = { groups: (textSec && textSec.groups) || [], channelOptions: data.channelOptions, roleOptions: data.roleOptions };
+%>
 <div class="feature-section" id="sec-text">
+  <%- include('../features/_settings_form', { data: textFormData, featureId, guildId }) %>
   <h3 class="list-title">Live-Vorschau</h3>
   <div class="embed-preview" id="welcomePreview"><div class="ep-bar"></div><div class="ep-content"><div class="ep-title">Willkommen</div><div class="ep-desc">…</div><div class="ep-footer"><%- activeGuild ? activeGuild.name : 'Emergency Hamburg Roleplay' %> • Heute</div></div></div>
   <p class="muted">So sieht die Nachricht für neue Mitglieder aus. <code>{user}</code> wird im Chat als Erwähnung angezeigt.</p>
