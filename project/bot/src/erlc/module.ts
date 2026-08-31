@@ -3,7 +3,7 @@ import { V2MessageBuilder, findCommand, type V2Layout } from "@berlin/shared";
 import { type BotModule } from "../core/registry.js";
 import { type SlashContext } from "../core/commandDispatcher.js";
 import { type ErlcService } from "./service.js";
-import { replyV2 } from "../core/messages.js";
+import { replyV2, v2LayoutReply } from "../core/messages.js";
 
 /** ER:LC-Modul: alle Slash-Subcommands gegen den Polling-Service. */
 export function erlcModule(service: ErlcService): BotModule {
@@ -39,7 +39,7 @@ export function erlcModule(service: ErlcService): BotModule {
 
       /** V2-Layout für interaction.reply bauen. */
       const replyLayout = (layout: V2Layout) => {
-        return new V2MessageBuilder(layout).build();
+        return v2LayoutReply(layout, false);
       };
 
       // --- status -----------------------------------------------------------

@@ -1,4 +1,4 @@
-import { type MessageCreateOptions } from "discord.js";
+import { MessageFlags, type InteractionReplyOptions, type MessageCreateOptions } from "discord.js";
 import type { RepliableInteraction } from "discord.js";
 import { V2MessageBuilder, type V2Layout } from "@berlin/shared";
 
@@ -21,9 +21,18 @@ export function textLayout(text: string): V2Layout {
   };
 }
 
-export function v2Text(text: string, ephemeral = true): MessageCreateOptions {
-  const builder = new V2MessageBuilder(textLayout(text));
-  return ephemeral ? builder.buildEphemeral() : builder.build();
+export function v2Text(text: string, ephemeral = true): InteractionReplyOptions {
+  return v2LayoutReply(textLayout(text), ephemeral);
+}
+
+export function v2LayoutReply(layout: V2Layout, ephemeral = true): InteractionReplyOptions {
+  const payload = new V2MessageBuilder(layout).build();
+  return {
+    components: payload.components,
+    flags: ephemeral
+      ? MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral
+      : MessageFlags.IsComponentsV2,
+  };
 }
 
 export async function replyV2(
