@@ -24,7 +24,10 @@ export async function GET(request: Request) {
   const state = url.searchParams.get("state");
   const expectedState = request.headers.get("cookie")?.split(";").map((v) => v.trim()).find((v) => v.startsWith(`${OAUTH_STATE_COOKIE}=`))?.split("=").slice(1).join("=");
 
-  const fail = (reason: string) => NextResponse.redirect(`${env.appBaseUrl}/login?error=${encodeURIComponent(reason)}`);
+  const fail = (reason: string) => {
+    console.warn("auth callback rejected", { reason });
+    return NextResponse.redirect(`${env.appBaseUrl}/login?error=${encodeURIComponent(reason)}`);
+  };
   if (error || !code) return fail(error ?? "missing_code");
   if (!state || !expectedState || state.length !== expectedState.length || !constantTimeEqual(state, expectedState)) return fail("invalid_oauth_state");
 
