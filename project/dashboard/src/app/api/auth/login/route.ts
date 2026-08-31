@@ -15,7 +15,7 @@ export async function GET() {
     response_type: "code",
     scope: "identify guilds",
     state,
-    prompt: "none",
+    prompt: "consent",
   });
 
   const res = NextResponse.redirect(`https://discord.com/api/oauth2/authorize?${params.toString()}`);

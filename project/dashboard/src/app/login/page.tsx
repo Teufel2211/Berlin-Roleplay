@@ -23,9 +23,7 @@ export default async function LoginPage({
 
           {error ? (
             <div className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-              {error === "missing_code"
-                ? "Anmeldung abgebrochen."
-                : "Die Anmeldung ist fehlgeschlagen. Bitte erneut versuchen."}
+              {loginErrorMessage(error)}
             </div>
           ) : null}
 
@@ -40,6 +38,23 @@ export default async function LoginPage({
       </div>
     </main>
   );
+}
+
+function loginErrorMessage(error: string): string {
+  switch (error) {
+    case "missing_code":
+      return "Anmeldung abgebrochen.";
+    case "access_denied":
+      return "Die Discord-Anmeldung wurde abgebrochen oder nicht bestätigt.";
+    case "dashboard_access_denied":
+      return "Dein Discord-Konto hat keine Staff- oder Admin-Berechtigung für dieses Dashboard.";
+    case "invalid_oauth_state":
+      return "Die Anmeldung ist abgelaufen. Bitte erneut versuchen.";
+    case "callback_failed":
+      return "Die Anmeldung konnte serverseitig nicht abgeschlossen werden. Bitte später erneut versuchen.";
+    default:
+      return "Die Anmeldung ist fehlgeschlagen. Bitte erneut versuchen.";
+  }
 }
 
 function DiscordIcon() {
