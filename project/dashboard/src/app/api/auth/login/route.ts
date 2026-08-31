@@ -1,8 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 import { env } from "@/lib/env";
-
-const OAUTH_STATE_COOKIE = "br_oauth_state";
+import { OAUTH_STATE_COOKIE } from "@/lib/oauth";
 
 export async function GET() {
   if (!env.discordClientId) {
@@ -29,5 +28,3 @@ export async function GET() {
   });
   return res;
 }
-
-export { OAUTH_STATE_COOKIE };

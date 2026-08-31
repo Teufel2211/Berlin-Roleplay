@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { env } from "@/lib/env";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { createSession, SESSION_COOKIE, SESSION_TTL_SECONDS } from "@/lib/session";
-import { OAUTH_STATE_COOKIE } from "../login/route";
+import { OAUTH_STATE_COOKIE } from "@/lib/oauth";
 
 interface DiscordTokenResponse {
   access_token: string;
