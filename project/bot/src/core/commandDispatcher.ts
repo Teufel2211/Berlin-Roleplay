@@ -1,5 +1,5 @@
 import { type CacheType, ChatInputCommandInteraction, GuildMember } from "discord.js";
-import { type CommandDef, type SubCommand, type GuildSettings } from "@berlin/shared";
+import { commands, type CommandDef, type SubCommand, type GuildSettings } from "@berlin/shared";
 import { hasPermission, permissionDenied, type PermissionLevel } from "./permissions.js";
 import { type SettingsService } from "./settingsService.js";
 import { replyV2 } from "./messages.js";
@@ -51,8 +51,13 @@ export class CommandDispatcher {
       return true;
     }
 
-    const g = interaction.guild!;
-    const settings = await this.settings.get(g.id);
+    const guild = interaction.guild;
+    if (!guild) {
+      await replyV2(interaction, "Dieser Befehl kann nur auf einem Server verwendet werden.");
+      return true;
+    }
+
+    const settings = await this.settings.get(guild.id);
 
     const level: PermissionLevel =
       entry.permission ?? this.defLevel(interaction.commandName) ?? "public";
@@ -76,5 +81,3 @@ export class CommandDispatcher {
     return all.find((c) => c.name === name)?.permission;
   }
 }
-
-import { commands } from "@berlin/shared";
