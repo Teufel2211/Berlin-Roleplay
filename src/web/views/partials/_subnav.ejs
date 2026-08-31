@@ -1,7 +1,0 @@
-<% if (sections && sections.length > 1) { %>
-<div class="subnav" id="subnav">
-  <% sections.forEach(function (s, i) { %>
-  <button type="button" class="subnav-btn<%= i === 0 ? ' active' : '' %>" data-target="sec-<%= s.id %>"><%= s.label %></button>
-  <% }) %>
-</div>
-<% } %>

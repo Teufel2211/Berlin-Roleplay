@@ -1,19 +1,31 @@
+# ── Dependencies ─────────────────────────────────────────────
 node_modules/
+.pnpm-store/
+
+# ── Build artifacts ──────────────────────────────────────────
+dist/
+.next/
+out/
+build/
+
+# ── Env / Secrets ────────────────────────────────────────────
 .env
 .env.local
-.deploy-sha
+.env.*.local
+*.pem
+
+# ── Data & Logs ──────────────────────────────────────────────
 data/
 logs/
-supabase/.temp/
 *.log
 
-# OS
+# ── Runtime ──────────────────────────────────────────────────
+.vercel/
+.dart_tool/
+*.tsbuildinfo
+
+# ── OS / Editor ──────────────────────────────────────────────
 .DS_Store
 Thumbs.db
-desktop.ini
-
-# npm
-npm-debug.log*
-package-lock.json.timestamp
-
-.vercel
+.idea/
+.vscode/*

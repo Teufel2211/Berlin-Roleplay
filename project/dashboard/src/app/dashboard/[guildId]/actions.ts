@@ -1,0 +1,277 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { requireAuth } from "@/lib/auth";
+import { getSupabaseAdmin } from "@/lib/supabase";
+import { requireGuild } from "@/lib/guild";
+
+export type ActionResult =
+  | { ok: true; message?: string }
+  | { ok: false; error: string };
+
+/**
+ * Admin-Gate: der eingeloggte User muss in der Guild die Rolle "admin" haben.
+ * Nicht-Mitglied -> notFound, Non-Admin -> redirect auf Guild-Start.
+ */
+async function requireAdmin(guildId: string) {
+  await requireAuth();
+  const guild = await requireGuild(guildId);
+  if (guild.role !== "admin") redirect(`/dashboard/${guildId}`);
+  return guild;
+}
+
+function fail(e: unknown): ActionResult {
+  return {
+    ok: false,
+    error: e instanceof Error ? e.message : "Unbekannter Fehler",
+  };
+}
+
+export async function saveWelcomeConfig(
+  _prev: ActionResult | null,
+  formData: FormData
+): Promise<ActionResult> {
+  try {
+    const guildId = String(formData.get("guildId") ?? "");
+    const guild = await requireAdmin(guildId);
+    const enabled = formData.get("enabled") === "on";
+    const channel_id = (formData.get("channel_id") as string | null)?.trim() || null;
+    const role_id = (formData.get("role_id") as string | null)?.trim() || null;
+    const message_template = (formData.get("message_template") as string | null) ?? "";
+
+    const { error } = await getSupabaseAdmin()
+      .from("berlin_roleplay_welcome_config")
+      .upsert(
+        {
+          guild_id: guild.guildId,
+          enabled,
+          channel_id,
+          role_id,
+          message_template,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "guild_id" }
+      );
+    if (error) return { ok: false, error: error.message };
+    revalidatePath(`/dashboard/${guildId}/welcome`);
+    return { ok: true, message: "Welcome-Konfiguration gespeichert." };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function saveVerificationConfig(
+  _prev: ActionResult | null,
+  formData: FormData
+): Promise<ActionResult> {
+  try {
+    const guildId = String(formData.get("guildId") ?? "");
+    const guild = await requireAdmin(guildId);
+    const enabled = formData.get("enabled") === "on";
+    const channel_id = (formData.get("channel_id") as string | null)?.trim() || null;
+    const role_id = (formData.get("role_id") as string | null)?.trim() || null;
+    const method = formData.get("method") === "snowflake" ? "snowflake" : "button";
+    const restore_on_unverify = formData.get("restore_on_unverify") === "on";
+
+    const { error } = await getSupabaseAdmin()
+      .from("berlin_roleplay_verification_config")
+      .upsert(
+        {
+          guild_id: guild.guildId,
+          enabled,
+          channel_id,
+          role_id,
+          method,
+          restore_on_unverify,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "guild_id" }
+      );
+    if (error) return { ok: false, error: error.message };
+    revalidatePath(`/dashboard/${guildId}/verify`);
+    return { ok: true, message: "Verify-Konfiguration gespeichert." };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function createERLCServer(
+  _prev: ActionResult | null,
+  formData: FormData
+): Promise<ActionResult> {
+  try {
+    const guildId = String(formData.get("guildId") ?? "");
+    const guild = await requireAdmin(guildId);
+    const name = (formData.get("name") as string | null)?.trim() || "";
+    if (!name) return { ok: false, error: "Name ist erforderlich" };
+    const base_url =
+      (formData.get("base_url") as string | null)?.trim() ||
+      "https://api.erlc.gg/v2";
+
+    const { error } = await getSupabaseAdmin()
+      .from("berlin_roleplay_erlc_servers")
+      .insert({
+        guild_id: guild.guildId,
+        name,
+        base_url,
+        api_key_enc: "",
+        enabled: true,
+      });
+    if (error) return { ok: false, error: error.message };
+    revalidatePath(`/dashboard/${guildId}/erlc`);
+    return { ok: true, message: "ER:LC-Server hinzugefügt." };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+const TICKET_STATUS: Record<string, "open" | "claimed" | "closed"> = {
+  claim: "claimed",
+  close: "closed",
+  reopen: "open",
+  unclaim: "open",
+};
+
+export async function changeTicketStatus(
+  _prev: ActionResult | null,
+  formData: FormData
+): Promise<ActionResult> {
+  try {
+    const guildId = String(formData.get("guildId") ?? "");
+    await requireAdmin(guildId);
+    const ticketId = String(formData.get("ticketId") ?? "");
+    const action = String(formData.get("action") ?? "");
+    const status = TICKET_STATUS[action];
+    if (!status) return { ok: false, error: "Unbekannte Ticket-Aktion" };
+
+    const payload: Record<string, unknown> = { status };
+    if (action === "close") {
+      payload.closed_at = new Date().toISOString();
+    } else if (action === "reopen") {
+      payload.closed_at = null;
+    }
+
+    const { error } = await getSupabaseAdmin()
+      .from("berlin_roleplay_tickets")
+      .update(payload)
+      .eq("id", ticketId)
+      .eq("guild_id", guildId);
+    if (error) return { ok: false, error: error.message };
+    revalidatePath(`/dashboard/${guildId}/tickets`);
+    return { ok: true, message: "Ticket aktualisiert." };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function createGiveaway(
+  _prev: ActionResult | null,
+  formData: FormData
+): Promise<ActionResult> {
+  try {
+    const guildId = String(formData.get("guildId") ?? "");
+    const guild = await requireAdmin(guildId);
+    const prize = (formData.get("prize") as string | null)?.trim() || "";
+    if (!prize) return { ok: false, error: "Preis ist erforderlich" };
+    const winners = Math.max(
+      1,
+      Number(formData.get("winners_count") ?? 1) || 1
+    );
+    const channel_id = (formData.get("channel_id") as string | null)?.trim() || "";
+    if (!channel_id) {
+      return { ok: false, error: "Kanal-ID ist erforderlich" };
+    }
+
+    const rawEnd = (formData.get("end_at") as string | null)?.trim();
+    const endAt = rawEnd ? new Date(rawEnd).toISOString() : null;
+    if (!endAt || Number.isNaN(new Date(endAt).getTime())) {
+      return { ok: false, error: "Endzeit ist ungültig" };
+    }
+
+    const { data, error } = await getSupabaseAdmin()
+      .from("berlin_roleplay_giveaways")
+      .insert({
+        guild_id: guild.guildId,
+        channel_id,
+        message_id: "",
+        prize,
+        winners_count: winners,
+        end_at: endAt,
+        host_id: "",
+        status: "running",
+      })
+      .select("id")
+      .maybeSingle();
+    if (error) return { ok: false, error: error.message };
+    revalidatePath(`/dashboard/${guildId}/giveaways`);
+    return { ok: true, message: "Giveaway angelegt." };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+const GIVEAWAY_STATUS: Record<string, "ended" | "cancelled"> = {
+  end: "ended",
+  cancel: "cancelled",
+};
+
+export async function changeGiveawayStatus(
+  _prev: ActionResult | null,
+  formData: FormData
+): Promise<ActionResult> {
+  try {
+    const guildId = String(formData.get("guildId") ?? "");
+    await requireAdmin(guildId);
+    const giveawayId = String(formData.get("giveawayId") ?? "");
+    const action = String(formData.get("action") ?? "");
+    const status = GIVEAWAY_STATUS[action];
+    if (!status) return { ok: false, error: "Unbekannte Giveaway-Aktion" };
+
+    const { error } = await getSupabaseAdmin()
+      .from("berlin_roleplay_giveaways")
+      .update({ status })
+      .eq("id", giveawayId)
+      .eq("guild_id", guildId)
+      .eq("status", "running");
+    if (error) return { ok: false, error: error.message };
+    revalidatePath(`/dashboard/${guildId}/giveaways`);
+    return { ok: true, message: "Giveaway aktualisiert." };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function changeERLCServer(
+  _prev: ActionResult | null,
+  formData: FormData
+): Promise<ActionResult> {
+  try {
+    const guildId = String(formData.get("guildId") ?? "");
+    await requireAdmin(guildId);
+    const serverId = String(formData.get("serverId") ?? "");
+    const action = String(formData.get("action") ?? "");
+    const enabled = formData.get("enabled") === "on";
+
+    let query = getSupabaseAdmin().from("berlin_roleplay_erlc_servers");
+    if (action === "toggle") {
+      const { error } = await query
+        .update({ enabled })
+        .eq("id", serverId)
+        .eq("guild_id", guildId);
+      if (error) return { ok: false, error: error.message };
+    } else if (action === "delete") {
+      const { error } = await query
+        .delete()
+        .eq("id", serverId)
+        .eq("guild_id", guildId);
+      if (error) return { ok: false, error: error.message };
+    } else {
+      return { ok: false, error: "Unbekannte Aktion" };
+    }
+    revalidatePath(`/dashboard/${guildId}/erlc`);
+    return { ok: true, message: "ER:LC-Server aktualisiert." };
+  } catch (e) {
+    return fail(e);
+  }
+}
