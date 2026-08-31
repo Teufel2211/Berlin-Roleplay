@@ -60,7 +60,7 @@ export class CommandDispatcher {
     const settings = await this.settings.get(guild.id);
 
     const level: PermissionLevel =
-      entry.permission ?? this.defLevel(interaction.commandName) ?? "public";
+      entry.permission ?? entry.def.permission ?? this.defLevel(interaction.commandName) ?? "public";
     if (!hasPermission(member, settings, level)) {
       await replyV2(interaction, permissionDenied(member));
       return true;
