@@ -3,6 +3,7 @@ import { V2MessageBuilder, findCommand, type V2Layout } from "@berlin/shared";
 import { type BotModule } from "../core/registry.js";
 import { type SlashContext } from "../core/commandDispatcher.js";
 import { type ErlcService } from "./service.js";
+import { replyV2 } from "../core/messages.js";
 
 /** ER:LC-Modul: alle Slash-Subcommands gegen den Polling-Service. */
 export function erlcModule(service: ErlcService): BotModule {
@@ -16,10 +17,7 @@ export function erlcModule(service: ErlcService): BotModule {
       ): Promise<NonNullable<Awaited<ReturnType<ErlcService["firstServer"]>>> | null> => {
         const server = await service.firstServer(ctx.interaction.guildId!);
         if (!server) {
-          await ctx.interaction.reply({
-            content: "Kein ER:LC-Server fÃƒÂ¼r diese Guild konfiguriert (Server muss in der DB hinterlegt sein).",
-            flags: 64,
-          });
+          await replyV2(ctx.interaction, "Kein ER:LC-Server für diese Guild konfiguriert (Server muss in der DB hinterlegt sein).");
           return null;
         }
         return server;
@@ -28,10 +26,7 @@ export function erlcModule(service: ErlcService): BotModule {
       const getClient = async (ctx: SlashContext): Promise<Awaited<ReturnType<ErlcService["clientForGuild"]>>> => {
         const client = await service.clientForGuild(ctx.interaction.guildId!);
         if (!client) {
-          await ctx.interaction.reply({
-            content: "Kein ER:LC-Server fÃƒÂ¼r diese Guild konfiguriert.",
-            flags: 64,
-          });
+          await replyV2(ctx.interaction, "Kein ER:LC-Server für diese Guild konfiguriert.");
         }
         return client;
       };
@@ -42,10 +37,9 @@ export function erlcModule(service: ErlcService): BotModule {
         style: "paragraph",
       });
 
-      /** V2-Layout in einen fÃƒÂ¼r interaction.reply gÃƒÂ¼ltigen Payload umbauen (flags aus MessageCreateOptions entfernen). */
+      /** V2-Layout für interaction.reply bauen. */
       const replyLayout = (layout: V2Layout) => {
-        const p = new V2MessageBuilder(layout).build();
-        return { content: p.content ?? "", components: p.components };
+        return new V2MessageBuilder(layout).build();
       };
 
       // --- status -----------------------------------------------------------
@@ -150,12 +144,12 @@ export function erlcModule(service: ErlcService): BotModule {
       commands.register(def, { name: "join", description: "Dem Server beitreten" }, async (ctx) => {
         const server = await requireServer(ctx);
         if (!server) return;
-        await ctx.interaction.reply({ content: "Server-Join erfolgt ÃƒÂ¼ber die ER:LC-Client (in der jeweiligen Guild-Konfiguration).", flags: 64 });
+        await replyV2(ctx.interaction, "Server-Join erfolgt über die ER:LC-Client (in der jeweiligen Guild-Konfiguration).");
       });
       commands.register(def, { name: "leave", description: "Server verlassen" }, async (ctx) => {
         const server = await requireServer(ctx);
         if (!server) return;
-        await ctx.interaction.reply({ content: "Server-Leave erfolgt ÃƒÂ¼ber die ER:LC-Client (in der jeweiligen Guild-Konfiguration).", flags: 64 });
+        await replyV2(ctx.interaction, "Server-Leave erfolgt über die ER:LC-Client (in der jeweiligen Guild-Konfiguration).");
       });
 
       // --- duty -------------------------------------------------------------
@@ -165,12 +159,9 @@ export function erlcModule(service: ErlcService): BotModule {
         const aktion = ctx.interaction.options.data.find((o) => o.name === "aktion")?.value as "start" | "end" | undefined;
         const duty = aktion === "start";
         await service.setDuty(ctx.interaction.guildId!, ctx.interaction.user.id, server, ctx.interaction.user.id, duty);
-        await ctx.interaction.reply({
-          content: duty
-            ? `Ã¢Å“â€¦ Dienst begonnen (${new Date().toLocaleTimeString("de-DE")}).`
-            : "Ã¢ÂÂ¹Ã¯Â¸Â Dienst beendet.",
-          flags: 64,
-        });
+        await replyV2(ctx.interaction, duty
+          ? `✅ Dienst begonnen (${new Date().toLocaleTimeString("de-DE")}).`
+          : "⏹️ Dienst beendet.");
       });
 
       // --- incident ---------------------------------------------------------
@@ -184,21 +175,18 @@ export function erlcModule(service: ErlcService): BotModule {
           createdBy: ctx.interaction.user.id,
           description: beschreibung,
         });
-        await ctx.interaction.reply({
-          content: `Ã°Å¸Å¡Â¨ Vorfall erstellt (ID \`${incident.id.slice(0, 8)}\`).`,
-          flags: 64,
-        });
+        await replyV2(ctx.interaction, `🚨 Vorfall erstellt (ID \`${incident.id.slice(0, 8)}\`).`);
       });
 
       commands.register(def, { name: "incident-close", description: "Vorfall schlieÃƒÅ¸en" }, async (ctx) => {
         const incidents = await service.openIncidents(ctx.interaction.guildId!);
         if (incidents.length === 0) {
-          await ctx.interaction.reply({ content: "Keine offenen VorfÃƒÂ¤lle.", flags: 64 });
+          await replyV2(ctx.interaction, "Keine offenen Vorfälle.");
           return;
         }
         const newest = incidents[0]!;
         await service.closeIncident(newest.id);
-        await ctx.interaction.reply({ content: `VorfÃƒÂ¤lle geschlossen (ID \`${newest.id.slice(0, 8)}\`).`, flags: 64 });
+        await replyV2(ctx.interaction, `Vorfälle geschlossen (ID \`${newest.id.slice(0, 8)}\`).`);
       });
 
       // --- notify -----------------------------------------------------------
@@ -207,7 +195,7 @@ export function erlcModule(service: ErlcService): BotModule {
         if (!server) return;
         const text = ctx.interaction.options.getString("text") ?? "";
         await service.logNotification(ctx.interaction.guildId!, server.id, { text, by: ctx.interaction.user.id });
-        await ctx.interaction.reply({ content: `Ã°Å¸â€â€ Benachrichtigung geloggt: ${text}`, flags: 64 });
+        await replyV2(ctx.interaction, `🔔 Benachrichtigung geloggt: ${text}`);
       });
 
       // --- panel ------------------------------------------------------------
@@ -219,7 +207,7 @@ export function erlcModule(service: ErlcService): BotModule {
 
         if (aktion === "create") {
           if (!channel || channel.type !== ChannelType.GuildText) {
-            await ctx.interaction.reply({ content: "Panel kann nur in einem Textkanal erstellt werden.", flags: 64 });
+            await replyV2(ctx.interaction, "Panel kann nur in einem Textkanal erstellt werden.");
             return;
           }
           const client = await service.clientForGuild(ctx.interaction.guildId!);
@@ -235,15 +223,15 @@ export function erlcModule(service: ErlcService): BotModule {
           };
           const sent = await (channel as { send(o: unknown): Promise<{ id: string }> }).send(new V2MessageBuilder(layout).build());
           await service.dbInsertStatusPanel(ctx.interaction.guildId!, channel.id, sent.id);
-          await ctx.interaction.reply({ content: "Status-Panel erstellt. Es wird automatisch aktualisiert.", flags: 64 });
+          await replyV2(ctx.interaction, "Status-Panel erstellt. Es wird automatisch aktualisiert.");
         } else if (aktion === "delete") {
           await service.dbDeleteStatusPanel(ctx.interaction.guildId!, channel?.id ?? "");
-          await ctx.interaction.reply({ content: "Status-Panel(s) fÃƒÂ¼r diesen Kanal gelÃƒÂ¶scht.", flags: 64 });
+          await replyV2(ctx.interaction, "Status-Panel(s) für diesen Kanal gelöscht.");
         } else {
           const client = await service.clientForGuild(ctx.interaction.guildId!);
           const serverInfo = client ? await client.fetchServer() : null;
           if (serverInfo) await service.refreshPanels(server, serverInfo);
-          await ctx.interaction.reply({ content: "Status-Panels aktualisiert.", flags: 64 });
+          await replyV2(ctx.interaction, "Status-Panels aktualisiert.");
         }
       });
 
@@ -271,15 +259,12 @@ export function erlcModule(service: ErlcService): BotModule {
 
         if (aktion === "set" && rolle) {
           await service.setPermission(ctx.interaction.guildId!, "erlc", rolle.id);
-          await ctx.interaction.reply({ content: `ER:LC-Berechtigung auf Rolle <@&${rolle.id}> gesetzt.`, flags: 64 });
+          await replyV2(ctx.interaction, `ER:LC-Berechtigung auf Rolle <@&${rolle.id}> gesetzt.`);
         } else {
           const perm = await service.getPermission(ctx.interaction.guildId!, "erlc");
-          await ctx.interaction.reply({
-            content: perm?.allow_role
-              ? `ER:LC-Befehle sind auf <@&${perm.allow_role}> beschrÃƒÂ¤nkt.`
-              : "ER:LC-Befehle sind fÃƒÂ¼r alle Staff-Mitglieder freigegeben.",
-            flags: 64,
-          });
+          await replyV2(ctx.interaction, perm?.allow_role
+            ? `ER:LC-Befehle sind auf <@&${perm.allow_role}> beschränkt.`
+            : "ER:LC-Befehle sind für alle Staff-Mitglieder freigegeben.");
         }
       });
 
@@ -289,12 +274,9 @@ export function erlcModule(service: ErlcService): BotModule {
         if (!server) return;
         const cmd = ctx.interaction.options.getString("cmd") ?? "";
         const result = await service.execCommand(ctx.interaction.guildId!, server, ctx.interaction.user.id, cmd);
-        await ctx.interaction.reply({
-          content: result.success
-            ? `Ã¢Å“â€¦ Befehl \`${cmd}\` ausgefÃƒÂ¼hrt.`
-            : `Ã¢ÂÅ’ Befehl \`${cmd}\` fehlgeschlagen.`,
-          flags: 64,
-        });
+        await replyV2(ctx.interaction, result.success
+          ? `✅ Befehl \`${cmd}\` ausgeführt.`
+          : `❌ Befehl \`${cmd}\` fehlgeschlagen.`);
       });
     },
   };

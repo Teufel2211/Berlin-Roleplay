@@ -2,6 +2,7 @@ import { findCommand, V2MessageBuilder, type V2Layout } from "@berlin/shared";
 import { type BotModule } from "../core/registry.js";
 import { type SlashContext } from "../core/commandDispatcher.js";
 import { type GiveawayService } from "./service.js";
+import { replyV2, v2Text } from "../core/messages.js";
 
 const GIVEAWAY_JOIN_PREFIX = "berlin:giveaway:join";
 
@@ -21,7 +22,7 @@ export function giveawayModule(giveaways: GiveawayService): BotModule {
         const kanalOpt = ctx.interaction.options.getChannel("kanal", true);
         const kanal = ctx.interaction.guild?.channels.cache.get(kanalOpt.id);
         if (!kanal || !kanal.isTextBased()) {
-          await ctx.interaction.reply({ content: "Der Kanal muss ein Textkanal sein.", flags: 64 });
+          await replyV2(ctx.interaction, "Der Kanal muss ein Textkanal sein.");
           return;
         }
         const preis = ctx.interaction.options.getString("preis", true);
@@ -49,7 +50,7 @@ export function giveawayModule(giveaways: GiveawayService): BotModule {
           host_id: ctx.interaction.user.id,
         });
 
-        await ctx.interaction.reply({ content: `Giveaway im Kanal ${kanal} erstellt.`, flags: 64 });
+        await replyV2(ctx.interaction, `Giveaway im Kanal ${kanal} erstellt.`);
       });
 
       commands.register(def, { name: "end", description: "Giveaway vorzeitig beenden" }, async (ctx) => {
@@ -64,7 +65,7 @@ export function giveawayModule(giveaways: GiveawayService): BotModule {
 
       interactionRouter.on(GIVEAWAY_JOIN_PREFIX, async (ictx) => {
         if (!ictx.interaction.isButton()) return;
-        const ephemeral = { content: "Du hast am Giveaway teilgenommen!", flags: 64 };
+        const ephemeral = v2Text("Du hast am Giveaway teilgenommen!");
         const giveawayId = ictx.data.length > 0 ? ictx.data : undefined;
 
         if (giveawayId) {
@@ -76,7 +77,7 @@ export function giveawayModule(giveaways: GiveawayService): BotModule {
         // Fallback: per Message-Referenz suchen.
         const g = await giveaways.findByMessage(ictx.guildId, ictx.interaction.message.id);
         if (!g) {
-          await ictx.interaction.reply({ content: "Dieses Giveaway existiert nicht mehr.", flags: 64 });
+          await replyV2(ictx.interaction, "Dieses Giveaway existiert nicht mehr.");
           return;
         }
         await giveaways.addEntry(g.id, ictx.userId);
@@ -90,37 +91,34 @@ async function endByMessage(ctx: SlashContext, giveaways: GiveawayService, rerol
   const ref = ctx.interaction.options.getString("nachricht", true);
   const messageId = extractMessageId(ref);
   if (!ctx.interaction.guildId || !messageId) {
-    await ctx.interaction.reply({ content: "Ungültige Nachrichten-Referenz.", flags: 64 });
+    await replyV2(ctx.interaction, "Ungültige Nachrichten-Referenz.");
     return;
   }
   const g = await giveaways.findByMessage(ctx.interaction.guildId, messageId);
   if (!g || g.status !== "running") {
-    await ctx.interaction.reply({ content: "Giveaway nicht gefunden oder nicht aktiv.", flags: 64 });
+    await replyV2(ctx.interaction, "Giveaway nicht gefunden oder nicht aktiv.");
     return;
   }
   const entries = await giveaways.entries(g.id);
   const winners = giveaways.drawWinners(entries, g.winners_count);
   await giveaways.updateStatus(g.id, "ended");
   const winnerText = winners.length ? winners.map((w) => `<@${w}>`).join(" ") : "Keine Teilnehmer.";
-  await ctx.interaction.reply({
-    content: reroll ? `Neuziehung für **${g.prize}**: ${winnerText}` : `Gewinner für **${g.prize}**: ${winnerText}`,
-    flags: 64,
-  });
+  await replyV2(ctx.interaction, reroll ? `Neuziehung für **${g.prize}**: ${winnerText}` : `Gewinner für **${g.prize}**: ${winnerText}`);
 }
 
 async function cancelByMessage(ctx: SlashContext, giveaways: GiveawayService): Promise<void> {
   const messageId = extractMessageId(ctx.interaction.options.getString("nachricht", true));
   if (!ctx.interaction.guildId || !messageId) {
-    await ctx.interaction.reply({ content: "Ungültige Nachrichten-Referenz.", flags: 64 });
+    await replyV2(ctx.interaction, "Ungültige Nachrichten-Referenz.");
     return;
   }
   const g = await giveaways.findByMessage(ctx.interaction.guildId, messageId);
   if (!g || g.status !== "running") {
-    await ctx.interaction.reply({ content: "Giveaway nicht gefunden oder nicht aktiv.", flags: 64 });
+    await replyV2(ctx.interaction, "Giveaway nicht gefunden oder nicht aktiv.");
     return;
   }
   await giveaways.updateStatus(g.id, "cancelled");
-  await ctx.interaction.reply({ content: `Giveaway für **${g.prize}** abgebrochen.`, flags: 64 });
+  await replyV2(ctx.interaction, `Giveaway für **${g.prize}** abgebrochen.`);
 }
 
 /** Message-ID aus Link (".../123123123") oder nackter ID ziehen. */

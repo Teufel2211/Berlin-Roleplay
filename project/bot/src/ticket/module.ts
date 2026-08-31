@@ -5,6 +5,7 @@ import type { SlashContext } from "../core/commandDispatcher.js";
 import type { SettingsService } from "../core/settingsService.js";
 import { type InteractionContext } from "../core/interactions/router.js";
 import { type Ticket, type TicketService } from "./service.js";
+import { replyV2 } from "../core/messages.js";
 
 const OPEN_PREFIX = "berlin:ticket:open";
 const CLOSE_PREFIX = "berlin:ticket:close";
@@ -22,7 +23,7 @@ export function ticketModule(tickets: TicketService, settingsService: SettingsSe
       commands.register(def, { name: "setup", description: "Ticket-Panel im aktuellen Kanal einrichten" }, async (ctx) => {
         const channel = ctx.interaction.channel;
         if (!channel || !channel.isTextBased()) {
-          await ctx.interaction.reply({ content: "Der Befehl muss in einem Textkanal ausgeführt werden.", flags: 64 });
+          await replyV2(ctx.interaction, "Der Befehl muss in einem Textkanal ausgeführt werden.");
           return;
         }
         const settings = await settingsService.get(ctx.interaction.guildId!);
@@ -59,7 +60,7 @@ export function ticketModule(tickets: TicketService, settingsService: SettingsSe
         if (!ticket) return;
         await tickets.claim(ticket.id, ctx.interaction.user.id);
         await renameChannel(ctx, ticket.channel_id, `ticket-${ticket.user_id.slice(-4)}`);
-        await ctx.interaction.reply({ content: `Ticket übernommen von <@${ctx.interaction.user.id}>.`, flags: 64 });
+        await replyV2(ctx.interaction, `Ticket übernommen von <@${ctx.interaction.user.id}>.`);
       });
 
       void def;
@@ -75,10 +76,7 @@ async function setupPanel(
 ): Promise<void> {
   const s = await settingsService.get(ctx.interaction.guildId!);
   if (!s.ticket.categoryId) {
-    await ctx.interaction.reply({
-      content: "Bitte zuerst eine Ticket-Kategorie im Dashboard/`/admin` konfigurieren.",
-      flags: 64,
-    });
+    await replyV2(ctx.interaction, "Bitte zuerst eine Ticket-Kategorie im Dashboard/`/admin` konfigurieren.");
     return;
   }
 
@@ -99,7 +97,7 @@ async function setupPanel(
   const payload = new V2MessageBuilder(layout).build();
   const channel = await ctx.interaction.guild!.channels.fetch(channelId);
   if (!channel || !("send" in channel)) {
-    await ctx.interaction.reply({ content: "Panel-Kanal nicht erreichbar.", flags: 64 });
+    await replyV2(ctx.interaction, "Panel-Kanal nicht erreichbar.");
     return;
   }
   const msg = await (channel as { send(o: unknown): Promise<{ id: string }> }).send(payload);
@@ -111,7 +109,7 @@ async function setupPanel(
     description: "Eröffne ein Ticket, um Unterstützung vom Team zu erhalten.",
     selection_type: "button",
   });
-  await ctx.interaction.reply({ content: `Ticket-Panel in <#${channelId}> erstellt.`, flags: 64 });
+  await replyV2(ctx.interaction, `Ticket-Panel in <#${channelId}> erstellt.`);
 }
 
 async function openTicket(
@@ -125,12 +123,12 @@ async function openTicket(
   const s = await settingsService.get(ictx.guildId);
 
   if (!s.ticket.categoryId) {
-    await ictx.interaction.reply({ content: "Keine Ticket-Kategorie konfiguriert.", flags: 64 });
+    await replyV2(ictx.interaction, "Keine Ticket-Kategorie konfiguriert.");
     return;
   }
   const open = await tickets.openTicketsByUser(ictx.guildId, ictx.userId);
   if (open.length >= s.ticket.maxOpenPerUser) {
-    await ictx.interaction.reply({ content: `Maximal ${s.ticket.maxOpenPerUser} offene Tickets erlaubt.`, flags: 64 });
+    await replyV2(ictx.interaction, `Maximal ${s.ticket.maxOpenPerUser} offene Tickets erlaubt.`);
     return;
   }
 
@@ -168,7 +166,7 @@ async function openTicket(
   };
   void channel.send(new V2MessageBuilder(layout).build());
 
-  await ictx.interaction.reply({ content: `Dein Ticket wurde erstellt: ${channel}`, flags: 64 });
+  await replyV2(ictx.interaction, `Dein Ticket wurde erstellt: ${channel}`);
 }
 
 type StaffAction = "close" | "reopen" | "claim" | "unclaim";
@@ -181,25 +179,25 @@ async function staffAction(
   if (!ictx.interaction.isButton()) return;
   const ticket = await tickets.ticketByChannel(ictx.interaction.channelId ?? ictx.guildId);
   if (!ticket) {
-    await ictx.interaction.reply({ content: "Kein Ticket in diesem Kanal.", flags: 64 });
+    await replyV2(ictx.interaction, "Kein Ticket in diesem Kanal.");
     return;
   }
   switch (action) {
     case "claim":
       await tickets.claim(ticket.id, ictx.userId);
-      await ictx.interaction.reply({ content: `Ticket übernommen von <@${ictx.userId}>.`, flags: 64 });
+      await replyV2(ictx.interaction, `Ticket übernommen von <@${ictx.userId}>.`);
       break;
     case "unclaim":
       await tickets.updateStatus(ticket.id, "open");
-      await ictx.interaction.reply({ content: "Ticket wieder freigegeben.", flags: 64 });
+      await replyV2(ictx.interaction, "Ticket wieder freigegeben.");
       break;
     case "close":
       await tickets.updateStatus(ticket.id, "closed");
-      await ictx.interaction.reply({ content: `Ticket geschlossen.`, flags: 64 });
+      await replyV2(ictx.interaction, "Ticket geschlossen.");
       break;
     case "reopen":
       await tickets.updateStatus(ticket.id, "open");
-      await ictx.interaction.reply({ content: "Ticket wieder geöffnet.", flags: 64 });
+      await replyV2(ictx.interaction, "Ticket wieder geöffnet.");
       break;
   }
 }
@@ -209,11 +207,11 @@ async function closeFromCommand(ctx: SlashContext, tickets: TicketService): Prom
   if (!channel) return;
   const ticket = await tickets.ticketByChannel(channel.id);
   if (!ticket) {
-    await ctx.interaction.reply({ content: "Kein Ticket in diesem Kanal.", flags: 64 });
+    await replyV2(ctx.interaction, "Kein Ticket in diesem Kanal.");
     return;
   }
   await tickets.updateStatus(ticket.id, "closed");
-  await ctx.interaction.reply({ content: "Ticket geschlossen.", flags: 64 });
+  await replyV2(ctx.interaction, "Ticket geschlossen.");
 }
 
 async function findTicketInChannel(ctx: SlashContext, tickets: TicketService): Promise<Ticket | null> {
@@ -221,7 +219,7 @@ async function findTicketInChannel(ctx: SlashContext, tickets: TicketService): P
   if (!channel) return null;
   const ticket = await tickets.ticketByChannel(channel.id);
   if (!ticket) {
-    await ctx.interaction.reply({ content: "Kein Ticket in diesem Kanal.", flags: 64 });
+    await replyV2(ctx.interaction, "Kein Ticket in diesem Kanal.");
     return null;
   }
   return ticket;

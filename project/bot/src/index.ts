@@ -23,6 +23,7 @@ import { TicketService } from "./ticket/service.js";
 import { ticketModule } from "./ticket/module.js";
 import { welcomeModule } from "./modules/welcome.js";
 import { verifyModule } from "./modules/verify.js";
+import { replyV2 } from "./core/messages.js";
 
 async function main(): Promise<void> {
   const config = loadConfig();
@@ -66,18 +67,13 @@ async function main(): Promise<void> {
         const handled = await commandDispatcher.route(interaction);
         if (!handled) {
           logger.warn(`Unbekannter Slash-Command: /${interaction.commandName}`);
-          await interaction.reply({
-            content: `Das Kommando \`/${interaction.commandName}\` ist noch nicht registriert.`,
-            flags: 64, // Ephemeral
-          });
+          await replyV2(interaction, `Das Kommando \`/${interaction.commandName}\` ist noch nicht registriert.`);
         }
       }
     } catch (err) {
       logger.error(`Interaction-Fehler: ${String(err)}`);
       if ("reply" in interaction) {
-        await interaction
-          .reply({ content: "Ein interner Fehler ist aufgetreten.", flags: 64 })
-          .catch(() => {});
+        await replyV2(interaction, "Ein interner Fehler ist aufgetreten.").catch(() => {});
       }
     }
   });

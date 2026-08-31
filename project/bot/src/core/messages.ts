@@ -1,4 +1,5 @@
 import { type MessageCreateOptions } from "discord.js";
+import type { RepliableInteraction } from "discord.js";
 import { V2MessageBuilder, type V2Layout } from "@berlin/shared";
 
 // Per Spec §4: Alle gesendeten Nachrichten sind Components-V2-Nachrichten.
@@ -11,4 +12,24 @@ export class MessagesService {
   buildEphemeral(layout: V2Layout): MessageCreateOptions {
     return new V2MessageBuilder(layout).buildEphemeral();
   }
+}
+
+export function textLayout(text: string): V2Layout {
+  return {
+    version: 1,
+    children: [{ type: "text", content: text, style: "paragraph" }],
+  };
+}
+
+export function v2Text(text: string, ephemeral = true): MessageCreateOptions {
+  const builder = new V2MessageBuilder(textLayout(text));
+  return ephemeral ? builder.buildEphemeral() : builder.build();
+}
+
+export async function replyV2(
+  interaction: Pick<RepliableInteraction, "reply">,
+  text: string,
+  ephemeral = true,
+): Promise<unknown> {
+  return interaction.reply(v2Text(text, ephemeral));
 }

@@ -2,6 +2,7 @@ import { type CacheType, ChatInputCommandInteraction, GuildMember } from "discor
 import { type CommandDef, type SubCommand, type GuildSettings } from "@berlin/shared";
 import { hasPermission, permissionDenied, type PermissionLevel } from "./permissions.js";
 import { type SettingsService } from "./settingsService.js";
+import { replyV2 } from "./messages.js";
 
 export type SlashHandler = (ctx: SlashContext) => Promise<void> | void;
 
@@ -46,7 +47,7 @@ export class CommandDispatcher {
 
     const member = interaction.member;
     if (!(member instanceof GuildMember)) {
-      await interaction.reply({ content: "Kein gültiger Server-Member.", flags: 64 });
+      await replyV2(interaction, "Kein gültiger Server-Member.");
       return true;
     }
 
@@ -56,7 +57,7 @@ export class CommandDispatcher {
     const level: PermissionLevel =
       entry.permission ?? this.defLevel(interaction.commandName) ?? "public";
     if (!hasPermission(member, settings, level)) {
-      await interaction.reply({ content: permissionDenied(member), flags: 64 });
+      await replyV2(interaction, permissionDenied(member));
       return true;
     }
 

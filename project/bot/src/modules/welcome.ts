@@ -3,6 +3,7 @@ import { V2MessageBuilder, findCommand, type V2Layout } from "@berlin/shared";
 import type { BotModule } from "../core/registry.js";
 import type { SlashContext } from "../core/commandDispatcher.js";
 import type { SettingsService } from "../core/settingsService.js";
+import { replyV2 } from "../core/messages.js";
 
 /** Welcome-Modul: /welcome set/test/disable + GuildMemberAdd-Handler. */
 export function welcomeModule(settingsService: SettingsService): BotModule {
@@ -14,22 +15,22 @@ export function welcomeModule(settingsService: SettingsService): BotModule {
       commands.register(def, { name: "set", description: "Willkommens-Kanal setzen" }, async (ctx) => {
         const kanalOpt = ctx.interaction.options.getChannel("kanal");
         if (!kanalOpt) {
-          await ctx.interaction.reply({ content: "Bitte einen Kanal angeben.", flags: 64 });
+          await replyV2(ctx.interaction, "Bitte einen Kanal angeben.");
           return;
         }
         await settingsService.setWelcomeChannel(ctx.interaction.guildId!, kanalOpt.id);
-        await ctx.interaction.reply({ content: `Willkommens-Nachrichten werden jetzt in ${kanalOpt} gesendet.`, flags: 64 });
+        await replyV2(ctx.interaction, `Willkommens-Nachrichten werden jetzt in ${kanalOpt} gesendet.`);
       });
 
       commands.register(def, { name: "test", description: "Willkommens-Nachricht testen" }, async (ctx) => {
         const s = await settingsService.get(ctx.interaction.guildId!);
         if (!s.welcome.channelId) {
-          await ctx.interaction.reply({ content: "Kein Willkommens-Kanal konfiguriert.", flags: 64 });
+          await replyV2(ctx.interaction, "Kein Willkommens-Kanal konfiguriert.");
           return;
         }
         const channel = await ctx.interaction.guild?.channels.fetch(s.welcome.channelId).catch(() => null);
         if (!channel || !("send" in channel)) {
-          await ctx.interaction.reply({ content: "Willkommens-Kanal nicht erreichbar.", flags: 64 });
+          await replyV2(ctx.interaction, "Willkommens-Kanal nicht erreichbar.");
           return;
         }
         const layout: V2Layout = {
@@ -40,12 +41,12 @@ export function welcomeModule(settingsService: SettingsService): BotModule {
           ],
         };
         await (channel as { send(o: unknown): Promise<unknown> }).send(new V2MessageBuilder(layout).build());
-        await ctx.interaction.reply({ content: "Test-Nachricht gesendet.", flags: 64 });
+        await replyV2(ctx.interaction, "Test-Nachricht gesendet.");
       });
 
       commands.register(def, { name: "disable", description: "Willkommens-System deaktivieren" }, async (ctx) => {
         await settingsService.setWelcomeEnabled(ctx.interaction.guildId!, false);
-        await ctx.interaction.reply({ content: "Willkommens-System deaktiviert.", flags: 64 });
+        await replyV2(ctx.interaction, "Willkommens-System deaktiviert.");
       });
 
       // GuildMemberAdd: Rollen + Nachricht.

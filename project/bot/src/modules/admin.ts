@@ -1,6 +1,7 @@
 import type { SubCommand } from "@berlin/shared";
 import { type BotModule } from "../core/registry.js";
 import { type GuildsService } from "../core/guilds.js";
+import { replyV2 } from "../core/messages.js";
 
 export function adminModule(guilds: GuildsService): BotModule {
   return {
@@ -14,10 +15,7 @@ export function adminModule(guilds: GuildsService): BotModule {
         async (slot) => {
           // Einstellungen werden beim nächsten Zugriff ohnehin neu geladen
           // (60s-Cache); hier erzwingen wir eine frische Belieferung.
-          slot.interaction.reply({
-            content: "Einstellungen werden neu geladen (Cache invalidiert).",
-            flags: 64,
-          });
+          replyV2(slot.interaction, "Einstellungen werden neu geladen (Cache invalidiert).");
         },
         "admin",
       );
@@ -28,10 +26,7 @@ export function adminModule(guilds: GuildsService): BotModule {
         async (slot) => {
           const { client } = ctx;
           await guilds.warmUp(client);
-          slot.interaction.reply({
-            content: "Guild-Synchronisation abgeschlossen (Einträge sichergestellt).",
-            flags: 64,
-          });
+          replyV2(slot.interaction, "Guild-Synchronisation abgeschlossen (Einträge sichergestellt).");
         },
         "admin",
       );

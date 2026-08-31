@@ -3,6 +3,7 @@ import type { BotModule } from "../core/registry.js";
 import type { SlashContext } from "../core/commandDispatcher.js";
 import type { SettingsService } from "../core/settingsService.js";
 import type { InteractionContext } from "../core/interactions/router.js";
+import { replyV2 } from "../core/messages.js";
 
 const VERIFY_PREFIX = "berlin:verify:accept";
 
@@ -16,13 +17,13 @@ export function verifyModule(settingsService: SettingsService): BotModule {
       commands.register(def, { name: "set", description: "Verifizierungs-Panel einrichten" }, async (ctx) => {
         const s = await settingsService.get(ctx.interaction.guildId!);
         if (!s.roles.verified) {
-          await ctx.interaction.reply({ content: "Keine `verified`-Rolle konfiguriert.", flags: 64 });
+          await replyV2(ctx.interaction, "Keine `verified`-Rolle konfiguriert.");
           return;
         }
 
         const kanalOpt = ctx.interaction.options.getChannel("kanal");
         if (!kanalOpt || !("send" in kanalOpt)) {
-          await ctx.interaction.reply({ content: "Bitte einen gültigen Textkanal angeben.", flags: 64 });
+          await replyV2(ctx.interaction, "Bitte einen gültigen Textkanal angeben.");
           return;
         }
 
@@ -48,51 +49,51 @@ export function verifyModule(settingsService: SettingsService): BotModule {
           panelMessageId: msg.id,
           method: "button",
         });
-        await ctx.interaction.reply({ content: `Verify-Panel in ${kanalOpt} erstellt.`, flags: 64 });
+        await replyV2(ctx.interaction, `Verify-Panel in ${kanalOpt} erstellt.`);
       });
 
       commands.register(def, { name: "check", description: "Verifizierung eines Users prüfen" }, async (ctx) => {
         const user = ctx.interaction.options.getUser("user");
         if (!user) {
-          await ctx.interaction.reply({ content: "Bitte einen User angeben.", flags: 64 });
+          await replyV2(ctx.interaction, "Bitte einen User angeben.");
           return;
         }
         const s = await settingsService.get(ctx.interaction.guildId!);
         if (!s.roles.verified) {
-          await ctx.interaction.reply({ content: "Keine verified-Rolle konfiguriert.", flags: 64 });
+          await replyV2(ctx.interaction, "Keine verified-Rolle konfiguriert.");
           return;
         }
         const member = await ctx.interaction.guild?.members.fetch(user.id).catch(() => null);
         if (!member) {
-          await ctx.interaction.reply({ content: "User nicht auf diesem Server.", flags: 64 });
+          await replyV2(ctx.interaction, "User nicht auf diesem Server.");
           return;
         }
         const isVerified = member.roles.cache.has(s.roles.verified);
-        await ctx.interaction.reply({ content: `<@${user.id}> ist ${isVerified ? "✅ verifiziert" : "❌ nicht verifiziert"}.`, flags: 64 });
+        await replyV2(ctx.interaction, `<@${user.id}> ist ${isVerified ? "✅ verifiziert" : "❌ nicht verifiziert"}.`);
       });
 
       commands.register(def, { name: "unverify", description: "Verifizierung entziehen" }, async (ctx) => {
         const user = ctx.interaction.options.getUser("user");
         if (!user) {
-          await ctx.interaction.reply({ content: "Bitte einen User angeben.", flags: 64 });
+          await replyV2(ctx.interaction, "Bitte einen User angeben.");
           return;
         }
         const s = await settingsService.get(ctx.interaction.guildId!);
         if (!s.roles.verified) {
-          await ctx.interaction.reply({ content: "Keine verified-Rolle konfiguriert.", flags: 64 });
+          await replyV2(ctx.interaction, "Keine verified-Rolle konfiguriert.");
           return;
         }
         const member = await ctx.interaction.guild?.members.fetch(user.id).catch(() => null);
         if (!member) {
-          await ctx.interaction.reply({ content: "User nicht auf diesem Server.", flags: 64 });
+          await replyV2(ctx.interaction, "User nicht auf diesem Server.");
           return;
         }
         await member.roles.remove(s.roles.verified).catch(() => {});
-        await ctx.interaction.reply({ content: `Verifizierung von <@${user.id}> entzogen.`, flags: 64 });
+        await replyV2(ctx.interaction, `Verifizierung von <@${user.id}> entzogen.`);
       });
 
       commands.register(def, { name: "restore", description: "Rollen wiederherstellen" }, async (ctx) => {
-        await ctx.interaction.reply({ content: "Rollenwiederherstellung noch nicht implementiert.", flags: 64 });
+        await replyV2(ctx.interaction, "Rollenwiederherstellung ist in der aktuellen Datenbank noch nicht verfügbar.");
       });
 
       // Button-Handler.
@@ -100,11 +101,11 @@ export function verifyModule(settingsService: SettingsService): BotModule {
         if (!ictx.interaction.isButton()) return;
         const s = await settingsService.get(ictx.guildId);
         if (!s.verification.enabled) {
-          await ictx.interaction.reply({ content: "Verifizierung ist derzeit deaktiviert.", flags: 64 });
+          await replyV2(ictx.interaction, "Verifizierung ist derzeit deaktiviert.");
           return;
         }
         if (!s.roles.verified) {
-          await ictx.interaction.reply({ content: "Keine verified-Rolle konfiguriert.", flags: 64 });
+          await replyV2(ictx.interaction, "Keine verified-Rolle konfiguriert.");
           return;
         }
 
@@ -118,17 +119,17 @@ export function verifyModule(settingsService: SettingsService): BotModule {
         const botPos = bot?.roles.highest.position ?? 0;
         const verifiedRole = guild.roles.cache.get(s.roles.verified);
         if (!verifiedRole || verifiedRole.position >= botPos) {
-          await ictx.interaction.reply({ content: "Die verified-Rolle ist zu hoch oder nicht vorhanden.", flags: 64 });
+          await replyV2(ictx.interaction, "Die verified-Rolle ist zu hoch oder nicht vorhanden.");
           return;
         }
 
         if (member.roles.cache.has(s.roles.verified)) {
-          await ictx.interaction.reply({ content: "Du bist bereits verifiziert.", flags: 64 });
+          await replyV2(ictx.interaction, "Du bist bereits verifiziert.");
           return;
         }
 
         await member.roles.add(s.roles.verified).catch(() => {});
-        await ictx.interaction.reply({ content: "Du wurdest verifiziert! Willkommen auf Berlin Roleplay.", flags: 64 });
+        await replyV2(ictx.interaction, "Du wurdest verifiziert! Willkommen auf Berlin Roleplay.");
       });
     },
   };
