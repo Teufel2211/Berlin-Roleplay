@@ -1,1 +1,1 @@
-{"$schema":"https://openapi.vercel.sh/vercel.json","framework":"nextjs","outputDirectory":"project/dashboard/.next"}
+{"$schema":"https://openapi.vercel.sh/vercel.json","builds":[{"src":"project/dashboard/package.json","use":"@vercel/next"}]}
