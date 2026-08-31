@@ -13,6 +13,7 @@ import { Registry } from "./core/registry.js";
 import { adminModule } from "./modules/admin.js";
 import { CommandDeployer } from "./core/commands/deploy.js";
 import { BOT_INTENTS } from "./core/client.js";
+import { SelfSyncService } from "./core/selfSync.js";
 import { ErlcService } from "./erlc/service.js";
 import { erlcModule } from "./erlc/module.js";
 import { ErlcWebhookHandler } from "./erlc/webhook.js";
@@ -94,6 +95,14 @@ async function main(): Promise<void> {
   await registry.init();
   await client.login(config.discordToken);
   logger.info("Bot gestartet.");
+
+  // SelfSync: Auto-Update-Poller (project/bot + project/shared) — startet Prozess bei Update neu.
+  const selfSync = new SelfSyncService({
+    enabled: config.selfUpdate,
+    intervalMs: config.selfUpdateIntervalMs,
+    logger,
+  });
+  selfSync.start();
 
   // ER:LC-Polling + Panel-Refresh an den Client binden und starten (nur bei echten Servern sinnvoll).
   erlcService.attach(client);

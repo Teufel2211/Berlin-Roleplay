@@ -12,6 +12,8 @@ export interface BotConfig {
   logLevel: string;
   webhookPort: number;
   erlcWebhookPublicKey: string | null;
+  selfUpdate: boolean;
+  selfUpdateIntervalMs: number;
 }
 
 const REQUIRED = ["DISCORD_TOKEN", "SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"] as const;
@@ -32,6 +34,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): BotConfig {
     logLevel: env.LOG_LEVEL ?? "info",
     webhookPort: Number(env.WEBHOOK_PORT ?? "8080"),
     erlcWebhookPublicKey: env.ERLC_WEBHOOK_PUBLIC_KEY?.trim() || null,
+    selfUpdate: env.SELF_UPDATE === "true",
+    selfUpdateIntervalMs: Number(env.SELF_UPDATE_INTERVAL_MS ?? "60000"),
   };
 }
 

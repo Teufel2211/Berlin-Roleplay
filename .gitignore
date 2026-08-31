@@ -7,6 +7,7 @@ dist/
 .next/
 out/
 build/
+.turbo/
 
 # ── Env / Secrets ────────────────────────────────────────────
 .env
@@ -23,6 +24,7 @@ logs/
 .vercel/
 .dart_tool/
 *.tsbuildinfo
+.deploy-sha
 
 # ── OS / Editor ──────────────────────────────────────────────
 .DS_Store

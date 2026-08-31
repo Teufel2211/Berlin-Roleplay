@@ -20,6 +20,9 @@ importers:
       '@supabase/supabase-js':
         specifier: ^2.47.0
         version: 2.112.4
+      discord-api-types:
+        specifier: ^0.38.54
+        version: 0.38.54
       discord.js:
         specifier: ^14.26.2
         version: 14.27.0
