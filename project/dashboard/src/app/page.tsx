@@ -117,7 +117,7 @@ export default function LandingPage() {
             <a href="#components" className="hover:text-white transition-colors">Components V2</a>
             <a href="#erlc" className="hover:text-white transition-colors">ER:LC</a>
             <a
-              href="#dashboard"
+              href="/dashboard"
               className="rounded-lg bg-[#5865f2] px-4 py-2 text-sm font-medium text-white hover:bg-[#4752c4] transition-colors"
             >
               Dashboard
@@ -139,7 +139,7 @@ export default function LandingPage() {
           </p>
           <div className="mt-10 flex items-center justify-center gap-4">
             <a
-              href="#dashboard"
+              href="/dashboard"
               className="rounded-xl bg-[#5865f2] px-8 py-3.5 text-base font-semibold text-white hover:bg-[#4752c4] transition-colors"
             >
               Dashboard öffnen
@@ -285,7 +285,7 @@ export default function LandingPage() {
           </p>
           <div className="mt-10 flex items-center justify-center gap-4">
             <a
-              href="#"
+              href="/dashboard"
               className="rounded-xl bg-[#5865f2] px-8 py-3.5 text-base font-semibold text-white hover:bg-[#4752c4] transition-colors"
             >
               Bot einladen
@@ -307,7 +307,7 @@ export default function LandingPage() {
           <div className="flex items-center gap-6">
             <a href="#" className="hover:text-white transition-colors">GitHub</a>
             <a href="#" className="hover:text-white transition-colors">Discord</a>
-            <a href="#" className="hover:text-white transition-colors">Dashboard</a>
+            <a href="/dashboard" className="hover:text-white transition-colors">Dashboard</a>
           </div>
         </div>
       </footer>
