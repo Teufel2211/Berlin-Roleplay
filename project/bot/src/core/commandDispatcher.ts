@@ -1,4 +1,4 @@
-import { type CacheType, ChatInputCommandInteraction, GuildMember } from "discord.js";
+import { type CacheType, type ChatInputCommandInteraction, GuildMember } from "discord.js";
 import { commands, type CommandDef, type SubCommand, type GuildSettings } from "@berlin/shared";
 import { hasPermission, permissionDenied, type PermissionLevel } from "./permissions.js";
 import { type SettingsService } from "./settingsService.js";

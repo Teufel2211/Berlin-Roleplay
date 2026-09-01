@@ -25,6 +25,7 @@ import { welcomeModule } from "./modules/welcome.js";
 import { verifyModule } from "./modules/verify.js";
 import { replyV2 } from "./core/messages.js";
 import { DashboardLoginPoller } from "./core/dashboardLoginPoller.js";
+import { componentsModule } from "./modules/components.js";
 
 async function main(): Promise<void> {
   const config = loadConfig();
@@ -93,6 +94,7 @@ async function main(): Promise<void> {
   registry.add(ticketModule(ticketService, settingsService));
   registry.add(welcomeModule(settingsService));
   registry.add(verifyModule(settingsService));
+  registry.add(componentsModule(db));
   await registry.init();
   await client.login(config.discordToken);
   logger.info("Bot gestartet.");

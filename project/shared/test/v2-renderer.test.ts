@@ -1,7 +1,7 @@
 import { MessageFlags } from "discord.js";
 import { describe, expect, it } from "vitest";
 
-import { container, layout, row, section, text, validateLayout } from "../src/components/v2-layout.js";
+import { container, layout, parseV2, row, section, serializeV2, text, validateLayout } from "../src/components/v2-layout.js";
 import { V2MessageBuilder } from "../src/components/v2-renderer.js";
 
 describe("v2-layout", () => {
@@ -20,6 +20,11 @@ describe("v2-layout", () => {
     const many = Array.from({ length: 6 }, (_, i) => ({ type: "button" as const, label: `B${i}`, style: "secondary" as const, customId: `b${i}` }));
     const result = validateLayout(layout([row(many)]));
     if (!result.ok) expect(result.errors.join(" ")).toContain("5 Komponenten");
+  });
+
+  it("round-trips a layout through the shared serializer", () => {
+    const original = layout([text("Hallo"), row([{ type: "button", label: "OK", style: "success", customId: "ok" }])]);
+    expect(parseV2(serializeV2(original))).toEqual(original);
   });
 });
 

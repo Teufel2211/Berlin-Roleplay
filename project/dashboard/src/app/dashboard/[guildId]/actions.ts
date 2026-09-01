@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { validateLayout, type V2Layout } from "@berlin/shared/layout";
+import { parseV2 } from "@berlin/shared/layout";
 import { requireAuth } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { requireGuild } from "@/lib/guild";
@@ -127,28 +127,10 @@ export async function createERLCServer(
   }
 }
 
-function parseV2Layout(value: FormDataEntryValue | null): V2Layout {
+function parseV2Layout(value: FormDataEntryValue | null) {
   const raw = String(value ?? "").trim();
   if (!raw) throw new Error("Payload ist erforderlich.");
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    throw new Error("Payload muss gültiges JSON sein.");
-  }
-
-  if (!parsed || typeof parsed !== "object") {
-    throw new Error("Payload muss ein Layout-Objekt sein.");
-  }
-
-  const layout = parsed as V2Layout;
-  const validation = validateLayout(layout);
-  if (!validation.ok) {
-    throw new Error(validation.errors.join("; "));
-  }
-
-  return layout;
+  return parseV2(raw);
 }
 
 export async function saveComponentTemplate(

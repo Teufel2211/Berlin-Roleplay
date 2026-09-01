@@ -1,8 +1,8 @@
 import { type Client } from "discord.js";
 import { commands, type CommandDef } from "@berlin/shared";
-import { EventRouter } from "./eventRouter.js";
-import { InteractionRouter } from "./interactions/router.js";
-import { CommandDispatcher } from "./commandDispatcher.js";
+import { type EventRouter } from "./eventRouter.js";
+import { type InteractionRouter } from "./interactions/router.js";
+import { type CommandDispatcher } from "./commandDispatcher.js";
 
 export interface BotModule {
   name: string;

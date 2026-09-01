@@ -218,3 +218,31 @@ export function row(items: (ButtonNode | SelectNode)[]): RowNode {
 export function layout(children: V2Node[], opts: Partial<Pick<V2Layout, "color">> = {}): V2Layout {
   return { version: 1, ...opts, children };
 }
+
+export function serializeV2(value: V2Layout): string {
+  const validation = validateLayout(value);
+  if (!validation.ok) throw new Error(validation.errors.join("; "));
+  return JSON.stringify(value);
+}
+
+export function parseV2(value: string): V2Layout {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    throw new Error("Payload muss gültiges JSON sein.");
+  }
+
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("Payload muss ein Layout-Objekt sein.");
+  }
+
+  const layoutValue = parsed as V2Layout;
+  if (layoutValue.version !== 1 || !Array.isArray(layoutValue.children)) {
+    throw new Error("Payload muss ein V2Layout mit version 1 und children sein.");
+  }
+
+  const validation = validateLayout(layoutValue);
+  if (!validation.ok) throw new Error(validation.errors.join("; "));
+  return layoutValue;
+}

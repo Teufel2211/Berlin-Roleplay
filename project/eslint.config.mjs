@@ -4,6 +4,7 @@ export default [
     ignores: ["**/dist/**", "**/.next/**", "**/node_modules/**"],
   },
   {
+    files: ["**/*.{ts,tsx,js,mjs,cjs}"],
     plugins: {
       "@typescript-eslint": (await import("@typescript-eslint/eslint-plugin")).default,
     },

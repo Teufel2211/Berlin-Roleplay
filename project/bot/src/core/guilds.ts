@@ -1,6 +1,7 @@
 import { type Client, type Guild } from "discord.js";
-import { createDbClient, TABLES, withRetry } from "./db.js";
-import { SettingsService } from "./settingsService.js";
+import { TABLES, withRetry } from "./db.js";
+import type { createDbClient } from "./db.js";
+import type { SettingsService } from "./settingsService.js";
 import type { Logger } from "./logger.js";
 
 /** Guild-Verwaltung: Provisioning, Abfrage, Soft-Delete. */
