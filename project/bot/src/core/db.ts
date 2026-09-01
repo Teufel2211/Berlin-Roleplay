@@ -33,6 +33,7 @@ export const TABLES = {
   erlcWebhookEvents: "berlin_roleplay_erlc_webhook_events",
   slashCommands: "berlin_roleplay_slash_commands",
   commandUsage: "berlin_roleplay_command_usage",
+  dashboardLogins: "berlin_roleplay_dashboard_logins",
 } as const;
 
 export type TableName = (typeof TABLES)[keyof typeof TABLES];

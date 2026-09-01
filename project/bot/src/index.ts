@@ -24,6 +24,7 @@ import { ticketModule } from "./ticket/module.js";
 import { welcomeModule } from "./modules/welcome.js";
 import { verifyModule } from "./modules/verify.js";
 import { replyV2 } from "./core/messages.js";
+import { DashboardLoginPoller } from "./core/dashboardLoginPoller.js";
 
 async function main(): Promise<void> {
   const config = loadConfig();
@@ -45,6 +46,10 @@ async function main(): Promise<void> {
   const giveawayService = new GiveawayService(db);
   const ticketService = new TicketService(db);
   const registry = new Registry(client, eventRouter, interactionRouter, commandDispatcher);
+
+  // Dashboard-Login-Poller: sendet offene Login-Codes per DM an die Admins.
+  const dashboardLoginPoller = new DashboardLoginPoller(db, client, logger, config.guildId);
+  dashboardLoginPoller.start(5000);
 
   // Grund-Event-Handler
   client.once(Events.ClientReady, (c) => {
