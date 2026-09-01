@@ -5,7 +5,7 @@ import { env } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
-export const LOGIN_CODE_TTL_SECONDS = 5 * 60; // 5 Minuten
+const LOGIN_CODE_TTL_SECONDS = 5 * 60; // 5 Minuten
 
 export async function POST(request: Request) {
   let body: { discordId?: string };
