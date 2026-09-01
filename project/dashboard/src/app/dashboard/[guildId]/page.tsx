@@ -48,6 +48,7 @@ export default async function GuildDashboardPage({
           <ModuleLink href={`/dashboard/${guildId}/giveaways`} title="Giveaways" desc="Laufende und beendete Giveaways verwalten" />
           <ModuleLink href={`/dashboard/${guildId}/welcome`} title="Welcome" desc="Begrüßungs-Konfiguration" />
           <ModuleLink href={`/dashboard/${guildId}/verify`} title="Verify" desc="Verifizierung einrichten" />
+          <ModuleLink href={`/dashboard/${guildId}/components`} title="Components" desc="V2-Template-Liste und Builder-Editor" />
           <ModuleLink href={`/dashboard/${guildId}/erlc`} title="ER:LC" desc="Emergency Response: Liberty County Anbindung" />
           <ModuleLink href={`/dashboard/${guildId}/audit`} title="Audit-Log" desc="Alle Staff-Aktionen im Überblick" />
         </div>

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { validateLayout, type V2Layout } from "@berlin/shared/layout";
 import { requireAuth } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { requireGuild } from "@/lib/guild";
@@ -121,6 +122,155 @@ export async function createERLCServer(
     if (error) return { ok: false, error: error.message };
     revalidatePath(`/dashboard/${guildId}/erlc`);
     return { ok: true, message: "ER:LC-Server hinzugefügt." };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+function parseV2Layout(value: FormDataEntryValue | null): V2Layout {
+  const raw = String(value ?? "").trim();
+  if (!raw) throw new Error("Payload ist erforderlich.");
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error("Payload muss gültiges JSON sein.");
+  }
+
+  if (!parsed || typeof parsed !== "object") {
+    throw new Error("Payload muss ein Layout-Objekt sein.");
+  }
+
+  const layout = parsed as V2Layout;
+  const validation = validateLayout(layout);
+  if (!validation.ok) {
+    throw new Error(validation.errors.join("; "));
+  }
+
+  return layout;
+}
+
+export async function saveComponentTemplate(
+  _prev: ActionResult | null,
+  formData: FormData
+): Promise<ActionResult> {
+  try {
+    const guildId = String(formData.get("guildId") ?? "");
+    const guild = await requireAdmin(guildId);
+    const user = await requireAuth();
+
+    const templateId = String(formData.get("templateId") ?? "").trim();
+    const name = (formData.get("name") as string | null)?.trim() || "";
+    const description = (formData.get("description") as string | null)?.trim() || "";
+    const payload = parseV2Layout(formData.get("payload"));
+
+    if (!name) return { ok: false, error: "Name ist erforderlich." };
+
+    const now = new Date().toISOString();
+
+    if (templateId) {
+      const { data: current, error: readError } = await getSupabaseAdmin()
+        .from("berlin_roleplay_component_templates")
+        .select("version")
+        .eq("id", templateId)
+        .eq("guild_id", guild.guildId)
+        .maybeSingle();
+
+      if (readError || !current) {
+        return { ok: false, error: "Template nicht gefunden." };
+      }
+
+      const nextVersion = Number(current.version ?? 1) + 1;
+      const { error } = await getSupabaseAdmin()
+        .from("berlin_roleplay_component_templates")
+        .update({
+          name,
+          description,
+          payload,
+          version: nextVersion,
+          updated_at: now,
+        })
+        .eq("id", templateId)
+        .eq("guild_id", guild.guildId);
+
+      if (error) return { ok: false, error: error.message };
+
+      const { error: versionError } = await getSupabaseAdmin()
+        .from("berlin_roleplay_component_versions")
+        .upsert(
+          {
+            template_id: templateId,
+            version: nextVersion,
+            payload,
+            created_at: now,
+          },
+          { onConflict: "template_id,version" }
+        );
+
+      if (versionError) return { ok: false, error: versionError.message };
+      revalidatePath(`/dashboard/${guildId}/components`);
+      revalidatePath(`/dashboard/${guildId}/components/${templateId}`);
+      return { ok: true, message: "Template aktualisiert." };
+    }
+
+    const { data, error } = await getSupabaseAdmin()
+      .from("berlin_roleplay_component_templates")
+      .insert({
+        guild_id: guild.guildId,
+        name,
+        description,
+        version: 1,
+        payload,
+        is_global: false,
+        flags: {},
+        created_by: user.id,
+        created_at: now,
+        updated_at: now,
+      })
+      .select("id")
+      .maybeSingle();
+
+    if (error) return { ok: false, error: error.message };
+    if (data) {
+      const { error: versionError } = await getSupabaseAdmin()
+        .from("berlin_roleplay_component_versions")
+        .insert({
+          template_id: data.id,
+          version: 1,
+          payload,
+          created_at: now,
+        });
+
+      if (versionError) return { ok: false, error: versionError.message };
+    }
+
+    revalidatePath(`/dashboard/${guildId}/components`);
+    return { ok: true, message: "Template erstellt." };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function deleteComponentTemplate(
+  _prev: ActionResult | null,
+  formData: FormData
+): Promise<ActionResult> {
+  try {
+    const guildId = String(formData.get("guildId") ?? "");
+    const guild = await requireAdmin(guildId);
+    const templateId = String(formData.get("templateId") ?? "").trim();
+    if (!templateId) return { ok: false, error: "Template-ID fehlt." };
+
+    const { error } = await getSupabaseAdmin()
+      .from("berlin_roleplay_component_templates")
+      .delete()
+      .eq("id", templateId)
+      .eq("guild_id", guild.guildId);
+
+    if (error) return { ok: false, error: error.message };
+    revalidatePath(`/dashboard/${guildId}/components`);
+    return { ok: true, message: "Template gelöscht." };
   } catch (e) {
     return fail(e);
   }

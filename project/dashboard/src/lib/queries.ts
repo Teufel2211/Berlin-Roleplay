@@ -63,6 +63,20 @@ export interface ERLCServerRow {
   updated_at: string;
 }
 
+export interface ComponentTemplateRow {
+  id: string;
+  guild_id: string;
+  name: string;
+  description: string;
+  version: number;
+  payload: Record<string, unknown>;
+  is_global: boolean;
+  flags: Record<string, unknown>;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
 /** Welcome-Konfiguration einer Guild (oder null). */
 export async function getWelcomeConfig(guildId: string): Promise<WelcomeConfig | null> {
   const { data, error } = await getSupabaseAdmin()
@@ -145,6 +159,36 @@ export async function listGiveaways(guildId: string): Promise<GiveawayRow[]> {
   );
 
   return rows.map((g, i) => ({ ...g, entries: entryCounts[i] ?? 0 }));
+}
+
+/** Template-Liste einer Guild. */
+export async function listComponentTemplates(guildId: string): Promise<ComponentTemplateRow[]> {
+  const { data, error } = await getSupabaseAdmin()
+    .from("berlin_roleplay_component_templates")
+    .select(
+      "id, guild_id, name, description, version, payload, is_global, flags, created_by, created_at, updated_at"
+    )
+    .eq("guild_id", guildId)
+    .order("updated_at", { ascending: false });
+  if (error) return [];
+  return (data ?? []) as ComponentTemplateRow[];
+}
+
+/** Einzelnes Component-Template einer Guild. */
+export async function getComponentTemplate(
+  guildId: string,
+  templateId: string,
+): Promise<ComponentTemplateRow | null> {
+  const { data, error } = await getSupabaseAdmin()
+    .from("berlin_roleplay_component_templates")
+    .select(
+      "id, guild_id, name, description, version, payload, is_global, flags, created_by, created_at, updated_at"
+    )
+    .eq("guild_id", guildId)
+    .eq("id", templateId)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data as ComponentTemplateRow;
 }
 
 /** Letzte Audit-Einträge einer Guild. */

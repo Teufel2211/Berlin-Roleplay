@@ -39,6 +39,7 @@ export default async function DashboardLayout({
               <SidebarLink href={`/dashboard/${g.id}/giveaways`} label="Giveaways" />
               <SidebarLink href={`/dashboard/${g.id}/welcome`} label="Welcome" />
               <SidebarLink href={`/dashboard/${g.id}/verify`} label="Verify" />
+              <SidebarLink href={`/dashboard/${g.id}/components`} label="Components" />
               <SidebarLink href={`/dashboard/${g.id}/erlc`} label="ER:LC" />
               <SidebarLink href={`/dashboard/${g.id}/audit`} label="Audit-Log" />
               <SidebarLink href={`/dashboard/${g.id}/stats`} label="Stats" />
