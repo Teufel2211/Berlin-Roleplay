@@ -48,28 +48,26 @@ export async function getSessionByToken(
 ): Promise<SessionUser | null> {
   if (!token) return null;
 
-  const { data, error } = await getSupabaseAdmin()
+  // Bewusst ohne Nested-Embed: postgREST loest die FK-Relation
+  // (berlin_roleplay_sessions -> berlin_roleplay_users) in manchen
+  // Projekten nicht auf (PGRST200). Daher zwei getrennte Abfragen.
+  const { data: session, error } = await getSupabaseAdmin()
     .from("berlin_roleplay_sessions")
-    .select(
-      "session_token, expires_at, user_id, users!berlin_roleplay_sessions_user_id_fkey(id, username, global_name, avatar)"
-    )
+    .select("session_token, expires_at, user_id")
     .eq("session_token", token)
     .maybeSingle();
 
-  if (error || !data) return null;
-
-  const session = data as unknown as {
-    session_token: string;
-    expires_at: string;
-    user: {
-      id: string;
-      username: string;
-      global_name: string | null;
-      avatar: string | null;
-    };
-  };
+  if (error || !session) return null;
 
   if (new Date(session.expires_at) <= new Date()) return null;
+
+  const { data: user, error: userErr } = await getSupabaseAdmin()
+    .from("berlin_roleplay_users")
+    .select("id, username, global_name, avatar")
+    .eq("id", session.user_id)
+    .maybeSingle();
+
+  if (userErr || !user) return null;
 
   // Slide: bei Aktivitaet um TTL verlaengern (best effort)
   const now = Date.now();
@@ -85,10 +83,10 @@ export async function getSessionByToken(
   }
 
   return {
-    id: session.user.id,
-    username: session.user.username,
-    global_name: session.user.global_name,
-    avatar: session.user.avatar,
+    id: user.id,
+    username: user.username,
+    global_name: user.global_name,
+    avatar: user.avatar,
     token: session.session_token,
   };
 }
