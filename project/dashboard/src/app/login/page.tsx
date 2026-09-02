@@ -63,14 +63,19 @@ export default function LoginPageClient() {
   }
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center px-6 bg-[--bg-primary] text-[--text-primary]">
+    <main className="min-h-screen flex flex-col items-center justify-center px-6 text-[--text-primary]">
       <div className="w-full max-w-md">
-        <Link href="/" className="inline-flex items-center gap-2 mb-8 text-sm text-[--text-muted] hover:text-[--text-primary] transition-colors">
+        <Link href="/" className="mb-8 inline-flex items-center gap-2 rounded-full border border-[--border] bg-white/5 px-4 py-1.5 text-sm text-[--text-muted] backdrop-blur transition-colors hover:text-[--text-primary]">
           ← Zurück zur Startseite
         </Link>
 
-        <div className="rounded-2xl border border-[--border] bg-[--bg-secondary] p-8 shadow-xl">
-          <h1 className="text-2xl font-bold mb-2">Dashboard Login</h1>
+        <div className="glass-card p-8">
+          <div className="mb-6 flex items-center gap-3">
+            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-[--accent] to-[#4752c4] text-lg font-bold text-white shadow-lg shadow-[--accent]/20">
+              B
+            </span>
+            <h1 className="text-2xl font-bold">Dashboard Login</h1>
+          </div>
           <p className="text-sm text-[--text-muted] mb-6">
             Gib deine Discord-ID ein. Ein Admin erhält anschließend einen
             Login-Code und teilt ihn dir mit. Nur Mitglieder mit Staff- oder

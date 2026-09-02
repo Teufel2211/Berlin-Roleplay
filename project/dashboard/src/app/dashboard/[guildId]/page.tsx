@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireGuild, getGuildStats } from "@/lib/guild";
+import { StatCard } from "@/components/ui";
 
 export default async function GuildDashboardPage({
   params,
@@ -33,7 +34,7 @@ export default async function GuildDashboardPage({
           <Link
             key={c.label}
             href={`/dashboard/${c.href}`}
-            className="rounded-2xl border border-[--border] bg-[--bg-secondary] p-5 transition-all hover:border-[--accent]/50 hover:-translate-y-0.5"
+            className="glass-card glass-card-hover p-5"
           >
             <p className="text-sm text-[--text-muted]">{c.label}</p>
             <p className="text-3xl font-bold mt-1">{c.value}</p>
@@ -61,7 +62,7 @@ function ModuleLink({ href, title, desc }: { href: string; title: string; desc: 
   return (
     <Link
       href={href}
-      className="group rounded-2xl border border-[--border] bg-[--bg-secondary] p-5 transition-all hover:border-[--accent]/50 hover:-translate-y-0.5"
+      className="group glass-card glass-card-hover p-5"
     >
       <h3 className="font-semibold group-hover:text-[--accent] transition-colors">{title}</h3>
       <p className="text-sm text-[--text-muted] mt-1">{desc}</p>
