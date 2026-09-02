@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireAuth, getUserGuilds } from "@/lib/auth";
+import { EmptyState } from "@/components/ui";
 
 export default async function DashboardHome() {
   const user = await requireAuth();
@@ -17,30 +18,23 @@ export default async function DashboardHome() {
       </header>
 
       {guilds.length === 0 ? (
-        <div className="rounded-2xl border border-[--border] bg-[--bg-secondary] p-8 text-center">
-          <p className="text-[--text-muted] mb-4">
-            Du bist in keinem verwalteten Server Mitglied.
-          </p>
-          <p className="text-xs text-[--text-muted]">
-            Melde dich in einem mit dem Bot verbundenen Discord-Server an.
-          </p>
-        </div>
+        <EmptyState message="Du bist in keinem verwalteten Server Mitglied. Melde dich in einem mit dem Bot verbundenen Discord-Server an." />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           {guilds.map((g) => (
             <Link
               key={g.id}
               href={`/dashboard/${g.id}`}
-              className="group rounded-2xl border border-[--border] bg-[--bg-secondary] p-5 transition-all hover:border-[--accent]/50 hover:-translate-y-0.5"
+              className="group glass-card glass-card-hover p-5"
             >
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold truncate">{g.name || "Unbenannter Server"}</h3>
                 <RoleBadge role={g.role} />
               </div>
               <div className="mt-3 flex items-center justify-between text-xs text-[--text-muted]">
-                <span>ID: {g.id}</span>
+                <span className="font-mono">ID: {g.id}</span>
                 {g.premium ? (
-                  <span className="text-[--accent]">Premium</span>
+                  <Badge tone="green">Premium</Badge>
                 ) : null}
               </div>
               <span className="mt-4 inline-block text-sm text-[--accent] group-hover:underline">
@@ -51,6 +45,17 @@ export default async function DashboardHome() {
         </div>
       )}
     </div>
+  );
+}
+
+function Badge({ children, tone }: { children: React.ReactNode; tone: "green" | "red" }) {
+  const dotColor = tone === "green" ? "bg-emerald-400" : "bg-red-400";
+  const textColor = tone === "green" ? "text-emerald-400" : "text-red-400";
+  return (
+    <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${textColor}`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${dotColor}`} />
+      {children}
+    </span>
   );
 }
 

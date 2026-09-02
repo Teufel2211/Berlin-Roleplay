@@ -18,6 +18,7 @@ const GUILD_LINKS: { href: string; label: string }[] = [
   { href: "/erlc", label: "ER:LC" },
   { href: "/audit", label: "Audit-Log" },
   { href: "/stats", label: "Stats" },
+  { href: "/settings", label: "Settings" },
 ];
 
 export function SidebarNav({ guilds }: { guilds: SidebarGuild[] }) {

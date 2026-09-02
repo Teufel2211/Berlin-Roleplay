@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from "./supabase";
+import { resolveSettings, type GuildSettings } from "@berlin/shared/settings";
 
 export interface TicketRow {
   id: string;
@@ -189,6 +190,27 @@ export async function getComponentTemplate(
     .maybeSingle();
   if (error || !data) return null;
   return data as ComponentTemplateRow;
+}
+
+export interface GuildSettingsRow {
+  settings: GuildSettings;
+  feature_flags: Record<string, unknown>;
+  premium: boolean;
+}
+
+/** Liest die Guild-Settings (JSONB) + Feature-Flags aus berlin_roleplay_guilds. */
+export async function getGuildSettingsRow(guildId: string): Promise<GuildSettingsRow | null> {
+  const { data, error } = await getSupabaseAdmin()
+    .from("berlin_roleplay_guilds")
+    .select("settings, feature_flags, premium")
+    .eq("id", guildId)
+    .maybeSingle();
+  if (error || !data) return null;
+  return {
+    settings: resolveSettings(data.settings),
+    feature_flags: (data.feature_flags ?? {}) as Record<string, unknown>,
+    premium: Boolean(data.premium),
+  };
 }
 
 /** Letzte Audit-Einträge einer Guild. */

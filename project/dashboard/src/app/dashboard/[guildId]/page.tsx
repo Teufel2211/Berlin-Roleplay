@@ -52,6 +52,7 @@ export default async function GuildDashboardPage({
           <ModuleLink href={`/dashboard/${guildId}/components`} title="Components" desc="V2-Template-Liste und Builder-Editor" />
           <ModuleLink href={`/dashboard/${guildId}/erlc`} title="ER:LC" desc="Emergency Response: Liberty County Anbindung" />
           <ModuleLink href={`/dashboard/${guildId}/audit`} title="Audit-Log" desc="Alle Staff-Aktionen im Überblick" />
+          <ModuleLink href={`/dashboard/${guildId}/settings`} title="Settings" desc="Globale Guild-Einstellungen (Roles, Tickets, Giveaways, …)" />
         </div>
       </section>
     </div>

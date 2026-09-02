@@ -17,6 +17,10 @@
     "./layout": {
       "types": "./dist/components/v2-layout.d.ts",
       "import": "./dist/components/v2-layout.js"
+    },
+    "./settings": {
+      "types": "./dist/settings.d.ts",
+      "import": "./dist/settings.js"
     }
   },
   "scripts": {

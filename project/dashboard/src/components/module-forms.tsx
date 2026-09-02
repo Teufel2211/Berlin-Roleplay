@@ -9,6 +9,7 @@ import {
   changeTicketStatus,
   createGiveaway,
   changeGiveawayStatus,
+  saveGuildSettings,
   type ActionResult,
 } from "@/app/dashboard/[guildId]/actions";
 import type { WelcomeConfig, VerificationConfig, ERLCServerRow, TicketRow, GiveawayRow } from "@/lib/queries";
@@ -329,5 +330,38 @@ export function GiveawayActions({
         <p className="mt-2 text-xs text-red-500">{state.error}</p>
       ) : null}
     </div>
+  );
+}
+
+export function SettingsForm({
+  guildId,
+  settings,
+}: {
+  guildId: string;
+  settings: Record<string, unknown>;
+}) {
+  const [state, formAction] = useActionState<ActionResult | null, FormData>(
+    saveGuildSettings,
+    null
+  );
+
+  return (
+    <Panel>
+      <h2 className="text-lg font-semibold mb-4">Guild-Settings bearbeiten</h2>
+      <form action={formAction} className="space-y-4">
+        <input type="hidden" name="guildId" value={guildId} />
+        <Field label="Settings JSON" hint="Komplette Guild-Settings als JSON. Änderungen werden gespeichert.">
+          <textarea
+            name="settings"
+            rows={20}
+            defaultValue={JSON.stringify(settings, null, 2)}
+            className="font-mono text-xs w-full rounded-lg border border-[--border] bg-[--bg-primary] px-3 py-2 text-[--text-primary] placeholder-[--text-secondary] focus:outline-none focus:border-[--accent] resize-y"
+            spellCheck={false}
+          />
+        </Field>
+        <Feedback state={state} />
+        <Submit value="Settings speichern" />
+      </form>
+    </Panel>
   );
 }

@@ -29,6 +29,36 @@ function fail(e: unknown): ActionResult {
   };
 }
 
+export async function saveGuildSettings(
+  _prev: ActionResult | null,
+  formData: FormData
+): Promise<ActionResult> {
+  try {
+    const guildId = String(formData.get("guildId") ?? "");
+    await requireAdmin(guildId);
+    const raw = String(formData.get("settings") ?? "").trim();
+    if (!raw) return { ok: false, error: "Settings-JSON ist leer." };
+
+    let settings: Record<string, unknown>;
+    try {
+      settings = JSON.parse(raw) as Record<string, unknown>;
+    } catch {
+      return { ok: false, error: "Settings-JSON ist ungültig." };
+    }
+
+    const { error } = await getSupabaseAdmin()
+      .from("berlin_roleplay_guilds")
+      .update({ settings, updated_at: new Date().toISOString() })
+      .eq("id", guildId);
+    if (error) return { ok: false, error: error.message };
+    revalidatePath(`/dashboard/${guildId}/settings`);
+    revalidatePath(`/dashboard/${guildId}`);
+    return { ok: true, message: "Settings gespeichert." };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
 export async function saveWelcomeConfig(
   _prev: ActionResult | null,
   formData: FormData
