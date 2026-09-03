@@ -1,34 +1,33 @@
-# ── Dependencies ─────────────────────────────────────────────
+# Dependencies
 node_modules/
 .pnpm-store/
 
-# ── Build artifacts ──────────────────────────────────────────
+# Build artifacts
 dist/
 .next/
 out/
 build/
 .turbo/
 
-# ── Env / Secrets ────────────────────────────────────────────
+# Env / Secrets
 .env
 .env.local
 .env.*.local
 *.pem
 
-# ── Data & Logs ──────────────────────────────────────────────
+# Data & Logs
 data/
 logs/
 *.log
 
-# ── Runtime ──────────────────────────────────────────────────
+# Runtime
 .vercel/
 .dart_tool/
 *.tsbuildinfo
 .deploy-sha
 
-# ── OS / Editor ──────────────────────────────────────────────
+# OS / Editor
 .DS_Store
 Thumbs.db
 .idea/
 .vscode/*
-.vercel
